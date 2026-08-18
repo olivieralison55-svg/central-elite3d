@@ -311,10 +311,9 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
     <h1 id="loginTitle">Entrar</h1>
     <div class="f"><label>E-mail</label><input id="li_email" type="email" placeholder="voce@exemplo.com"></div>
     <div class="f"><label>Senha</label><input id="li_pass" type="password" placeholder="••••••••"></div>
-    <div class="f" id="li_nome_field" style="display:none"><label>Nome</label><input id="li_nome" placeholder="Seu nome"></div>
     <button class="btn" style="width:100%" id="li_submit" onclick="doLogin()">Entrar</button>
     <div class="login-err" id="li_err"></div>
-    <div class="login-switch"><a onclick="toggleLoginMode()" id="li_switch">Ainda não tem conta? Criar conta</a></div>
+    <div class="login-switch">Acesso restrito à equipe. Solicite seu login ao administrador.</div>
   </div>
 </div>
 <div id="mainShell" class="shell" style="display:none">
@@ -331,7 +330,7 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
     <button data-view="financeiro" id="navFinanceiro"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 7l2.5-3h13L21 7"/><path d="M12 11v6M9.5 12.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg></span> Financeiro</button>
   </nav>
   <div class="side-foot">
-    Dados migrados da planilha<br>Central de Controle · v1.4
+    Dados migrados da planilha<br>Central de Controle · v1.5
     <div class="user-badge">
       <div class="who"><b id="userNome">—</b><span id="userRole">—</span></div>
       <button onclick="doLogout()">Sair</button>
@@ -421,11 +420,11 @@ let M = [], P = [], S = [];   // mentorados, parcelas, sessoes
 let ROTAS = [], MARCOS = [], MM = []; // rotas, marcos_definicao, mentorado_marcos
 let CANAIS_DB = [], MC = []; // canais (por rota), mentorado_canais
 let FAT = []; // faturamento_mensal
+let ORFAS = []; // sessoes cujo evento sumiu do Google Calendar
 let view = "dash";
 let filtro = {q:"", mentor:"", statusFin:""};
 let rotaAtual = null; // slug da rota selecionada na tela Rotas
 let myRole = null, myProfile = null;
-let loginMode = "signin"; // signin | signup
 
 /* ================= AUTH ================= */
 async function boot(){
@@ -454,32 +453,15 @@ async function afterLogin(session){
   }
   await loadAll();
 }
-function toggleLoginMode(){
-  loginMode = loginMode === "signin" ? "signup" : "signin";
-  $("#loginTitle").textContent = loginMode === "signin" ? "Entrar" : "Criar conta";
-  $("#li_submit").textContent = loginMode === "signin" ? "Entrar" : "Criar conta";
-  $("#li_nome_field").style.display = loginMode === "signup" ? "block" : "none";
-  $("#li_switch").textContent = loginMode === "signin" ? "Ainda não tem conta? Criar conta" : "Já tem conta? Entrar";
-  $("#li_err").textContent = "";
-}
 async function doLogin(){
   const email = $("#li_email").value.trim(), pass = $("#li_pass").value;
   $("#li_err").textContent = "";
   if(!email || !pass) { $("#li_err").textContent = "Preencha e-mail e senha."; return; }
-  if(loginMode === "signup"){
-    const nome = $("#li_nome").value.trim();
-    const { data, error } = await db.auth.signUp({ email, password: pass, options: { data: { nome } } });
-    if(error){ $("#li_err").textContent = error.message; return; }
-    if(data.session){ await afterLogin(data.session); }
-    else { $("#li_err").textContent = "Conta criada. Verifique seu e-mail para confirmar, depois faça login."; toggleLoginMode(); }
-  } else {
-    const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
-    if(error){ $("#li_err").textContent = "E-mail ou senha inválidos."; return; }
-    await afterLogin(data.session);
-  }
+  const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+  if(error){ $("#li_err").textContent = "E-mail ou senha inválidos."; return; }
+  await afterLogin(data.session);
 }
 window.doLogin = doLogin;
-window.toggleLoginMode = toggleLoginMode;
 window.doLogout = async function(){ await db.auth.signOut(); myRole=null; myProfile=null; showLogin(); };
 
 /* ================= DATA ================= */
@@ -490,7 +472,7 @@ async function loadAll(){
   const parcelaQuery = myRole === "admin"
     ? db.from("parcelas").select("*").order("numero")
     : Promise.resolve({data:[], error:null});
-  const [m,p,s,r,md,mm,fat,cn,mc] = await Promise.all([
+  const [m,p,s,r,md,mm,fat,cn,mc,orf] = await Promise.all([
     mentorQuery,
     parcelaQuery,
     db.from("sessoes").select("*").order("ordem"),
@@ -500,11 +482,12 @@ async function loadAll(){
     db.from("faturamento_mensal").select("*"),
     db.from("canais").select("*").order("ordem"),
     db.from("mentorado_canais").select("*"),
+    db.from("sessoes_orfas").select("*"),
   ]);
   if(m.error||p.error||s.error){ toast((m.error||p.error||s.error).message, true); return; }
   M = m.data; P = p.data; S = s.data;
   ROTAS = r.data||[]; MARCOS = md.data||[]; MM = mm.data||[];
-  FAT = fat.data||[]; CANAIS_DB = cn.data||[]; MC = mc.data||[];
+  FAT = fat.data||[]; CANAIS_DB = cn.data||[]; MC = mc.data||[]; ORFAS = orf.data||[];
   if(!rotaAtual && ROTAS.length) rotaAtual = ROTAS[0].slug;
   render();
 }
@@ -667,6 +650,7 @@ function renderDash(){
     isAdmin ? {label:"Parcelas vencidas em aberto", count:vencidas.length, view:"financeiro"} : null,
     {label:"Mentorados sem sessão há +30 dias", count:semSessao30.length, view:null, anchor:"risco"},
     aguardConf ? {label:"Sessões aguardando confirmação", count:aguardConf, view:"sessoes"} : null,
+    ORFAS.length ? {label:"Sessões sem evento no Google Agenda", count:ORFAS.length, anchor:"orfas"} : null,
   ].filter(Boolean);
   const temAtencao = attnItems.some(i=>i.count>0);
 
@@ -730,6 +714,13 @@ function renderDash(){
       </div>
     </div>
   </div>
+  ${ORFAS.length?`<div class="panel detail" id="orfas"><h3>Sessões sem evento no Google Agenda</h3>
+  <div class="sub" style="color:var(--mut);font-size:12px;margin:-8px 0 14px">O evento foi apagado, renomeado ou saiu da janela de sincronização. Estes registros pararam de receber atualização e precisam de conferência manual.</div>
+  <div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Mentorado</th><th>Etapa</th><th>Mentor</th><th>Status</th></tr></thead><tbody>
+  ${ORFAS.slice().sort((a,b)=>(a.data||"")<(b.data||"")?-1:1).map(o=>`<tr class="click" onclick="openMentorado('${o.mentorado_id}','sessoes')">
+    <td>${cellDataHora(o.data, o.hora)}</td><td>${esc(o.mentorado_nome)}</td><td>${esc(o.etapa)}</td>
+    <td>${o.mentor?esc(o.mentor):'<span class="pill amber">sem mentor</span>'}</td><td>${pillSess(o.status)}</td>
+  </tr>`).join("")}</tbody></table></div></div>`:""}
   ${semSessao30.length?`<div class="panel detail" id="risco"><h3>Mentorados sem sessão há +30 dias</h3><div style="overflow-x:auto"><table><thead><tr><th>Mentorado</th><th>Última sessão</th><th></th></tr></thead><tbody>
   ${semSessao30.map(m=>{
     const last = sessoesDe(m.id).filter(s=>s.status==="Concluída"&&s.data).map(s=>s.data).sort().pop();
