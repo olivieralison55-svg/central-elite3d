@@ -331,7 +331,7 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
     <button data-view="financeiro" id="navFinanceiro"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 7l2.5-3h13L21 7"/><path d="M12 11v6M9.5 12.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg></span> Financeiro</button>
   </nav>
   <div class="side-foot">
-    Dados migrados da planilha<br>Central de Controle · v1.2
+    Dados migrados da planilha<br>Central de Controle · v1.4
     <div class="user-badge">
       <div class="who"><b id="userNome">—</b><span id="userRole">—</span></div>
       <button onclick="doLogout()">Sair</button>
@@ -405,7 +405,11 @@ function nivelDe(total){
   return {atual, proximo, pct, total};
 }
 
-const MENTORES = ["Israel","Evaldo","Luan","Sergio","Diovani","Petare"];
+/* Mentores que recebem novos agendamentos. Quem sai do projeto vai para
+   MENTORES_HIST: some dos formularios, mas continua contando no historico. */
+const MENTORES = ["Evaldo","Luan","Sergio","Diovani","Petare","Michelle"];
+const MENTORES_HIST = ["Israel"];
+const TODOS_MENTORES = [...MENTORES, ...MENTORES_HIST];
 const ETAPAS = ["Diagnóstico de Negócio","Plano de Ação","Checkup 1","Checkup 2","Checkup 3","Checkup 4","Checkup 5","Checkup 6","Checkup 7","Checkup 8","Checkup 9","Checkup 10"];
 const ETAPA_ORD = Object.fromEntries(ETAPAS.map((e,i)=>[e,i+1]));
 const S_STATUS = ["Não iniciada","Agendada","Aguardando confirmação","Concluída","Bloqueada"];
@@ -631,10 +635,17 @@ function renderDash(){
 
   // matriz mentor x etapa
   const etapasAtivas = [...new Set(S.map(s=>s.etapa))].sort((a,b)=>ETAPA_ORD[a]-ETAPA_ORD[b]);
-  const matriz = MENTORES.map(mt=>{
+  // Deriva a lista de quem aparece na matriz dos proprios dados: assim ninguem
+  // some da contagem ao sair do projeto, nem depende de estar na constante.
+  const mentoresComSessao = [...new Set(S.filter(s=>s.status==="Concluída"&&s.mentor).map(s=>s.mentor))];
+  const matriz = mentoresComSessao.map(mt=>{
     const row = etapasAtivas.map(et=>S.filter(s=>s.mentor===mt&&s.etapa===et&&s.status==="Concluída").length);
-    return {mt,row,tot:row.reduce((a,b)=>a+b,0)};
+    return {mt,row,tot:row.reduce((a,b)=>a+b,0), inativo: !MENTORES.includes(mt)};
   }).filter(r=>r.tot>0).sort((a,b)=>b.tot-a.tot);
+  // Sessoes concluidas sem mentor identificado: ficam visiveis em vez de sumir.
+  const semMentorRow = etapasAtivas.map(et=>S.filter(s=>!s.mentor&&s.etapa===et&&s.status==="Concluída").length);
+  const semMentorTot = semMentorRow.reduce((a,b)=>a+b,0);
+  const aguardSemMentor = S.filter(s=>!s.mentor&&s.status==="Aguardando confirmação").length;
 
   // Cinto de segurança: "próximas" nunca mostra data passada, mesmo que algo
   // fique preso em "Agendada" no banco. Ordena por data + hora.
@@ -707,7 +718,9 @@ function renderDash(){
     <div class="panel detail">
       <h3>Sessões concluídas por mentor</h3>
       <div style="overflow-x:auto"><table><thead><tr><th>Mentor</th>${etapasAtivas.map(e=>`<th class="num" title="${e}">${e.replace("Diagnóstico de Negócio","Diag.").replace("Plano de Ação","Plano").replace("Checkup ","C")}</th>`).join("")}<th class="num">Total</th></tr></thead>
-      <tbody>${matriz.map(r=>`<tr><td class="mentor-chip">${r.mt}</td>${r.row.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--green);font-weight:700">${r.tot}</td></tr>`).join("")}</tbody></table></div>
+      <tbody>${matriz.map(r=>`<tr><td class="mentor-chip">${r.mt}${r.inativo?'<span class="pill gray" style="margin-left:8px">fora do projeto</span>':''}</td>${r.row.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--green);font-weight:700">${r.tot}</td></tr>`).join("")}
+      ${semMentorTot?`<tr style="opacity:.75"><td class="mentor-chip">Sem mentor identificado</td>${semMentorRow.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--amber);font-weight:700">${semMentorTot}</td></tr>`:''}</tbody></table></div>
+      ${aguardSemMentor?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${aguardSemMentor} sessão(ões) aguardando confirmação sem mentor definido</div><a onclick="setView('sessoes')">ver</a></div>`:''}
     </div>
     <div class="panel detail">
       <h3>Próximas sessões agendadas</h3>
@@ -771,7 +784,8 @@ function renderMentorados(){
 /* ================= SESSÕES (agenda) ================= */
 function renderSessoes(){
   let list = S.slice();
-  if(filtro.mentor) list = list.filter(s=>s.mentor===filtro.mentor);
+  if(filtro.mentor==="__sem__") list = list.filter(s=>!s.mentor);
+  else if(filtro.mentor) list = list.filter(s=>s.mentor===filtro.mentor);
   const grupos = {
     "agendadas": {titulo:"Agendadas", itens: list.filter(s=>s.status==="Agendada")},
     "concluidas": {titulo:"Concluídas (últimas 30)", itens: list.filter(s=>s.status==="Concluída").slice(0,30)},
@@ -785,7 +799,7 @@ function renderSessoes(){
   };
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Sessões</h2><div class="sub">${S.filter(s=>s.status==="Concluída").length} concluídas · ${S.filter(s=>s.status==="Agendada").length} agendadas</div></div></div>
-  <div class="filters"><select onchange="filtro.mentor=this.value;renderSessoes()"><option value="">Todos os mentores</option>${MENTORES.map(m=>`<option ${filtro.mentor===m?"selected":""}>${m}</option>`).join("")}</select></div>
+  <div class="filters"><select onchange="filtro.mentor=this.value;renderSessoes()"><option value="">Todos os mentores</option>${TODOS_MENTORES.map(m=>`<option ${filtro.mentor===m?"selected":""}>${m}</option>`).join("")}<option value="__sem__" ${filtro.mentor==="__sem__"?"selected":""}>— sem mentor —</option></select></div>
   ${Object.entries(grupos).map(([key,{titulo,itens}])=>{
     const tableKey = "sessoes_"+key;
     const g = applySort(itens, tableKey, getters, "data", key==="concluidas"?"desc":"asc");
@@ -1166,7 +1180,7 @@ window.openMentorado = function(id, secao){
     <div><div class="mentor-chip">${esc(s.mentor||"— sem mentor")}</div>
       <div class="lk mt8">${[linkOr(s.link_meet,"meet"),linkOr(s.link_gravacao,"gravação"),linkOr(s.link_anotacoes,"anotações")].filter(Boolean).join(" · ")}</div></div>
     <div class="rowflex">
-      ${s.status==="Aguardando confirmação"?`<button class="btn sm" onclick="confirmarSessao('${s.id}','${id}')">Confirmar</button>`:''}
+      ${s.status==="Aguardando confirmação"?`<button class="btn sm" onclick="openConfirmarSessao('${s.id}','${id}')">Confirmar</button>`:''}
       <button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>
     </div>
   </div>`).join("")||`<div class="empty" style="padding:12px">Nenhuma sessão registrada ainda.</div>`}
@@ -1280,7 +1294,7 @@ window.openSessao = function(sid, mid){
   <div class="fgrid" style="grid-template-columns:1fr 1fr">
     <div class="f"><label>Etapa</label><select id="s_etapa">${ETAPAS.map(e=>`<option ${(s.etapa||sugestao)===e?"selected":""}>${e}</option>`).join("")}</select></div>
     <div class="f"><label>Status</label><select id="s_status">${S_STATUS.map(e=>`<option ${(s.status||"Agendada")===e?"selected":""}>${e}</option>`).join("")}</select></div>
-    <div class="f"><label>Mentor</label><select id="s_mentor"><option value="">—</option>${MENTORES.map(e=>`<option ${s.mentor===e?"selected":""}>${e}</option>`).join("")}</select></div>
+    <div class="f"><label>Mentor</label><select id="s_mentor"><option value="">—</option>${[...MENTORES, ...(s.mentor && !MENTORES.includes(s.mentor) ? [s.mentor] : [])].map(e=>`<option ${s.mentor===e?"selected":""}>${e}</option>`).join("")}</select></div>
     <div class="f"><label>Data</label><input id="s_data" type="date" value="${s.data||""}"></div>
     <div class="f"><label>Hora</label><input id="s_hora" type="time" value="${s.hora?s.hora.slice(0,5):""}"></div>
   </div>
@@ -1308,8 +1322,32 @@ window.salvarSessao = async function(sid, mid){
   if(error) return toast(error.message,true);
   toast("Sessão salva"); await loadAll(); openMentorado(mid);
 }
+/* Confirmar exige o mentor: sem isso a sessao entra como concluida sem dono
+   e some da contagem por mentor, que foi o que aconteceu com o historico do Calendar. */
+window.openConfirmarSessao = function(sid, mid){
+  const s = S.find(x=>x.id===sid); if(!s) return;
+  const opcoes = [...MENTORES, ...(s.mentor && !MENTORES.includes(s.mentor) ? [s.mentor] : [])];
+  const box = $("#modalBox"); box.className="modal narrow";
+  box.innerHTML = `
+  <header><div><h3>Confirmar sessão</h3><div class="sub" style="color:var(--mut);font-size:12px;margin-top:3px">${esc(s.etapa)} · ${esc(nome(mid))} · ${fmtD(s.data)}</div></div>
+  <button class="x" onclick="openMentorado('${mid}')">✕</button></header>
+  <div class="f" style="margin-bottom:18px">
+    <label>Quem atendeu esta sessão?</label>
+    <select id="cf_mentor">
+      <option value="">Selecione o mentor…</option>
+      ${opcoes.map(m=>`<option ${s.mentor===m?"selected":""}>${m}</option>`).join("")}
+    </select>
+  </div>
+  <div class="rowflex">
+    <button class="btn" onclick="confirmarSessao('${sid}','${mid}')">Confirmar como concluída</button>
+    <button class="btn ghost sm" onclick="openMentorado('${mid}')">Cancelar</button>
+  </div>`;
+  $("#overlay").classList.add("open");
+}
 window.confirmarSessao = async function(sid, mid){
-  const {error} = await db.from("sessoes").update({status:"Concluída"}).eq("id",sid);
+  const mentor = $("#cf_mentor") ? $("#cf_mentor").value : null;
+  if(!mentor) return toast("Selecione quem atendeu a sessão", true);
+  const {error} = await db.from("sessoes").update({status:"Concluída", mentor}).eq("id",sid);
   if(error) return toast(error.message,true);
   toast("Sessão confirmada como concluída"); await loadAll(); openMentorado(mid);
 }
