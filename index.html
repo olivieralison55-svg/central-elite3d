@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central de Controle · Elite 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  /* ---- design system Elite 3D ---- */
+  --background:#101214;
+  --background-deep:#090A0A;
+  --background-alt:#0E0E0F;
+  --surface:#121416;
+  --surface-active:rgba(185,255,70,.08);
+  --surface-selected:rgba(185,255,70,.16);
+  --surface-input:#1A1F26;
+  --surface-interactive:#1B2916;
+  --primary:#B9FF46;
+  --primary-foreground:#10141A;
+  --foreground:#FEFEFE;
+  --muted-foreground:rgba(232,237,245,.72);
+  --subtle-foreground:#929699;
+  --disabled-foreground:#5C6166;
+  --border:rgba(254,254,254,.08);
+  --border-hover:rgba(254,254,254,.16);
+  --border-primary:rgba(185,255,70,.30);
+  --danger:#E5484D;
+  --danger-dim:rgba(229,72,77,.12);
+  --danger-line:rgba(229,72,77,.32);
+  --warning:#E8A13C;
+  --warning-dim:rgba(232,161,60,.12);
+  --info:#4D9FE0;
+  --info-dim:rgba(77,159,224,.12);
+  --radius-card:20px;
+  --radius-control:10px;
+  --radius-pill:999px;
+  --glow-primary:0 0 0 1px rgba(185,255,70,.18), 0 0 24px rgba(185,255,70,.10);
+  --speed:170ms;
+
+  /* ---- aliases legados (mantêm o JS existente funcionando) ---- */
+  --bg:var(--background);
+  --panel:var(--surface);
+  --panel2:var(--surface-input);
+  --line:var(--border);
+  --txt:var(--foreground);
+  --mut:var(--muted-foreground);
+  --dim:var(--subtle-foreground);
+  --green:var(--primary);
+  --green-dim:var(--surface-active);
+  --green-line:var(--border-primary);
+  --amber:var(--warning);
+  --amber-dim:var(--warning-dim);
+  --red:var(--danger);
+  --red-dim:var(--danger-dim);
+  --blue:var(--info);
+  --blue-dim:var(--info-dim);
+  --radius:var(--radius-control);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--background);color:var(--foreground);font-family:'Inter Tight',system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.display{font-family:'Plus Jakarta Sans',system-ui,sans-serif;letter-spacing:-.02em}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:13px;background:var(--surface-input);border:1px solid var(--border);color:var(--foreground);border-radius:var(--radius-control);padding:11px 12px;outline:none;width:100%;min-height:44px;transition:border-color var(--speed) ease,box-shadow var(--speed) ease}
+input::placeholder,textarea::placeholder{color:var(--disabled-foreground)}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(185,255,70,.12)}
+input:disabled,select:disabled,textarea:disabled{opacity:.45;cursor:not-allowed}
+input[aria-invalid="true"],.f.err input{border-color:var(--danger)}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--subtle-foreground) 50%),linear-gradient(135deg,var(--subtle-foreground) 50%,transparent 50%);background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:32px}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* ---------- shell ---------- */
+.shell{display:flex;min-height:100vh}
+aside{width:236px;flex-shrink:0;background:var(--background-deep);border-right:1px solid var(--border);padding:26px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.brand{padding:0 8px 26px}
+.brand .eyebrow{font-size:10px;letter-spacing:.2em;color:var(--primary);font-weight:600;text-transform:uppercase}
+.brand h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.025em;margin-top:6px}
+.nav button{position:relative;display:flex;align-items:center;gap:11px;width:100%;background:none;border:none;color:var(--subtle-foreground);padding:11px 12px;border-radius:var(--radius-control);font-size:13.5px;font-weight:500;text-align:left;margin-bottom:3px;min-height:44px;transition:background var(--speed) ease,color var(--speed) ease}
+.nav button:hover{background:rgba(254,254,254,.04);color:var(--foreground)}
+.nav button.active{background:var(--surface-active);color:var(--primary);font-weight:600}
+.nav button.active::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--primary)}
+.nav .ic{width:18px;height:18px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+.nav .ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.side-foot{margin-top:auto;padding:10px 8px;font-size:11px;color:var(--disabled-foreground);line-height:1.5}
+main{flex:1;padding:30px 34px 64px;max-width:1340px;min-width:0}
+@media(max-width:600px){main{padding:18px 16px 52px}}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;gap:14px;flex-wrap:wrap}
+.topbar h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.03em}
+.topbar .sub{color:var(--muted-foreground);font-size:12.5px;margin-top:4px}
+
+/* ---------- components ---------- */
+.btn{background:var(--primary);color:var(--primary-foreground);border:none;border-radius:var(--radius-control);padding:11px 18px;font-weight:700;font-size:13px;min-height:44px;transition:filter var(--speed) ease,transform var(--speed) ease}
+.btn:hover{filter:brightness(1.08)}
+.btn:active{transform:scale(.985)}
+.btn.ghost{background:transparent;color:var(--foreground);border:1px solid var(--border);font-weight:600}
+.btn.ghost:hover{border-color:var(--border-primary);color:var(--primary);filter:none}
+.btn.sm{padding:7px 12px;font-size:12px;border-radius:8px;min-height:36px}
+.btn.danger{background:var(--danger-dim);color:var(--danger);border:1px solid var(--danger-line)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:26px}
+.cards.quiet{margin-bottom:0}
+.cards.quiet .card{padding:16px 18px}
+.cards.quiet .card .v{font-size:24px;margin-top:4px}
+.cards.quiet .card .k{font-size:10px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:20px 22px;transition:border-color var(--speed) ease}
+.card:hover{border-color:var(--border-hover)}
+.card.sel{border-color:var(--border-primary);box-shadow:var(--glow-primary)}
+.card .k{font-size:10.5px;color:var(--subtle-foreground);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.card .v{font-family:'Plus Jakarta Sans',sans-serif;font-size:34px;font-weight:800;margin-top:8px;letter-spacing:-.035em;line-height:1.05}
+.card .d{font-size:11.5px;color:var(--subtle-foreground);margin-top:5px}
+.card.alert .v{color:var(--warning)}
+.card.bad .v{color:var(--danger)}
+.card.good .v{color:var(--primary)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:22px;margin-bottom:20px}
+.panel h3{font-size:12px;text-transform:uppercase;letter-spacing:.11em;color:var(--subtle-foreground);font-weight:700;margin-bottom:16px}
+
+/* ---------- hierarquia de página ---------- */
+.panel.urgent{border-color:var(--border-primary);background:var(--surface)}
+.panel.quiet{background:transparent;border-color:transparent;padding:14px 0 0;box-shadow:none}
+.panel.quiet h3{color:var(--subtle-foreground);font-size:11.5px}
+.attn-list{display:flex;flex-direction:column;gap:1px}
+.attn-row{display:flex;align-items:center;gap:12px;padding:12px 6px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:8px;transition:background var(--speed) ease}
+.attn-row:last-child{border-bottom:none}
+.attn-row:hover{background:var(--surface-active)}
+.attn-row .tag{flex-shrink:0;width:8px;height:8px;border-radius:var(--radius-pill)}
+.attn-row .tag.red{background:var(--danger)}
+.attn-row .tag.amber{background:var(--warning)}
+.attn-row .who{font-weight:600;font-size:13px;flex:1;min-width:0}
+.attn-row .why{color:var(--muted-foreground);font-size:12px}
+.attn-row .arrow{color:var(--subtle-foreground);font-size:13px}
+.panel.attention{border-color:var(--border-primary);border-left:1px solid var(--border-primary);border-radius:var(--radius-card);box-shadow:var(--glow-primary)}
+.panel.attention h3{color:var(--primary)}
+.panel.detail{background:transparent;border-color:var(--border)}
+.panel.detail h3{color:var(--subtle-foreground);font-weight:600;letter-spacing:.08em}
+.section-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.16em;color:var(--subtle-foreground);font-weight:700;margin:32px 0 14px;display:flex;align-items:center;gap:10px}
+.section-label:first-child{margin-top:0}
+.section-label::after{content:"";flex:1;height:1px;background:var(--border)}
+.attn-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)}
+.attn-item:last-child{border-bottom:none}
+.attn-item .lbl{font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px}
+.attn-item .lbl .dot{width:7px;height:7px;border-radius:50%;background:var(--warning);flex-shrink:0}
+.attn-item.ok .lbl .dot{background:var(--primary)}
+.attn-item .cnt{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:16px;letter-spacing:-.02em}
+.attn-item.ok .cnt{color:var(--subtle-foreground);font-weight:500}
+.attn-item a{font-size:11.5px;color:var(--muted-foreground);text-decoration:underline}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.11em;color:var(--subtle-foreground);font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--foreground)}
+th.sortable .arrow{color:var(--primary);font-size:10px;margin-left:4px}
+td{padding:12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--surface-active)}
+td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:-.01em}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:var(--radius-pill);font-size:11px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.pill::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.pill.green{background:var(--surface-active);color:var(--primary);border-color:var(--border-primary)}
+.pill.amber{background:var(--warning-dim);color:var(--warning);border-color:rgba(232,161,60,.3)}
+.pill.red{background:var(--danger-dim);color:var(--danger);border-color:var(--danger-line)}
+.pill.blue{background:var(--info-dim);color:var(--info);border-color:rgba(77,159,224,.3)}
+.pill.gray{background:rgba(254,254,254,.05);color:var(--muted-foreground);border-color:var(--border)}
+
+.prog{display:flex;gap:4px}
+.prog i{width:9px;height:9px;border-radius:2px;background:rgba(254,254,254,.06);border:1px solid var(--border)}
+.prog i.done{background:var(--primary);border-color:var(--primary)}
+.prog i.sched{background:var(--info);border-color:var(--info)}
+.prog i.block{background:var(--danger-dim);border-color:var(--danger-line)}
+
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.filters input,.filters select{width:auto;min-width:160px}
+.filters input[type=search]{min-width:250px}
+
+/* ---------- modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(9,10,10,.78);display:none;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:40px 16px}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);width:100%;max-width:880px;padding:30px}
+.modal.narrow{max-width:520px}
+.modal header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px}
+.modal header h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:20px;font-weight:800;text-transform:none;letter-spacing:-.03em;color:var(--foreground)}
+.modal header .x{background:none;border:none;color:var(--subtle-foreground);font-size:20px;line-height:1;padding:6px 10px;border-radius:8px}
+.modal header .x:hover{color:var(--foreground);background:rgba(254,254,254,.05)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
+.f label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--subtle-foreground);font-weight:600;margin-bottom:6px}
+.sec{border-top:1px solid var(--border);margin-top:22px;padding-top:20px}
+.sec>h4{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--primary);font-weight:700;margin-bottom:14px}
+.parc-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+@media(max-width:700px){.parc-grid{grid-template-columns:repeat(3,1fr)}}
+.parc{position:relative;background:rgba(254,254,254,.03);border:1px solid var(--border);border-radius:var(--radius-control);padding:10px;text-align:center;cursor:pointer;font-size:11px;color:var(--muted-foreground);transition:border-color var(--speed) ease}
+.parc:hover{border-color:var(--border-hover)}
+.parc b{display:block;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;color:var(--foreground);margin-bottom:3px}
+.parc-sub{margin-top:2px}
+.parc-edit{position:absolute;top:4px;right:6px;font-size:11px;color:var(--subtle-foreground);cursor:pointer;line-height:1}
+.parc-edit:hover{color:var(--primary)}
+.parc.paga{border-color:var(--border-primary);background:var(--surface-active)}
+.parc.paga b{color:var(--primary)}
+.parc.vencida{border-color:var(--danger-line);background:var(--danger-dim)}
+.parc.vencida b{color:var(--danger)}
+.sess{background:rgba(254,254,254,.03);border:1px solid var(--border);border-radius:var(--radius-control);padding:14px 16px;margin-bottom:9px;display:grid;grid-template-columns:minmax(120px,1.1fr) auto auto minmax(120px,1fr) auto;gap:14px;align-items:center;transition:border-color var(--speed) ease}
+.sess:hover{border-color:var(--border-hover)}
+@media(max-width:800px){.sess{grid-template-columns:1fr 1fr;row-gap:8px}}
+.fgrid.fat-form{grid-template-columns:1fr 1fr 1fr auto}
+@media(max-width:700px){.fgrid.fat-form{grid-template-columns:1fr 1fr}}
+.sess.marco-row{grid-template-columns:1fr 160px auto}
+@media(max-width:600px){.sess.marco-row{grid-template-columns:1fr;row-gap:8px}}
+.sess .et{font-weight:600;font-size:13px}
+.sess .dt{color:var(--muted-foreground)}
+.sess .dt .dh b{font-size:13px}
+.sess .lk{font-size:11.5px;display:flex;gap:10px;flex-wrap:wrap}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border-primary);color:var(--foreground);padding:14px 20px;border-radius:var(--radius-control);font-size:13px;z-index:99;display:none;box-shadow:var(--glow-primary)}
+.toast.err{border-color:var(--danger-line);box-shadow:none}
+.loading{color:var(--subtle-foreground);padding:34px;text-align:center;font-size:13px}
+.mono{font-family:'Plus Jakarta Sans',sans-serif;font-size:12.5px;font-weight:600;letter-spacing:-.01em}
+.mt8{margin-top:8px}.mt14{margin-top:14px}
+.rowflex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mentor-chip{font-size:12px;font-weight:600;color:var(--foreground)}
+.empty{padding:30px;text-align:center;color:var(--subtle-foreground);font-size:13px}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- mobile nav ---------- */
+@media(max-width:860px){aside{display:none}.mobilenav{display:flex!important}}
+.mobilenav{display:none;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.mobilenav button{background:rgba(254,254,254,.03);border:1px solid var(--border);color:var(--subtle-foreground);border-radius:var(--radius-pill);padding:10px 16px;font-size:12.5px;font-weight:600;min-height:44px}
+.mobilenav button.active{background:var(--surface-active);color:var(--primary);border-color:var(--border-primary)}
+
+/* ---------- auth ---------- */
+.login-screen{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;overflow:hidden}
+.login-screen::before{content:"";position:absolute;top:-10%;left:50%;transform:translateX(-50%);width:min(900px,140vw);height:600px;background:radial-gradient(ellipse at center,rgba(185,255,70,.10),rgba(185,255,70,.03) 45%,transparent 70%);pointer-events:none}
+.login-box{position:relative;width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:36px}
+.login-box .eyebrow{font-size:10px;letter-spacing:.2em;color:var(--primary);font-weight:600;text-transform:uppercase}
+.login-box h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:26px;font-weight:800;letter-spacing:-.035em;margin-top:8px;margin-bottom:26px}
+.login-box .f{margin-bottom:16px}
+.login-box .f label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--subtle-foreground);font-weight:600;margin-bottom:6px}
+.login-box input{min-height:46px}
+.login-err{color:var(--danger);font-size:12.5px;margin-top:12px;min-height:16px}
+.login-switch{text-align:center;margin-top:18px;font-size:12.5px;color:var(--muted-foreground)}
+.login-switch a{cursor:pointer;color:var(--primary)}
+.user-badge{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 8px 4px;margin-top:10px;border-top:1px solid var(--border)}
+.user-badge .who{font-size:11.5px;color:var(--subtle-foreground);line-height:1.4}
+.user-badge .who b{color:var(--foreground);display:block;font-size:12.5px;font-weight:600}
+.user-badge button{background:none;border:1px solid var(--border);color:var(--muted-foreground);font-size:11.5px;font-weight:600;cursor:pointer;text-decoration:none;padding:8px 12px;border-radius:8px;min-height:36px;transition:border-color var(--speed) ease,color var(--speed) ease}
+.user-badge button:hover{color:var(--foreground);border-color:var(--border-hover)}
+
+/* ---------- progressão por níveis ---------- */
+.niveis-legend{display:flex;flex-wrap:wrap;gap:14px;margin:-4px 0 14px}
+.niv-chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--subtle-foreground);font-weight:500}
+.niv-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);opacity:.35}
+.niveis-legend .niv-chip:first-child .niv-dot{opacity:1}
+.niveis-legend .niv-chip:nth-child(2) .niv-dot{opacity:.8}
+.niveis-legend .niv-chip:nth-child(3) .niv-dot{opacity:.62}
+.niveis-legend .niv-chip:nth-child(4) .niv-dot{opacity:.48}
+.niv-row{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(120px,1.4fr) minmax(150px,auto);gap:18px;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.niv-row:last-child{border-bottom:none}
+.niv-row:hover .niv-nome{color:var(--primary)}
+.niv-who{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
+.niv-nome{font-size:13px;font-weight:600;transition:color var(--speed) ease}
+.niv-badge{flex-shrink:0}
+.niv-bar{height:6px;border-radius:var(--radius-pill);background:rgba(254,254,254,.06);overflow:hidden}
+.niv-bar i{display:block;height:100%;border-radius:var(--radius-pill);background:var(--primary);min-width:3px}
+.niv-val{text-align:right;line-height:1.35}
+.niv-val b{display:block;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800;letter-spacing:-.02em}
+.niv-val span{font-size:11px;color:var(--subtle-foreground)}
+@media(max-width:700px){.niv-row{grid-template-columns:1fr;gap:10px}.niv-val{text-align:left}}
+
+/* ---------- stepper de rotas ---------- */
+.stepper{padding-left:4px}
+.step{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:14px 0 14px 0}
+.step::before{content:"";position:absolute;left:11px;top:32px;bottom:-14px;width:1px;background:var(--border)}
+.step.last::before{display:none}
+.step.done::before{background:var(--border-primary)}
+.step-mark{width:23px;height:23px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;background:var(--surface);z-index:1}
+.step.done .step-mark{border-color:var(--primary);background:var(--surface-active);color:var(--primary)}
+.step.atual .step-mark{border-color:var(--primary);color:var(--primary);box-shadow:var(--glow-primary);font-size:8px}
+.step.futuro{opacity:.55}
+.step-body{min-width:0}
+.step-nome{font-size:13px;font-weight:600}
+.step.atual .step-nome{color:var(--primary)}
+.step-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:6px}
+.step-data{font-size:11px;color:var(--subtle-foreground)}
+@media(max-width:600px){.step{grid-template-columns:auto 1fr;row-gap:10px}.step>.btn{grid-column:2}}
+
+/* ---------- hierarquia de data / valores ---------- */
+.dh{display:inline-flex;flex-direction:column;line-height:1.25}
+.dh b{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;letter-spacing:-.02em}
+.dh span{font-size:11px;color:var(--subtle-foreground)}
+.dh-vazio{font-size:12px;color:var(--disabled-foreground)}
+.val-neg{color:var(--danger);font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;letter-spacing:-.01em}
+
+.skel-wrap{display:flex;flex-direction:column;gap:16px;padding-top:4px}
+.skel-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+
+/* ---------- skeleton + acessibilidade ---------- */
+.skel{background:linear-gradient(90deg,rgba(254,254,254,.04),rgba(254,254,254,.08),rgba(254,254,254,.04));background-size:200% 100%;animation:skel 1.4s ease-in-out infinite;border-radius:8px}
+@keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div id="loginScreen" class="login-screen" style="display:none">
+  <div class="login-box">
+    <div class="eyebrow">Mentoria Elite 3D · STLFLIX</div>
+    <h1 id="loginTitle">Entrar</h1>
+    <div class="f"><label>E-mail</label><input id="li_email" type="email" placeholder="voce@exemplo.com"></div>
+    <div class="f"><label>Senha</label><input id="li_pass" type="password" placeholder="••••••••"></div>
+    <div class="f" id="li_nome_field" style="display:none"><label>Nome</label><input id="li_nome" placeholder="Seu nome"></div>
+    <button class="btn" style="width:100%" id="li_submit" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="li_err"></div>
+    <div class="login-switch"><a onclick="toggleLoginMode()" id="li_switch">Ainda não tem conta? Criar conta</a></div>
+  </div>
+</div>
+<div id="mainShell" class="shell" style="display:none">
+<aside>
+  <div class="brand">
+    <div class="eyebrow">Mentoria Elite 3D · STLFLIX</div>
+    <h1>Central de Controle</h1>
+  </div>
+  <nav class="nav">
+    <button data-view="dash" class="active"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3h7v8H3zM14 3h7v5h-7zM14 11h7v10h-7zM3 14h7v7H3z"/></svg></span> Dashboard</button>
+    <button data-view="mentorados"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Mentorados</button>
+    <button data-view="sessoes"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span> Sessões</button>
+    <button data-view="rotas"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="5.5" r="2.5"/><path d="M8 18.5h6a4.5 4.5 0 0 0 0-9H10a4.5 4.5 0 0 1 0-9"/></svg></span> Rotas</button>
+    <button data-view="financeiro" id="navFinanceiro"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 7l2.5-3h13L21 7"/><path d="M12 11v6M9.5 12.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg></span> Financeiro</button>
+  </nav>
+  <div class="side-foot">
+    Dados migrados da planilha<br>Central de Controle · v1.2
+    <div class="user-badge">
+      <div class="who"><b id="userNome">—</b><span id="userRole">—</span></div>
+      <button onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+</aside>
+<main>
+  <div class="mobilenav">
+    <button data-view="dash" class="active">Dashboard</button>
+    <button data-view="mentorados">Mentorados</button>
+    <button data-view="sessoes">Sessões</button>
+    <button data-view="rotas">Rotas</button>
+    <button data-view="financeiro" id="navFinanceiroMobile">Financeiro</button>
+  </div>
+  <div id="app"><div class="skel-wrap" aria-busy="true" aria-label="Carregando dados"><div class="skel" style="height:34px;width:220px"></div><div class="skel" style="height:120px"></div><div class="skel-row"><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div></div><div class="skel" style="height:200px"></div></div></div>
+</main>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://matgynpiscyoshnjzolo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_S7cckKfundDsqo-s_qL2-A_lgPkY9Yl";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* lê um token do design system para uso onde só cabe cor literal (Chart.js) */
+const cssToken = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* Chart.js herda o tema escuro dos tokens em vez de usar os defaults claros */
+if(window.Chart){
+  Chart.defaults.font.family = "'Inter Tight', system-ui, sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = cssToken("--subtle-foreground");
+  Chart.defaults.borderColor = "rgba(254,254,254,.08)";
+  Chart.defaults.plugins.tooltip.backgroundColor = cssToken("--surface");
+  Chart.defaults.plugins.tooltip.borderColor = cssToken("--border-primary");
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.titleColor = cssToken("--foreground");
+  Chart.defaults.plugins.tooltip.bodyColor = cssToken("--muted-foreground");
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.plugins.tooltip.displayColors = false;
+}
+/* eixos no tema escuro, reaproveitado pelos dois gráficos */
+const chartScales = (extraY={}) => ({
+  x:{ grid:{display:false}, border:{color:"rgba(254,254,254,.08)"},
+      ticks:{color:cssToken("--subtle-foreground")} },
+  y:{ beginAtZero:true, grid:{color:"rgba(254,254,254,.06)"}, border:{display:false},
+      ticks:Object.assign({color:cssToken("--subtle-foreground")}, extraY) },
+});
+
+/* ---- gamificação: faixa derivada do faturamento acumulado real ---- */
+const NIVEIS = [
+  {nome:"Diamante", min:100000},
+  {nome:"Platina",  min:50000},
+  {nome:"Ouro",     min:20000},
+  {nome:"Prata",    min:10000},
+  {nome:"Bronze",   min:1},
+  {nome:"Iniciante",min:0},
+];
+const faturamentoAcumulado = id => FAT.filter(f=>f.mentorado_id===id).reduce((a,f)=>a+Number(f.valor||0),0);
+function nivelDe(total){
+  const i = NIVEIS.findIndex(n=>total>=n.min);
+  const atual = NIVEIS[i];
+  const proximo = i>0 ? NIVEIS[i-1] : null;
+  const base = atual.min || 0;
+  // trunca e limita a 99%: barra cheia só quando o nível realmente subiu
+  const pct = proximo ? Math.min(99, Math.floor((total-base)/(proximo.min-base)*100)) : 100;
+  return {atual, proximo, pct, total};
+}
+
+const MENTORES = ["Israel","Evaldo","Luan","Sergio","Diovani","Petare"];
+const ETAPAS = ["Diagnóstico de Negócio","Plano de Ação","Checkup 1","Checkup 2","Checkup 3","Checkup 4","Checkup 5","Checkup 6","Checkup 7","Checkup 8","Checkup 9","Checkup 10"];
+const ETAPA_ORD = Object.fromEntries(ETAPAS.map((e,i)=>[e,i+1]));
+const S_STATUS = ["Não iniciada","Agendada","Aguardando confirmação","Concluída","Bloqueada"];
+// Data de hoje no fuso da operação. toISOString() devolve UTC — entre 21h e 00h
+// em Brasília isso já virava o dia seguinte, adiantando vencimentos e "próximas".
+const HOJE = new Date().toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});
+
+let M = [], P = [], S = [];   // mentorados, parcelas, sessoes
+let ROTAS = [], MARCOS = [], MM = []; // rotas, marcos_definicao, mentorado_marcos
+let CANAIS_DB = [], MC = []; // canais (por rota), mentorado_canais
+let FAT = []; // faturamento_mensal
+let view = "dash";
+let filtro = {q:"", mentor:"", statusFin:""};
+let rotaAtual = null; // slug da rota selecionada na tela Rotas
+let myRole = null, myProfile = null;
+let loginMode = "signin"; // signin | signup
+
+/* ================= AUTH ================= */
+async function boot(){
+  const { data: { session } } = await db.auth.getSession();
+  if(session){ await afterLogin(session); }
+  else { showLogin(); }
+  db.auth.onAuthStateChange((event, session)=>{
+    if(event === "SIGNED_OUT"){ showLogin(); }
+  });
+}
+function showLogin(){
+  $("#loginScreen").style.display = "flex";
+  $("#mainShell").style.display = "none";
+}
+async function afterLogin(session){
+  const { data: profile, error } = await db.from("profiles").select("*").eq("id", session.user.id).single();
+  if(error || !profile){ toast("Perfil não encontrado. Contate o admin.", true); await db.auth.signOut(); return; }
+  myProfile = profile; myRole = profile.role;
+  $("#loginScreen").style.display = "none";
+  $("#mainShell").style.display = "flex";
+  $("#userNome").textContent = profile.nome || profile.email;
+  $("#userRole").textContent = myRole === "admin" ? "Administrador" : "Mentor";
+  if(myRole !== "admin"){
+    $("#navFinanceiro").style.display = "none";
+    $("#navFinanceiroMobile").style.display = "none";
+  }
+  await loadAll();
+}
+function toggleLoginMode(){
+  loginMode = loginMode === "signin" ? "signup" : "signin";
+  $("#loginTitle").textContent = loginMode === "signin" ? "Entrar" : "Criar conta";
+  $("#li_submit").textContent = loginMode === "signin" ? "Entrar" : "Criar conta";
+  $("#li_nome_field").style.display = loginMode === "signup" ? "block" : "none";
+  $("#li_switch").textContent = loginMode === "signin" ? "Ainda não tem conta? Criar conta" : "Já tem conta? Entrar";
+  $("#li_err").textContent = "";
+}
+async function doLogin(){
+  const email = $("#li_email").value.trim(), pass = $("#li_pass").value;
+  $("#li_err").textContent = "";
+  if(!email || !pass) { $("#li_err").textContent = "Preencha e-mail e senha."; return; }
+  if(loginMode === "signup"){
+    const nome = $("#li_nome").value.trim();
+    const { data, error } = await db.auth.signUp({ email, password: pass, options: { data: { nome } } });
+    if(error){ $("#li_err").textContent = error.message; return; }
+    if(data.session){ await afterLogin(data.session); }
+    else { $("#li_err").textContent = "Conta criada. Verifique seu e-mail para confirmar, depois faça login."; toggleLoginMode(); }
+  } else {
+    const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+    if(error){ $("#li_err").textContent = "E-mail ou senha inválidos."; return; }
+    await afterLogin(data.session);
+  }
+}
+window.doLogin = doLogin;
+window.toggleLoginMode = toggleLoginMode;
+window.doLogout = async function(){ await db.auth.signOut(); myRole=null; myProfile=null; showLogin(); };
+
+/* ================= DATA ================= */
+async function loadAll(){
+  const mentorQuery = myRole === "admin"
+    ? db.from("mentorados").select("*").order("data_fechamento",{ascending:true})
+    : db.from("mentorados_basic").select("*").order("data_fechamento",{ascending:true});
+  const parcelaQuery = myRole === "admin"
+    ? db.from("parcelas").select("*").order("numero")
+    : Promise.resolve({data:[], error:null});
+  const [m,p,s,r,md,mm,fat,cn,mc] = await Promise.all([
+    mentorQuery,
+    parcelaQuery,
+    db.from("sessoes").select("*").order("ordem"),
+    db.from("rotas").select("*").order("ordem"),
+    db.from("marcos_definicao").select("*").order("ordem"),
+    db.from("mentorado_marcos").select("*"),
+    db.from("faturamento_mensal").select("*"),
+    db.from("canais").select("*").order("ordem"),
+    db.from("mentorado_canais").select("*"),
+  ]);
+  if(m.error||p.error||s.error){ toast((m.error||p.error||s.error).message, true); return; }
+  M = m.data; P = p.data; S = s.data;
+  ROTAS = r.data||[]; MARCOS = md.data||[]; MM = mm.data||[];
+  FAT = fat.data||[]; CANAIS_DB = cn.data||[]; MC = mc.data||[];
+  if(!rotaAtual && ROTAS.length) rotaAtual = ROTAS[0].slug;
+  render();
+}
+const parcelasDe = id => P.filter(x=>x.mentorado_id===id);
+const sessoesDe  = id => S.filter(x=>x.mentorado_id===id).sort((a,b)=>a.ordem-b.ordem);
+const nome = id => (M.find(x=>x.id===id)||{}).nome || "—";
+
+/* ================= HELPERS ================= */
+const $ = s => document.querySelector(s);
+function fmtBRL(v){ return (v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+const fmtD = d => d ? d.split("-").reverse().join("/") : "—";
+const fmtDshort = d => d ? d.slice(8,10)+"/"+d.slice(5,7) : "—";
+/* Data com hierarquia: dia/mês em destaque, hora abaixo em tom secundário. */
+function cellDataHora(d, h){
+  if(!d) return `<span class="dh-vazio">sem data</span>`;
+  return `<span class="dh"><b>${fmtDshort(d)}</b>${h?`<span>${h.slice(0,5)}</span>`:""}</span>`;
+}
+function toast(msg, err=false){
+  const t = $("#toast"); t.textContent = msg; t.className = "toast"+(err?" err":""); t.style.display="block";
+  clearTimeout(t._h); t._h = setTimeout(()=>t.style.display="none", 3500);
+}
+function pillContrato(v){
+  if(v==="Assinado") return `<span class="pill green">Assinado</span>`;
+  if(v==="Aguardando assinatura") return `<span class="pill amber">Aguardando</span>`;
+  if(v==="Cancelou") return `<span class="pill red">Cancelou</span>`;
+  return `<span class="pill gray">${v||"Pendente"}</span>`;
+}
+function pillPgto(v){
+  if(v==="Pago") return `<span class="pill green">Pago</span>`;
+  if(v==="Pago parcial") return `<span class="pill amber">Parcial</span>`;
+  if(v==="Patrocinado") return `<span class="pill blue">Patrocinado</span>`;
+  if(v==="Cancelou") return `<span class="pill red">Cancelou</span>`;
+  return `<span class="pill gray">${v||"Em aberto"}</span>`;
+}
+function pillSess(v){
+  const map={ "Concluída":"green","Agendada":"blue","Aguardando confirmação":"amber","Bloqueada":"red","Não iniciada":"gray" };
+  return `<span class="pill ${map[v]||"gray"}">${v||"—"}</span>`;
+}
+function progBar(mid){
+  const ss = sessoesDe(mid);
+  if(!ss.length) return `<span class="pill gray">0 sessões</span>`;
+  return `<div class="prog">`+ss.map(s=>{
+    const c = s.status==="Concluída"?"done":s.status==="Agendada"?"sched":s.status==="Bloqueada"?"block":"";
+    return `<i class="${c}" title="${s.etapa}: ${s.status||"—"}"></i>`;
+  }).join("")+`</div>`;
+}
+function parcelaVencida(p){ return p.status!=="paga" && p.vencimento && p.vencimento < HOJE; }
+/* Situacao do mentorado: ativo | pausado | cancelado.
+   Fallback para o booleano antigo caso algum registro venha sem situacao. */
+function situacaoDe(m){ return (m&&m.situacao) || (m&&m.cancelado ? "cancelado" : "ativo"); }
+function ehAtivo(m){ return situacaoDe(m)==="ativo"; }
+function pillSituacao(m){
+  const st = situacaoDe(m);
+  if(st==="cancelado") return `<span class="pill red">cancelado</span>`;
+  if(st==="pausado") return `<span class="pill amber">pausado</span>`;
+  return "";
+}
+function esc(s){ return (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+function linkOr(v, label){ 
+  if(!v) return "";
+  const url = /^https?:/i.test(v) ? v : null;
+  return url ? `<a href="${esc(url)}" target="_blank">${label}</a>` : `<span style="color:var(--dim)" title="${esc(v)}">${label}*</span>`;
+}
+
+/* ================= ORDENAÇÃO GENÉRICA ================= */
+let sortState = {};
+function toggleSort(tableKey, field){
+  const cur = sortState[tableKey];
+  if(cur && cur.field===field){ cur.dir = cur.dir==="asc"?"desc":"asc"; }
+  else { sortState[tableKey] = {field, dir:"asc"}; }
+  render();
+}
+function sortArrow(tableKey, field){
+  const s = sortState[tableKey];
+  if(!s || s.field!==field) return "";
+  return `<span class="arrow">${s.dir==="asc"?"▲":"▼"}</span>`;
+}
+function th(tableKey, field, label, extraClass){
+  return `<th class="sortable ${extraClass||""}" onclick="toggleSort('${tableKey}','${field}')">${label}${sortArrow(tableKey,field)}</th>`;
+}
+function applySort(arr, tableKey, getters, defaultField, defaultDir){
+  const s = sortState[tableKey] || {field:defaultField, dir:defaultDir||"asc"};
+  const getter = getters[s.field];
+  if(!getter) return arr;
+  const sorted = [...arr].sort((a,b)=>{
+    const va = getter(a), vb = getter(b);
+    if(va==null && vb==null) return 0;
+    if(va==null) return 1;
+    if(vb==null) return -1;
+    if(va<vb) return -1;
+    if(va>vb) return 1;
+    return 0;
+  });
+  if(s.dir==="desc") sorted.reverse();
+  return sorted;
+}
+
+/* ================= RENDER ROUTER ================= */
+function setView(v){
+  view=v;
+  document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
+  render();
+}
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>setView(b.dataset.view));
+function render(){
+  if(view==="dash") renderDash();
+  else if(view==="mentorados") renderMentorados();
+  else if(view==="sessoes") renderSessoes();
+  else if(view==="rotas") renderRotas();
+  else if(view==="financeiro" && myRole==="admin") renderFinanceiro();
+  else { view="dash"; renderDash(); }
+}
+
+/* ================= DASHBOARD ================= */
+function renderDash(){
+  const ativos = M.filter(ehAtivo);
+  const concl = S.filter(s=>s.status==="Concluída").length;
+  const agend = S.filter(s=>s.status==="Agendada");
+  const aguardConf = S.filter(s=>s.status==="Aguardando confirmação").length;
+  const contratosPend = ativos.filter(m=>m.contrato_status!=="Assinado").length;
+  const vencidas = P.filter(p=>parcelaVencida(p) && ehAtivo(M.find(m=>m.id===p.mentorado_id)));
+  const semSessao30 = ativos.filter(m=>{
+    const ss = sessoesDe(m.id).filter(s=>s.status==="Concluída"&&s.data);
+    if(!ss.length) return false;
+    const last = ss.map(s=>s.data).sort().pop();
+    return (new Date(HOJE)-new Date(last))/864e5 > 30 && !sessoesDe(m.id).some(s=>s.status==="Agendada");
+  });
+
+  // matriz mentor x etapa
+  const etapasAtivas = [...new Set(S.map(s=>s.etapa))].sort((a,b)=>ETAPA_ORD[a]-ETAPA_ORD[b]);
+  const matriz = MENTORES.map(mt=>{
+    const row = etapasAtivas.map(et=>S.filter(s=>s.mentor===mt&&s.etapa===et&&s.status==="Concluída").length);
+    return {mt,row,tot:row.reduce((a,b)=>a+b,0)};
+  }).filter(r=>r.tot>0).sort((a,b)=>b.tot-a.tot);
+
+  // Cinto de segurança: "próximas" nunca mostra data passada, mesmo que algo
+  // fique preso em "Agendada" no banco. Ordena por data + hora.
+  const proximas = S.filter(s=>s.status==="Agendada" && s.data && s.data>=HOJE)
+    .sort((a,b)=>((a.data+(a.hora||"99"))<(b.data+(b.hora||"99")))?-1:1).slice(0,8);
+
+  const isAdmin = myRole === "admin";
+
+  // Progressão por faturamento: só entra quem tem faturamento real registrado.
+  // Nada é inventado — mentorado sem registro simplesmente não aparece na seção.
+  const comFaturamento = ativos
+    .map(m=>({m, nv: nivelDe(faturamentoAcumulado(m.id))}))
+    .filter(x=>x.nv.total>0)
+    .sort((a,b)=>b.nv.total-a.nv.total);
+
+  // Itens de atenção: financeiros só para admin; risco de estagnação vale para todos
+  const attnItems = [
+    isAdmin ? {label:"Contratos pendentes de assinatura", count:contratosPend, view:null} : null,
+    isAdmin ? {label:"Parcelas vencidas em aberto", count:vencidas.length, view:"financeiro"} : null,
+    {label:"Mentorados sem sessão há +30 dias", count:semSessao30.length, view:null, anchor:"risco"},
+    aguardConf ? {label:"Sessões aguardando confirmação", count:aguardConf, view:"sessoes"} : null,
+  ].filter(Boolean);
+  const temAtencao = attnItems.some(i=>i.count>0);
+
+  $("#app").innerHTML = `
+  <div class="topbar"><div><h2>Dashboard</h2><div class="sub">Visão geral da operação · ${ativos.length} mentorados ativos</div></div>
+  ${isAdmin?'<button class="btn" onclick="openNovoMentorado()">+ Novo mentorado</button>':''}</div>
+
+  <div class="panel ${temAtencao?"attention":""}">
+    <h3>${temAtencao?"⚠ Precisa de atenção agora":"✓ Tudo em ordem"}</h3>
+    ${attnItems.map(i=>`<div class="attn-item ${i.count?"":"ok"}">
+      <div class="lbl"><span class="dot"></span>${i.label}</div>
+      <div class="rowflex" style="gap:14px">
+        <span class="cnt">${i.count}</span>
+        ${i.count && i.view?`<a onclick="setView('${i.view}')">ver</a>`:''}
+        ${i.count && i.anchor?`<a onclick="document.getElementById('${i.anchor}')?.scrollIntoView({behavior:'smooth'})">ver</a>`:''}
+      </div>
+    </div>`).join("")}
+  </div>
+
+  <div class="section-label">Números gerais</div>
+  <div class="cards quiet">
+    <div class="card"><div class="k">Mentorados ativos</div><div class="v">${ativos.length}</div><div class="d">${M.filter(m=>situacaoDe(m)==="pausado").length} pausado(s) &middot; ${M.filter(m=>situacaoDe(m)==="cancelado").length} cancelado(s)</div></div>
+    <div class="card"><div class="k">Sessões concluídas</div><div class="v">${concl}</div><div class="d">no total</div></div>
+    <div class="card"><div class="k">Agendadas</div><div class="v">${agend.length}</div><div class="d">próximas sessões</div></div>
+  </div>
+
+  ${comFaturamento.length?`
+  <div class="section-label">Progressão por faturamento</div>
+  <div class="niveis-legend">${NIVEIS.slice().reverse().map(n=>`<span class="niv-chip"><i class="niv-dot"></i>${n.nome}${n.min>0?` · ${n.min>=1000?(n.min/1000)+"k":n.min}`:""}</span>`).join("")}</div>
+  <div class="panel detail">
+    ${comFaturamento.map(({m,nv})=>`
+    <div class="niv-row" onclick="openMentorado('${m.id}','completo')">
+      <div class="niv-who">
+        <span class="niv-nome">${esc(m.nome)}</span>
+        <span class="pill green niv-badge">${nv.atual.nome}</span>
+      </div>
+      <div class="niv-bar" role="img" aria-label="${nv.pct}% rumo a ${nv.proximo?nv.proximo.nome:"nível máximo"}">
+        <i style="width:${nv.pct}%"></i>
+      </div>
+      <div class="niv-val">
+        <b>${fmtBRL(nv.total)}</b>
+        <span>${nv.proximo?`faltam ${fmtBRL(nv.proximo.min-nv.total)} para ${nv.proximo.nome}`:"nível máximo atingido"}</span>
+      </div>
+    </div>`).join("")}
+  </div>`:""}
+
+  <div class="section-label">Detalhe analítico</div>
+  <div class="grid2">
+    <div class="panel detail">
+      <h3>Sessões concluídas por mentor</h3>
+      <div style="overflow-x:auto"><table><thead><tr><th>Mentor</th>${etapasAtivas.map(e=>`<th class="num" title="${e}">${e.replace("Diagnóstico de Negócio","Diag.").replace("Plano de Ação","Plano").replace("Checkup ","C")}</th>`).join("")}<th class="num">Total</th></tr></thead>
+      <tbody>${matriz.map(r=>`<tr><td class="mentor-chip">${r.mt}</td>${r.row.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--green);font-weight:700">${r.tot}</td></tr>`).join("")}</tbody></table></div>
+    </div>
+    <div class="panel detail">
+      <h3>Próximas sessões agendadas</h3>
+      <div style="overflow-x:auto">
+      ${proximas.length ? `<table><thead><tr><th>Data</th><th>Mentorado</th><th>Etapa</th><th>Mentor</th></tr></thead><tbody>
+      ${proximas.map(s=>`<tr class="click" onclick="openMentorado('${s.mentorado_id}','sessoes')"><td>${cellDataHora(s.data, s.hora)}</td><td>${esc(nome(s.mentorado_id))}</td><td>${esc(s.etapa)}</td><td>${esc(s.mentor||"—")}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Nenhuma sessão agendada. Agende pela ficha do mentorado.</div>`}
+      </div>
+    </div>
+  </div>
+  ${semSessao30.length?`<div class="panel detail" id="risco"><h3>Mentorados sem sessão há +30 dias</h3><div style="overflow-x:auto"><table><thead><tr><th>Mentorado</th><th>Última sessão</th><th></th></tr></thead><tbody>
+  ${semSessao30.map(m=>{
+    const last = sessoesDe(m.id).filter(s=>s.status==="Concluída"&&s.data).map(s=>s.data).sort().pop();
+    return `<tr class="click" onclick="openMentorado('${m.id}','sessoes')"><td>${esc(m.nome)}</td><td class="mono">${fmtD(last)}</td><td><span class="pill amber">Contatar</span></td></tr>`;
+  }).join("")}</tbody></table></div></div>`:""}`;
+}
+
+/* ================= MENTORADOS ================= */
+function renderMentorados(){
+  let list = M.slice();
+  if(filtro.q) list = list.filter(m=>m.nome.toLowerCase().includes(filtro.q.toLowerCase()));
+  if(filtro.statusFin==="contrato") list = list.filter(m=>ehAtivo(m) && m.contrato_status!=="Assinado");
+  if(filtro.statusFin==="ativos") list = list.filter(ehAtivo);
+  if(filtro.statusFin==="pausados") list = list.filter(m=>situacaoDe(m)==="pausado");
+
+  const isAdmin = myRole === "admin";
+  list = applySort(list, "mentorados", {
+    nome: m=>m.nome.toLowerCase(),
+    fechamento: m=>m.data_fechamento||"",
+    contrato: m=>m.contrato_status||"",
+    sessoes: m=>sessoesDe(m.id).filter(s=>s.status==="Concluída").length,
+  }, "nome", "asc");
+
+  $("#app").innerHTML = `
+  <div class="topbar"><div><h2>Mentorados</h2><div class="sub">${list.length} de ${M.length} registro(s) · dados financeiros ficam em Financeiro</div></div>
+  ${isAdmin?'<button class="btn" onclick="openNovoMentorado()">+ Novo mentorado</button>':''}</div>
+  <div class="panel" style="padding:14px 16px">
+  <div class="filters" style="margin-bottom:0">
+    <input type="search" placeholder="Buscar por nome…" value="${esc(filtro.q)}" oninput="filtro.q=this.value;renderMentorados()">
+    <select onchange="filtro.statusFin=this.value;renderMentorados()">
+      <option value="">Todos</option>
+      <option value="ativos" ${filtro.statusFin==="ativos"?"selected":""}>Somente ativos</option>
+      <option value="pausados" ${filtro.statusFin==="pausados"?"selected":""}>Somente pausados</option>
+      ${isAdmin?`<option value="contrato" ${filtro.statusFin==="contrato"?"selected":""}>Contrato pendente</option>`:''}
+    </select>
+  </div>
+  </div>
+  <div class="panel" style="padding:6px 10px;overflow-x:auto">
+  <table><thead><tr>${th("mentorados","nome","Mentorado")}${th("mentorados","fechamento","Fechamento")}${isAdmin?th("mentorados","contrato","Contrato"):''}${th("mentorados","sessoes","Sessões")}</tr></thead><tbody>
+  ${list.map(m=>{
+    return `<tr class="click" onclick="openMentorado('${m.id}','completo')" ${!ehAtivo(m)?'style="opacity:.55"':""}>
+      <td style="font-weight:600">${esc(m.nome)} ${pillSituacao(m)}</td>
+      <td class="mono">${fmtD(m.data_fechamento)}</td>
+      ${isAdmin?`<td>${pillContrato(m.contrato_status)}</td>`:''}
+      <td>${progBar(m.id)}</td>
+    </tr>`;
+  }).join("")}</tbody></table>
+  ${!list.length?'<div class="empty">Nenhum mentorado encontrado com esses filtros.</div>':""}
+  </div>`;
+}
+
+/* ================= SESSÕES (agenda) ================= */
+function renderSessoes(){
+  let list = S.slice();
+  if(filtro.mentor) list = list.filter(s=>s.mentor===filtro.mentor);
+  const grupos = {
+    "agendadas": {titulo:"Agendadas", itens: list.filter(s=>s.status==="Agendada")},
+    "concluidas": {titulo:"Concluídas (últimas 30)", itens: list.filter(s=>s.status==="Concluída").slice(0,30)},
+    "bloqueadas": {titulo:"Bloqueadas", itens: list.filter(s=>s.status==="Bloqueada")},
+  };
+  const getters = {
+    data: s=>s.data||"",
+    mentorado: s=>nome(s.mentorado_id).toLowerCase(),
+    etapa: s=>ETAPA_ORD[s.etapa]||99,
+    mentor: s=>s.mentor||"",
+  };
+  $("#app").innerHTML = `
+  <div class="topbar"><div><h2>Sessões</h2><div class="sub">${S.filter(s=>s.status==="Concluída").length} concluídas · ${S.filter(s=>s.status==="Agendada").length} agendadas</div></div></div>
+  <div class="filters"><select onchange="filtro.mentor=this.value;renderSessoes()"><option value="">Todos os mentores</option>${MENTORES.map(m=>`<option ${filtro.mentor===m?"selected":""}>${m}</option>`).join("")}</select></div>
+  ${Object.entries(grupos).map(([key,{titulo,itens}])=>{
+    const tableKey = "sessoes_"+key;
+    const g = applySort(itens, tableKey, getters, "data", key==="concluidas"?"desc":"asc");
+    return `
+  <div class="panel"><h3>${titulo} · ${g.length}</h3>
+  ${g.length?`<div style="overflow-x:auto"><table><thead><tr>${th(tableKey,"data","Data")}${th(tableKey,"mentorado","Mentorado")}${th(tableKey,"etapa","Etapa")}${th(tableKey,"mentor","Mentor")}<th>Status</th><th>Links</th></tr></thead><tbody>
+  ${g.map(s=>`<tr class="click" onclick="openMentorado('${s.mentorado_id}','sessoes')">
+    <td>${cellDataHora(s.data, s.hora)}</td>
+    <td>${esc(nome(s.mentorado_id))}</td><td>${esc(s.etapa)}</td><td>${esc(s.mentor||"—")}</td>
+    <td>${pillSess(s.status)}</td>
+    <td class="lk">${[linkOr(s.link_meet,"meet"),linkOr(s.link_gravacao,"gravação"),linkOr(s.link_anotacoes,"anotações")].filter(Boolean).join(" · ")||"—"}</td>
+  </tr>`).join("")}</tbody></table></div>`:`<div class="empty">Nada por aqui.</div>`}
+  </div>`;
+  }).join("")}`;
+}
+
+/* ================= FINANCEIRO ================= */
+function renderFinanceiro(){
+  const ativos = M.filter(ehAtivo);
+  let rows = ativos.map(m=>{
+    const ps = parcelasDe(m.id);
+    return {m, ps, pagas: ps.filter(p=>p.status==="paga").length, vencidas: ps.filter(parcelaVencida)};
+  });
+  const totVenc = rows.reduce((a,r)=>a+r.vencidas.length,0);
+  let proxVenc = P.filter(p=>p.status!=="paga"&&p.vencimento&&p.vencimento>=HOJE&&ehAtivo(M.find(m=>m.id===p.mentorado_id)));
+
+  rows = applySort(rows, "fin_situacao", {
+    nome: r=>r.m.nome.toLowerCase(),
+    contrato: r=>r.m.contrato_status||"",
+    entrada: r=>r.m.entrada_status||"",
+    restante: r=>r.m.restante_status||"",
+    parcelas: r=>r.ps.length?r.pagas/r.ps.length:-1,
+  }, "nome", "asc");
+  proxVenc = applySort(proxVenc, "fin_proxvenc", {
+    vence: p=>p.vencimento,
+    mentorado: p=>nome(p.mentorado_id).toLowerCase(),
+  }, "vence", "asc").slice(0,10);
+
+  $("#app").innerHTML = `
+  <div class="topbar"><div><h2>Financeiro</h2><div class="sub">Contratos, entradas e parcelas</div></div></div>
+  <div class="cards">
+    <div class="card ${totVenc?"bad":""}"><div class="k">Parcelas vencidas</div><div class="v">${totVenc}</div><div class="d">requerem cobrança</div></div>
+    <div class="card alert"><div class="k">Restante em aberto</div><div class="v">${ativos.filter(m=>m.restante_status==="Ainda não").length}</div><div class="d">+ ${ativos.filter(m=>m.restante_status==="Pago parcial").length} pagos parcialmente</div></div>
+    <div class="card"><div class="k">Contratos assinados</div><div class="v">${ativos.filter(m=>m.contrato_status==="Assinado").length}<span style="font-size:16px;color:var(--dim)">/${ativos.length}</span></div><div class="d">${ativos.filter(m=>m.contrato_status!=="Assinado").length} pendentes</div></div>
+  </div>
+  <div class="grid2">
+  <div class="panel"><h3>Cobranças com parcela vencida</h3>
+  ${totVenc?`<table><thead><tr><th>Mentorado</th><th>Parcela</th><th>Venceu em</th></tr></thead><tbody>
+  ${rows.filter(r=>r.vencidas.length).map(r=>r.vencidas.map(p=>`<tr class="click" onclick="openMentorado('${r.m.id}','financeiro')"><td>${esc(r.m.nome)}</td><td class="mono">#${p.numero}</td><td><span class="val-neg">${fmtD(p.vencimento)}</span> <span class="pill red">Vencida</span></td></tr>`).join("")).join("")}</tbody></table>`:`<div class="empty">Nenhuma parcela vencida. 🎯</div>`}
+  </div>
+  <div class="panel"><h3>Próximos vencimentos</h3>
+  ${proxVenc.length?`<table><thead><tr>${th("fin_proxvenc","vence","Vence em")}${th("fin_proxvenc","mentorado","Mentorado")}<th>Parcela</th></tr></thead><tbody>
+  ${proxVenc.map(p=>`<tr class="click" onclick="openMentorado('${p.mentorado_id}','financeiro')"><td class="mono">${fmtD(p.vencimento)}</td><td>${esc(nome(p.mentorado_id))}</td><td class="mono">#${p.numero}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">Sem vencimentos futuros cadastrados.</div>`}
+  </div></div>
+  <div class="panel" style="overflow-x:auto"><h3>Situação por mentorado</h3>
+  <table><thead><tr>${th("fin_situacao","nome","Mentorado")}${th("fin_situacao","contrato","Contrato")}${th("fin_situacao","entrada","Entrada")}<th>Forma</th>${th("fin_situacao","restante","Restante")}<th>Forma</th>${th("fin_situacao","parcelas","Parcelas pagas")}</tr></thead><tbody>
+  ${rows.map(r=>`<tr class="click" onclick="openMentorado('${r.m.id}','financeiro')">
+    <td style="font-weight:600">${esc(r.m.nome)}</td>
+    <td>${pillContrato(r.m.contrato_status)}</td>
+    <td>${pillPgto(r.m.entrada_status)}</td><td style="color:var(--mut)">${esc(r.m.entrada_forma_pgto||"—")}</td>
+    <td>${pillPgto(r.m.restante_status)}</td><td style="color:var(--mut)">${esc(r.m.restante_forma_pgto||"—")}</td>
+    <td class="mono">${r.ps.length?`${r.pagas}/${r.ps.length}`:"—"}</td>
+  </tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ================= ROTAS / MARCOS ================= */
+let rotaMentoradoId = null;
+const MESES_PT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const RICO_STATUS = ["NAO_INICIADO","EM_ANDAMENTO","BLOQUEADO","AGUARDANDO_VALIDACAO","CONCLUIDO","NAO_APLICAVEL"];
+function pillMarco(status, modelo){
+  if(modelo==="simples"){
+    if(status==="passou") return `<span class="pill green">Passou</span>`;
+    return `<span class="pill gray">Não passou</span>`;
+  }
+  const map={CONCLUIDO:"green",EM_ANDAMENTO:"blue",BLOQUEADO:"red",AGUARDANDO_VALIDACAO:"amber",NAO_APLICAVEL:"gray",NAO_INICIADO:"gray"};
+  const label={CONCLUIDO:"Concluído",EM_ANDAMENTO:"Em andamento",BLOQUEADO:"Bloqueado",AGUARDANDO_VALIDACAO:"Aguard. validação",NAO_APLICAVEL:"Não aplicável",NAO_INICIADO:"Não iniciado"};
+  return `<span class="pill ${map[status]||"gray"}">${label[status]||status}</span>`;
+}
+function ultimosMeses(n){
+  const out=[]; const d=new Date();
+  d.setDate(1);
+  for(let i=0;i<n;i++){ out.unshift(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`); d.setMonth(d.getMonth()-1); }
+  return out;
+}
+let canalAtual = null; // id do canal selecionado dentro da rota
+let canaisAbertos = false; // estado da sanfona de canais
+function renderRotas(){
+  const rota = ROTAS.find(r=>r.slug===rotaAtual) || ROTAS[0];
+  if(!rota){ $("#app").innerHTML = `<div class="empty">Nenhuma rota cadastrada.</div>`; return; }
+  const marcos = MARCOS.filter(mo=>mo.rota_id===rota.id).sort((a,b)=>a.ordem-b.ordem);
+  const meses = ultimosMeses(12);
+  const concluidoStatus = rota.modelo==="simples" ? "passou" : "CONCLUIDO";
+  const series = marcos.map(mo=>({
+    nome: mo.nome,
+    dados: meses.map(mes => MM.filter(x=>x.marco_id===mo.id && x.status===concluidoStatus && x.data && x.data.slice(0,7)===mes).length)
+  }));
+  const ativos = M.filter(ehAtivo);
+  const sel = rotaMentoradoId || (ativos[0] && ativos[0].id);
+  const marcosDoSel = sel ? marcos.map(mo=>({marco:mo, mm: MM.find(x=>x.mentorado_id===sel && x.marco_id===mo.id)})) : [];
+
+  // Canais desta rota (sanfona quando há mais de um)
+  const canaisDaRota = CANAIS_DB.filter(c=>c.rota_id===rota.id).sort((a,b)=>a.ordem-b.ordem);
+  if(!canaisDaRota.some(c=>c.id===canalAtual)) canalAtual = canaisDaRota[0] ? canaisDaRota[0].id : null;
+  const canalObj = canaisDaRota.find(c=>c.id===canalAtual);
+  const temMultiplosCanais = canaisDaRota.length > 1;
+
+  // Canal de venda do mentorado selecionado (só faz sentido quando há mais de um canal na rota)
+  const canalDoMentorado = sel ? MC.find(x=>x.mentorado_id===sel && x.rota_id===rota.id) : null;
+
+  // Faturamento do mentorado selecionado, neste canal
+  const registrosFat = (sel && canalObj) ? FAT.filter(f=>f.mentorado_id===sel && f.canal_id===canalObj.id) : [];
+  const totalMesAtual = registrosFat.filter(f=>f.mes.slice(0,7)===meses[meses.length-1]).reduce((a,f)=>a+Number(f.valor),0);
+  const totalMesAnterior = registrosFat.filter(f=>f.mes.slice(0,7)===meses[meses.length-2]).reduce((a,f)=>a+Number(f.valor),0);
+  const variacao = totalMesAnterior>0 ? ((totalMesAtual-totalMesAnterior)/totalMesAnterior*100) : null;
+  const dadosFatChart = meses.map(mes => registrosFat.filter(f=>f.mes.slice(0,7)===mes).reduce((a,f)=>a+Number(f.valor),0));
+  const registrosFatOrdenados = applySort(registrosFat, "rota_fat", {
+    mes: f=>f.mes,
+    valor: f=>Number(f.valor),
+  }, "mes", "desc");
+
+  $("#app").innerHTML = `
+  <div class="topbar"><div><h2>Rotas</h2><div class="sub">Marcos, canais e faturamento por rota</div></div>
+  <select onchange="rotaAtual=this.value;canalAtual=null;render()">${ROTAS.map(r=>`<option value="${r.slug}" ${r.slug===rota.slug?"selected":""}>${esc(r.nome)}</option>`).join("")}</select></div>
+
+  ${temMultiplosCanais?`
+  <div class="panel" style="padding:14px 16px">
+    <div class="rowflex" style="justify-content:space-between;cursor:pointer" onclick="canaisAbertos=!canaisAbertos;renderRotas()">
+      <h3 style="margin:0">Canal de ${esc(rota.nome)} · ${esc(canalObj?canalObj.nome:"—")}</h3>
+      <span class="arrow">${canaisAbertos?"▲":"▼"}</span>
+    </div>
+    ${canaisAbertos?`<div class="rowflex mt8">${canaisDaRota.map(c=>`<button class="btn sm ${c.id===canalAtual?"":"ghost"}" onclick="canalAtual='${c.id}';canaisAbertos=false;renderRotas()">${esc(c.nome)}</button>`).join("")}</div>`:''}
+  </div>`:''}
+
+  <div class="panel"><h3>Evolução mensal de marcos · ${esc(rota.nome)}</h3>
+  ${marcos.length?`<div style="position:relative;height:280px"><canvas id="rotaChart" role="img" aria-label="Linha do tempo mensal de marcos concluídos na rota ${esc(rota.nome)}"></canvas></div>`
+    :`<div class="empty">Marcos desta rota ainda não foram definidos.</div>`}
+  </div>
+
+  <div class="panel">
+    <h3>Progresso por mentorado</h3>
+    <div class="filters"><select id="rotaSelMentorado" onchange="rotaMentoradoId=this.value;renderRotas()">${ativos.map(m=>`<option value="${m.id}" ${m.id===sel?"selected":""}>${esc(m.nome)}</option>`).join("")}</select></div>
+    ${temMultiplosCanais?`<div class="rowflex" style="margin-bottom:12px">
+      <span class="section-label" style="margin:0">Canal de venda deste mentorado:</span>
+      <select id="mcCanalSel">${canaisDaRota.map(c=>`<option value="${c.id}" ${(canalDoMentorado?canalDoMentorado.canal_id:canalObj?.id)===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select>
+      <button class="btn sm ghost" onclick="salvarCanalMentorado('${sel}','${rota.id}')">Salvar</button>
+    </div>`:''}
+    ${marcosDoSel.length?`<div class="stepper">${marcosDoSel.map(({marco,mm},i)=>{
+      const st = mm?mm.status:(rota.modelo==="simples"?"nao_passou":"NAO_INICIADO");
+      const done = st==="passou" || st==="CONCLUIDO";
+      const atual = !done && (st==="EM_ANDAMENTO" || st==="AGUARDANDO_VALIDACAO" || st==="BLOQUEADO");
+      const cls = done?"done":atual?"atual":"futuro";
+      const ultimo = i===marcosDoSel.length-1;
+      return `<div class="step ${cls} ${ultimo?"last":""}">
+        <div class="step-mark" aria-hidden="true">${done?"✓":atual?"●":""}</div>
+        <div class="step-body">
+          <div class="step-nome">${esc(marco.nome)}</div>
+          <div class="step-meta">${pillMarco(st, rota.modelo)}${mm&&mm.data?`<span class="step-data">${fmtD(mm.data)}</span>`:""}${mm&&mm.progresso!=null?`<span class="step-data">${mm.progresso}%</span>`:""}</div>
+        </div>
+        <button class="btn sm ghost" onclick="openMarco('${marco.id}','${sel}')">Marcar</button>
+      </div>`;
+    }).join("")}</div>`:`<div class="empty">Nenhum mentorado ativo.</div>`}
+  </div>
+
+  ${canalObj?`
+  <div class="section-label">Faturamento · ${esc(canalObj.nome)}</div>
+  <div class="cards quiet">
+    <div class="card"><div class="k">Faturamento do mês</div><div class="v">${fmtBRL(totalMesAtual)}</div><div class="d">${variacao===null?"sem base de comparação":(variacao>=0?`+${variacao.toFixed(0)}% vs mês anterior`:`${variacao.toFixed(0)}% vs mês anterior`)}</div></div>
+    <div class="card"><div class="k">Mês anterior</div><div class="v">${fmtBRL(totalMesAnterior)}</div><div class="d">referência de comparação</div></div>
+  </div>
+  <div class="panel"><h3>Evolução mensal · ${esc(nome(sel))}</h3>
+  <div style="position:relative;height:220px"><canvas id="fatChart" role="img" aria-label="Faturamento mensal de ${esc(nome(sel))} no canal ${esc(canalObj.nome)}"></canvas></div>
+  </div>
+  <div class="panel"><h3>Registrar faturamento</h3>
+  <div class="fgrid fat-form">
+    <div class="f"><label>Mês</label><input id="ft_mes" type="month" value="${meses[meses.length-1]}"></div>
+    <div class="f"><label>Valor (R$)</label><input id="ft_valor" type="number" min="0" step="0.01" placeholder="0,00"></div>
+    <div class="f" style="display:flex;align-items:flex-end"><button class="btn" style="width:100%" onclick="salvarFaturamento('${sel}','${canalObj.id}')">Salvar</button></div>
+  </div>
+  </div>
+  <div class="panel" style="overflow-x:auto"><h3>Registros</h3>
+  <table><thead><tr>${th("rota_fat","mes","Mês")}${th("rota_fat","valor","Valor","num")}<th></th></tr></thead><tbody>
+  ${registrosFatOrdenados.length?registrosFatOrdenados.map(f=>`<tr>
+    <td class="mono">${MESES_PT[+f.mes.slice(5,7)-1]}/${f.mes.slice(2,4)}</td>
+    <td class="num mono">${fmtBRL(f.valor)}</td>
+    <td>${myRole==="admin"?`<button class="btn sm ghost" onclick="excluirFaturamento('${f.id}')">Excluir</button>`:''}</td>
+  </tr>`).join(""):`<tr><td colspan="3"><div class="empty">Nenhum registro ainda.</div></td></tr>`}
+  </tbody></table></div>`:''}`;
+
+  if(marcos.length && window.Chart){
+    const ctx = document.getElementById("rotaChart");
+    if(ctx._chart) ctx._chart.destroy();
+    const cove = [cssToken("--primary"),"#4D9FE0","#E8A13C","#E5484D","#7FD8A8","#C08CE8","#5DCAA5","#EF9F27"];
+    ctx._chart = new Chart(ctx, {
+      type:"line",
+      data:{ labels: meses.map(m=>MESES_PT[+m.slice(5,7)-1]+"/"+m.slice(2,4)),
+        datasets: series.map((s,i)=>({label:s.nome, data:s.dados, borderColor:cove[i%cove.length], backgroundColor:cove[i%cove.length], borderWidth:2, tension:.25, pointRadius:3, pointHoverRadius:5})) },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:chartScales({precision:0}) }
+    });
+  }
+  if(canalObj && window.Chart){
+    const ctx2 = document.getElementById("fatChart");
+    if(ctx2._chart) ctx2._chart.destroy();
+    ctx2._chart = new Chart(ctx2, {
+      type:"bar",
+      data:{ labels: meses.map(m=>MESES_PT[+m.slice(5,7)-1]+"/"+m.slice(2,4)), datasets:[{data:dadosFatChart, backgroundColor:cssToken("--primary"), borderRadius:4, maxBarThickness:34}] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        scales:chartScales({callback:v=>"R$ "+(v>=1000?(v/1000)+"k":v)}),
+        plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>fmtBRL(c.raw)}}} }
+    });
+  }
+}
+window.renderRotas = renderRotas;
+window.salvarCanalMentorado = async function(mentoradoId, rotaId){
+  const canalId = $("#mcCanalSel").value;
+  const {error} = await db.from("mentorado_canais").upsert(
+    {mentorado_id:mentoradoId, rota_id:rotaId, canal_id:canalId},
+    {onConflict:"mentorado_id,rota_id"}
+  );
+  if(error) return toast(error.message,true);
+  toast("Canal de venda salvo"); canalAtual = canalId; await loadAll(); renderRotas();
+}
+window.salvarFaturamento = async function(mentoradoId, canalId){
+  const mesInput = $("#ft_mes").value;
+  if(!mesInput) return toast("Selecione o mês",true);
+  const valor = parseFloat($("#ft_valor").value||"0");
+  const {error} = await db.from("faturamento_mensal").upsert({
+    mentorado_id: mentoradoId, mes: mesInput+"-01", canal_id: canalId, valor
+  }, {onConflict:"mentorado_id,mes,canal_id"});
+  if(error) return toast(error.message,true);
+  toast("Faturamento registrado"); await loadAll(); renderRotas();
+}
+window.excluirFaturamento = async function(id){
+  if(!confirm("Excluir este registro?")) return;
+  const {error} = await db.from("faturamento_mensal").delete().eq("id",id);
+  if(error) return toast(error.message,true);
+  toast("Registro excluído"); await loadAll(); renderRotas();
+}
+
+window.openMarco = function(marcoId, mentoradoId){
+  const rota = ROTAS.find(r=>r.slug===rotaAtual);
+  const marco = MARCOS.find(x=>x.id===marcoId);
+  const mm = MM.find(x=>x.mentorado_id===mentoradoId && x.marco_id===marcoId) || {};
+  const box = $("#modalBox"); box.className="modal narrow";
+  const isSimples = rota.modelo==="simples";
+  box.innerHTML = `
+  <header><h3>${esc(marco.nome)} · ${esc(nome(mentoradoId))}</h3><button class="x" onclick="closeModal()">✕</button></header>
+  <div class="fgrid" style="grid-template-columns:1fr 1fr">
+    <div class="f"><label>Status</label><select id="mk_status">
+      ${(isSimples?["nao_passou","passou"]:RICO_STATUS).map(s=>`<option value="${s}" ${((mm.status)||(isSimples?"nao_passou":"NAO_INICIADO"))===s?"selected":""}>${isSimples?(s==="passou"?"Passou":"Não passou"):s}</option>`).join("")}
+    </select></div>
+    <div class="f"><label>Data</label><input id="mk_data" type="date" value="${mm.data||""}"></div>
+  </div>
+  ${!isSimples?`
+  <div class="fgrid" style="grid-template-columns:1fr">
+    <div class="f"><label>Progresso (%)</label><input id="mk_prog" type="number" min="0" max="100" value="${mm.progresso??""}"></div>
+    <div class="f"><label>Critérios pendentes (um por linha)</label><textarea id="mk_crit" rows="3">${(mm.criterios_pendentes||[]).join("\n")}</textarea></div>
+    <div class="f"><label>Bloqueios (um por linha)</label><textarea id="mk_bloq" rows="2">${(mm.bloqueios||[]).join("\n")}</textarea></div>
+    <div class="f"><label>Próxima ação</label><input id="mk_acao" value="${esc(mm.proxima_acao)}"></div>
+  </div>`:''}
+  <button class="btn" onclick="salvarMarco('${marcoId}','${mentoradoId}')">Salvar</button>`;
+  $("#overlay").classList.add("open");
+}
+window.salvarMarco = async function(marcoId, mentoradoId){
+  const rota = ROTAS.find(r=>r.slug===rotaAtual);
+  const isSimples = rota.modelo==="simples";
+  const payload = {
+    mentorado_id: mentoradoId, marco_id: marcoId,
+    status: $("#mk_status").value,
+    data: $("#mk_data").value || null,
+  };
+  if(!isSimples){
+    payload.progresso = $("#mk_prog").value ? +$("#mk_prog").value : null;
+    payload.criterios_pendentes = $("#mk_crit").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    payload.bloqueios = $("#mk_bloq").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    payload.proxima_acao = $("#mk_acao").value.trim() || null;
+  }
+  const {error} = await db.from("mentorado_marcos").upsert(payload, {onConflict:"mentorado_id,marco_id"});
+  if(error) return toast(error.message,true);
+  toast("Marco atualizado"); closeModal(); await loadAll(); rotaMentoradoId=mentoradoId; renderRotas();
+}
+
+/* ================= FICHA DO MENTORADO ================= */
+/* A ficha se adapta à tela de origem:
+   "sessoes"    -> só a trilha de sessões
+   "financeiro" -> só contrato, pagamentos e parcelas
+   "completo"   -> tudo (Mentorados, Dashboard, Rotas)
+   Chamadas internas (voltar de um submodal) omitem o parâmetro e herdam o contexto. */
+let fichaSecao = "completo";
+window.openMentorado = function(id, secao){
+  const m = M.find(x=>x.id===id); if(!m) return;
+  if(secao) fichaSecao = secao;
+  const isAdmin = myRole === "admin";
+  // mentor nunca vê o recorte financeiro, mesmo que a seção chegue por outro caminho
+  const sec = (!isAdmin && fichaSecao==="financeiro") ? "sessoes" : fichaSecao;
+  const ps = parcelasDe(id), ss = sessoesDe(id);
+
+  const mostra = {
+    basico:     sec==="completo",
+    financeiro: isAdmin && (sec==="completo" || sec==="financeiro"),
+    sessoes:    sec==="completo" || sec==="sessoes",
+  };
+  const legenda = {
+    completo:   `Fechamento ${fmtD(m.data_fechamento)}`,
+    sessoes:    `Trilha de sessões · ${ss.filter(s=>s.status==="Concluída").length} de ${ss.length} concluída(s)`,
+    financeiro: `Financeiro · ${ps.length?`${ps.filter(p=>p.status==="paga").length}/${ps.length} parcelas pagas`:"sem parcelas"}`,
+  }[sec];
+
+  const box = $("#modalBox"); box.className="modal";
+  box.innerHTML = `
+  <header><div><h3>${esc(m.nome)}</h3><div class="sub" style="color:var(--mut);font-size:12px;margin-top:3px">${legenda}</div></div>
+  <button class="x" onclick="closeModal()">✕</button></header>
+
+  ${sec!=="completo"?`<div class="rowflex" style="margin-bottom:18px">
+    <button class="btn sm ghost" onclick="openMentorado('${id}','completo')">Ver ficha completa</button>
+  </div>`:''}
+
+  ${mostra.basico?`
+  <div class="fgrid">
+    <div class="f"><label>Nome</label><input id="e_nome" value="${esc(m.nome)}" ${isAdmin?"":"disabled"}></div>
+    <div class="f"><label>Data de fechamento</label><input id="e_fech" type="date" value="${m.data_fechamento||""}" ${isAdmin?"":"disabled"}></div>
+  </div>
+  <div class="fgrid">
+    <div class="f"><label>Link Drive</label><input id="e_ldrive" value="${esc(m.link_drive)}" ${isAdmin?"":"disabled"}></div>
+    <div class="f"><label>Link Mapa Mental</label><input id="e_lmapa" value="${esc(m.link_mapa_mental)}" ${isAdmin?"":"disabled"}></div>
+    <div class="f"><label>Canal WhatsApp</label><input id="e_lwhats" value="${esc(m.link_whatsapp)}" ${isAdmin?"":"disabled"}></div>
+  </div>`:''}
+
+  ${mostra.financeiro?`
+  ${sec==="completo"?`<div class="sec"><h4>Contrato e pagamento</h4>`:`<div>`}
+  <div class="fgrid">
+    <div class="f"><label>Contrato</label><select id="e_contr">${["Assinado","Aguardando assinatura","Ainda não","Cancelou"].map(c=>`<option ${m.contrato_status===c?"selected":""}>${c}</option>`).join("")}</select></div>
+    <div class="f"><label>Entrada</label><select id="e_ent">${["Pago","Pago parcial","Patrocinado","Ainda não","Cancelou"].map(c=>`<option ${m.entrada_status===c?"selected":""}>${c}</option>`).join("")}</select></div>
+    <div class="f"><label>Forma entrada</label><input id="e_entf" value="${esc(m.entrada_forma_pgto)}" placeholder="pix, cartão…"></div>
+    <div class="f"><label>Restante</label><select id="e_res">${["Pago","Pago parcial","Ainda não","Patrocinado","Cancelou"].map(c=>`<option ${m.restante_status===c?"selected":""}>${c}</option>`).join("")}</select></div>
+    <div class="f"><label>Forma restante</label><input id="e_resf" value="${esc(m.restante_forma_pgto)}" placeholder="parc. boleto…"></div>
+  </div>
+  </div>`:''}
+
+  ${(mostra.basico||mostra.financeiro)&&isAdmin?`<div class="rowflex">
+    <button class="btn" onclick="salvarMentorado('${id}')">Salvar alterações</button>
+  </div>`:''}
+
+  ${mostra.basico&&isAdmin?`
+  <div class="sec"><h4>Situa&ccedil;&atilde;o</h4>
+  <div class="fgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:0">
+    <div class="f"><label>Situa&ccedil;&atilde;o</label><select id="e_situacao" onchange="togglePausaCampos()">
+      ${["ativo","pausado","cancelado"].map(v=>`<option value="${v}" ${situacaoDe(m)===v?"selected":""}>${v==="ativo"?"Ativo":v==="pausado"?"Pausado":"Cancelado"}</option>`).join("")}
+    </select></div>
+    <div class="f pausa-campo" style="display:${situacaoDe(m)==="pausado"?"block":"none"}"><label>Pausado em</label><input id="e_pausado_em" type="date" value="${m.pausado_em||""}"></div>
+    <div class="f pausa-campo" style="display:${situacaoDe(m)==="pausado"?"block":"none"}"><label>Retorno previsto</label><input id="e_retorno" type="date" value="${m.retorno_previsto||""}"></div>
+  </div>
+  <div class="rowflex mt8"><button class="btn sm" onclick="salvarSituacao('${id}')">Salvar situa&ccedil;&atilde;o</button></div>
+  </div>`:''}
+
+  ${mostra.financeiro?`
+  <div class="sec"><h4>Parcelas ${ps.length?`· ${ps.filter(p=>p.status==="paga").length}/${ps.length} pagas`:""}</h4>
+  ${ps.length?`<div class="parc-grid">${ps.map(p=>`
+    <div class="parc ${p.status==="paga"?"paga":parcelaVencida(p)?"vencida":""}" title="Clique para alternar paga/aberta">
+      <span class="parc-edit" onclick="event.stopPropagation();openParcela('${p.id}','${id}')" title="Editar parcela">✎</span>
+      <div onclick="toggleParcela('${p.id}','${id}')">
+        <b>#${p.numero}</b>${p.valor!=null?fmtBRL(Number(p.valor)):""}
+        <div class="parc-sub">${p.status==="paga"?"paga ✓":p.vencimento?fmtDshort(p.vencimento):"aberta"}</div>
+      </div>
+    </div>`).join("")}</div>`:`<div class="empty" style="padding:12px">Sem parcelas (pagamento à vista ou não cadastrado).</div>`}
+  <div class="rowflex mt8">
+    <input id="np_venc" type="date" style="width:160px" title="Vencimento da nova parcela">
+    <input id="np_valor" type="number" min="0" step="0.01" placeholder="Valor (R$)" style="width:140px">
+    <button class="btn sm ghost" onclick="addParcela('${id}')">+ Adicionar parcela</button>
+  </div></div>`:''}
+
+  ${mostra.sessoes?`
+  <div class="sec"><h4>Trilha de sessões</h4>
+  ${ss.map(s=>`
+  <div class="sess">
+    <div class="et">${esc(s.etapa)}</div>
+    <div>${pillSess(s.status)}</div>
+    <div class="dt">${cellDataHora(s.data, s.hora)}</div>
+    <div><div class="mentor-chip">${esc(s.mentor||"— sem mentor")}</div>
+      <div class="lk mt8">${[linkOr(s.link_meet,"meet"),linkOr(s.link_gravacao,"gravação"),linkOr(s.link_anotacoes,"anotações")].filter(Boolean).join(" · ")}</div></div>
+    <div class="rowflex">
+      ${s.status==="Aguardando confirmação"?`<button class="btn sm" onclick="confirmarSessao('${s.id}','${id}')">Confirmar</button>`:''}
+      <button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>
+    </div>
+  </div>`).join("")||`<div class="empty" style="padding:12px">Nenhuma sessão registrada ainda.</div>`}
+  ${isAdmin?`<button class="btn sm mt8" onclick="openSessao(null,'${id}')">+ Nova sessão</button>`:''}</div>`:''}`;
+  $("#overlay").classList.add("open");
+}
+window.closeModal = ()=>$("#overlay").classList.remove("open");
+$("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeModal(); });
+
+window.salvarMentorado = async function(id){
+  // A ficha pode estar num recorte parcial, então só envia os campos presentes na tela.
+  const upd = {};
+  const val = s => { const el = $(s); return el ? el.value : undefined; };
+  const nomeV = val("#e_nome");
+  if(nomeV !== undefined){
+    if(!nomeV.trim()) return toast("Informe o nome", true);
+    upd.nome = nomeV.trim();
+  }
+  const mapa = {
+    "#e_fech":"data_fechamento", "#e_contr":"contrato_status",
+    "#e_ent":"entrada_status", "#e_entf":"entrada_forma_pgto",
+    "#e_res":"restante_status", "#e_resf":"restante_forma_pgto",
+    "#e_ldrive":"link_drive", "#e_lmapa":"link_mapa_mental", "#e_lwhats":"link_whatsapp",
+  };
+  for(const [sel,campo] of Object.entries(mapa)){
+    const v = val(sel);
+    if(v !== undefined) upd[campo] = v || null;
+  }
+  if(!Object.keys(upd).length) return;
+  const {error} = await db.from("mentorados").update(upd).eq("id",id);
+  if(error) return toast(error.message,true);
+  toast("Mentorado atualizado"); closeModal(); loadAll();
+}
+window.togglePausaCampos = function(){
+  const mostrar = $("#e_situacao").value === "pausado";
+  document.querySelectorAll(".pausa-campo").forEach(el=>el.style.display = mostrar?"block":"none");
+}
+window.salvarSituacao = async function(id){
+  const situacao = $("#e_situacao").value;
+  const upd = { situacao,
+    pausado_em: situacao==="pausado" ? ($("#e_pausado_em").value||HOJE) : null,
+    retorno_previsto: situacao==="pausado" ? ($("#e_retorno").value||null) : null };
+  const {error} = await db.from("mentorados").update(upd).eq("id",id);
+  if(error) return toast(error.message,true);
+  toast("Situacao atualizada"); await loadAll(); openMentorado(id);
+}
+window.toggleParcela = async function(pid, mid){
+  const p = P.find(x=>x.id===pid);
+  const {error} = await db.from("parcelas").update({status: p.status==="paga"?"aberta":"paga"}).eq("id",pid);
+  if(error) return toast(error.message,true);
+  p.status = p.status==="paga"?"aberta":"paga";
+  openMentorado(mid); loadAll();
+}
+window.addParcela = async function(mid){
+  const venc = $("#np_venc").value||null;
+  const valorRaw = $("#np_valor").value;
+  const n = Math.max(0,...parcelasDe(mid).map(p=>p.numero))+1;
+  if(n>12) return toast("Limite de 12 parcelas atingido",true);
+  const {error} = await db.from("parcelas").insert({mentorado_id:mid, numero:n, status:"aberta", vencimento:venc, valor: valorRaw!==""?parseFloat(valorRaw):null});
+  if(error) return toast(error.message,true);
+  await loadAll(); openMentorado(mid);
+}
+/* ---- editar / excluir parcela ---- */
+window.openParcela = function(pid, mid){
+  const p = P.find(x=>x.id===pid); if(!p) return;
+  const box = $("#modalBox"); box.className="modal narrow";
+  box.innerHTML = `
+  <header><h3>Parcela #${p.numero} &middot; ${esc(nome(mid))}</h3><button class="x" onclick="openMentorado('${mid}')">&#10005;</button></header>
+  <div class="fgrid" style="grid-template-columns:1fr 1fr">
+    <div class="f"><label>N&uacute;mero</label><input id="p_num" type="number" min="1" max="12" value="${p.numero}"></div>
+    <div class="f"><label>Vencimento</label><input id="p_venc" type="date" value="${p.vencimento||""}"></div>
+    <div class="f"><label>Valor (R$)</label><input id="p_valor" type="number" min="0" step="0.01" value="${p.valor!=null?p.valor:""}"></div>
+    <div class="f"><label>Status</label><select id="p_status">
+      ${["aberta","paga"].map(v=>`<option value="${v}" ${p.status===v?"selected":""}>${v==="paga"?"Paga":"Aberta"}</option>`).join("")}
+    </select></div>
+  </div>
+  <div class="rowflex">
+    <button class="btn" onclick="salvarParcela('${pid}','${mid}')">Salvar parcela</button>
+    <button class="btn danger sm" onclick="delParcela('${pid}','${mid}')">Excluir</button>
+  </div>`;
+  $("#overlay").classList.add("open");
+}
+window.salvarParcela = async function(pid, mid){
+  const num = parseInt($("#p_num").value,10);
+  if(!num || num<1) return toast("Numero de parcela invalido",true);
+  const dup = parcelasDe(mid).find(x=>x.numero===num && x.id!==pid);
+  if(dup) return toast("Ja existe a parcela #"+num+" deste mentorado",true);
+  const valorRaw = $("#p_valor").value;
+  const upd = { numero:num, vencimento: $("#p_venc").value||null,
+    valor: valorRaw!==""?parseFloat(valorRaw):null, status: $("#p_status").value };
+  const {error} = await db.from("parcelas").update(upd).eq("id",pid);
+  if(error) return toast(error.message,true);
+  toast("Parcela atualizada"); await loadAll(); openMentorado(mid);
+}
+window.delParcela = async function(pid, mid){
+  if(!confirm("Excluir esta parcela? A acao nao pode ser desfeita.")) return;
+  const {error} = await db.from("parcelas").delete().eq("id",pid);
+  if(error) return toast(error.message,true);
+  toast("Parcela excluida"); await loadAll(); openMentorado(mid);
+}
+
+/* ================= SESSÃO (form) ================= */
+window.openSessao = function(sid, mid){
+  const s = sid ? S.find(x=>x.id===sid) : {};
+  const ss = sessoesDe(mid);
+  const usadas = new Set(ss.map(x=>x.etapa));
+  const sugestao = ETAPAS.find(e=>!usadas.has(e)) || "Checkup extra";
+  const box = $("#modalBox"); box.className="modal narrow";
+  box.innerHTML = `
+  <header><h3>${sid?"Editar sessão":"Nova sessão"} · ${esc(nome(mid))}</h3><button class="x" onclick="openMentorado('${mid}')">✕</button></header>
+  <div class="fgrid" style="grid-template-columns:1fr 1fr">
+    <div class="f"><label>Etapa</label><select id="s_etapa">${ETAPAS.map(e=>`<option ${(s.etapa||sugestao)===e?"selected":""}>${e}</option>`).join("")}</select></div>
+    <div class="f"><label>Status</label><select id="s_status">${S_STATUS.map(e=>`<option ${(s.status||"Agendada")===e?"selected":""}>${e}</option>`).join("")}</select></div>
+    <div class="f"><label>Mentor</label><select id="s_mentor"><option value="">—</option>${MENTORES.map(e=>`<option ${s.mentor===e?"selected":""}>${e}</option>`).join("")}</select></div>
+    <div class="f"><label>Data</label><input id="s_data" type="date" value="${s.data||""}"></div>
+    <div class="f"><label>Hora</label><input id="s_hora" type="time" value="${s.hora?s.hora.slice(0,5):""}"></div>
+  </div>
+  <div class="fgrid" style="grid-template-columns:1fr">
+    <div class="f"><label>Link Meet</label><input id="s_meet" value="${esc(s.link_meet)}"></div>
+    <div class="f"><label>Link gravação</label><input id="s_grav" value="${esc(s.link_gravacao)}"></div>
+    <div class="f"><label>Link anotações</label><input id="s_anot" value="${esc(s.link_anotacoes)}"></div>
+  </div>
+  <div class="rowflex">
+    <button class="btn" onclick="salvarSessao('${sid||""}','${mid}')">Salvar sessão</button>
+    ${(sid && myRole==="admin")?`<button class="btn danger sm" onclick="delSessao('${sid}','${mid}')">Excluir</button>`:""}
+  </div>`;
+  $("#overlay").classList.add("open");
+}
+window.salvarSessao = async function(sid, mid){
+  const etapa = $("#s_etapa").value;
+  const payload = {
+    mentorado_id: mid, etapa, ordem: ETAPA_ORD[etapa]||99,
+    status: $("#s_status").value, mentor: $("#s_mentor").value||null,
+    data: $("#s_data").value||null, hora: $("#s_hora").value||null,
+    link_meet: $("#s_meet").value||null, link_gravacao: $("#s_grav").value||null, link_anotacoes: $("#s_anot").value||null,
+  };
+  const q = sid ? db.from("sessoes").update(payload).eq("id",sid) : db.from("sessoes").insert(payload);
+  const {error} = await q;
+  if(error) return toast(error.message,true);
+  toast("Sessão salva"); await loadAll(); openMentorado(mid);
+}
+window.confirmarSessao = async function(sid, mid){
+  const {error} = await db.from("sessoes").update({status:"Concluída"}).eq("id",sid);
+  if(error) return toast(error.message,true);
+  toast("Sessão confirmada como concluída"); await loadAll(); openMentorado(mid);
+}
+window.delSessao = async function(sid, mid){
+  if(!confirm("Excluir esta sessão?")) return;
+  const {error} = await db.from("sessoes").delete().eq("id",sid);
+  if(error) return toast(error.message,true);
+  toast("Sessão excluída"); await loadAll(); openMentorado(mid);
+}
+
+/* ================= NOVO MENTORADO ================= */
+window.openNovoMentorado = function(){
+  const box = $("#modalBox"); box.className="modal narrow";
+  box.innerHTML = `
+  <header><h3>Novo mentorado</h3><button class="x" onclick="closeModal()">✕</button></header>
+  <div class="fgrid" style="grid-template-columns:1fr 1fr">
+    <div class="f" style="grid-column:1/-1"><label>Nome</label><input id="n_nome" placeholder="Nome completo ou razão social"></div>
+    <div class="f"><label>Data de fechamento</label><input id="n_fech" type="date" value="${HOJE}"></div>
+    <div class="f"><label>Entrada</label><select id="n_ent"><option>Pago</option><option>Pago parcial</option><option>Ainda não</option><option>Patrocinado</option></select></div>
+    <div class="f"><label>Forma entrada</label><input id="n_entf" placeholder="pix, cartão…"></div>
+    <div class="f"><label>Contrato</label><select id="n_contr"><option>Ainda não</option><option>Aguardando assinatura</option><option>Assinado</option></select></div>
+    <div class="f"><label>Restante</label><select id="n_res"><option>Ainda não</option><option>Pago parcial</option><option>Pago</option><option>Patrocinado</option></select></div>
+  </div>
+  <button class="btn" onclick="criarMentorado()">Criar mentorado</button>`;
+  $("#overlay").classList.add("open");
+}
+window.criarMentorado = async function(){
+  const nomeV = $("#n_nome").value.trim();
+  if(!nomeV) return toast("Informe o nome",true);
+  const {data,error} = await db.from("mentorados").insert({
+    nome:nomeV, data_fechamento: $("#n_fech").value||null,
+    entrada_status: $("#n_ent").value, entrada_forma_pgto: $("#n_entf").value||null,
+    contrato_status: $("#n_contr").value, restante_status: $("#n_res").value, cancelado:false
+  }).select().single();
+  if(error) return toast(error.message,true);
+  toast("Mentorado criado"); await loadAll(); openMentorado(data.id,'completo');
+}
+
+boot();
+</script>
+</body>
+</html>
