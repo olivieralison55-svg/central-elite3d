@@ -509,29 +509,34 @@ function toast(msg, err=false){
   const t = $("#toast"); t.textContent = msg; t.className = "toast"+(err?" err":""); t.style.display="block";
   clearTimeout(t._h); t._h = setTimeout(()=>t.style.display="none", 3500);
 }
+/* Os valores abaixo vêm de colunas de texto livre do banco (contrato_status,
+   entrada_status, restante_status, sessoes.status, sessoes.etapa). Os casos
+   conhecidos caem em rótulos fixos, mas o fallback imprime o valor bruto —
+   por isso passa por esc(). Sem isso, quem consegue escrever nessas colunas
+   injeta HTML que executa no navegador de quem abre a tela, inclusive admin. */
 function pillContrato(v){
   if(v==="Assinado") return `<span class="pill green">Assinado</span>`;
   if(v==="Aguardando assinatura") return `<span class="pill amber">Aguardando</span>`;
   if(v==="Cancelou") return `<span class="pill red">Cancelou</span>`;
-  return `<span class="pill gray">${v||"Pendente"}</span>`;
+  return `<span class="pill gray">${esc(v||"Pendente")}</span>`;
 }
 function pillPgto(v){
   if(v==="Pago") return `<span class="pill green">Pago</span>`;
   if(v==="Pago parcial") return `<span class="pill amber">Parcial</span>`;
   if(v==="Patrocinado") return `<span class="pill blue">Patrocinado</span>`;
   if(v==="Cancelou") return `<span class="pill red">Cancelou</span>`;
-  return `<span class="pill gray">${v||"Em aberto"}</span>`;
+  return `<span class="pill gray">${esc(v||"Em aberto")}</span>`;
 }
 function pillSess(v){
   const map={ "Concluída":"green","Agendada":"blue","Aguardando confirmação":"amber","Bloqueada":"red","Não iniciada":"gray" };
-  return `<span class="pill ${map[v]||"gray"}">${v||"—"}</span>`;
+  return `<span class="pill ${map[v]||"gray"}">${esc(v||"—")}</span>`;
 }
 function progBar(mid){
   const ss = sessoesDe(mid);
   if(!ss.length) return `<span class="pill gray">0 sessões</span>`;
   return `<div class="prog">`+ss.map(s=>{
     const c = s.status==="Concluída"?"done":s.status==="Agendada"?"sched":s.status==="Bloqueada"?"block":"";
-    return `<i class="${c}" title="${s.etapa}: ${s.status||"—"}"></i>`;
+    return `<i class="${c}" title="${esc(s.etapa)}: ${esc(s.status||"—")}"></i>`;
   }).join("")+`</div>`;
 }
 function parcelaVencida(p){ return p.status!=="paga" && p.vencimento && p.vencimento < HOJE; }
@@ -545,7 +550,11 @@ function pillSituacao(m){
   if(st==="pausado") return `<span class="pill amber">pausado</span>`;
   return "";
 }
-function esc(s){ return (s??"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+/* Escapa para interpolação em HTML. Cobre também > e ' : havia atributos em
+   aspas simples no código, onde só &quot; não bastava. */
+function esc(s){ return (s??"").toString()
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 function linkOr(v, label){ 
   if(!v) return "";
   const url = /^https?:/i.test(v) ? v : null;
@@ -609,11 +618,18 @@ function renderDash(){
   const aguardConf = S.filter(s=>s.status==="Aguardando confirmação").length;
   const contratosPend = ativos.filter(m=>m.contrato_status!=="Assinado").length;
   const vencidas = P.filter(p=>parcelaVencida(p) && ehAtivo(M.find(m=>m.id===p.mentorado_id)));
+  /* Quem tem sessão agendada não está parado — sai da lista.
+     Para os demais a régua é a última sessão concluída; quem NUNCA concluiu
+     nenhuma é medido pela data de fechamento. Antes esse grupo era descartado
+     por um "if(!ss.length) return false", o que escondia justamente o caso
+     mais grave: contrato fechado há meses e a mentoria nunca começou. */
+  const ultimaConcluida = mid => sessoesDe(mid)
+    .filter(s=>s.status==="Concluída"&&s.data).map(s=>s.data).sort().pop() || null;
   const semSessao30 = ativos.filter(m=>{
-    const ss = sessoesDe(m.id).filter(s=>s.status==="Concluída"&&s.data);
-    if(!ss.length) return false;
-    const last = ss.map(s=>s.data).sort().pop();
-    return (new Date(HOJE)-new Date(last))/864e5 > 30 && !sessoesDe(m.id).some(s=>s.status==="Agendada");
+    if(sessoesDe(m.id).some(s=>s.status==="Agendada")) return false;
+    const ref = ultimaConcluida(m.id) || m.data_fechamento;
+    if(!ref) return false;
+    return (new Date(HOJE)-new Date(ref))/864e5 > 30;
   });
 
   // matriz mentor x etapa
@@ -702,7 +718,7 @@ function renderDash(){
     <div class="panel detail">
       <h3>Sessões concluídas por mentor</h3>
       <div style="overflow-x:auto"><table><thead><tr><th>Mentor</th>${etapasAtivas.map(e=>`<th class="num" title="${e}">${e.replace("Diagnóstico de Negócio","Diag.").replace("Plano de Ação","Plano").replace("Checkup ","C")}</th>`).join("")}<th class="num">Total</th></tr></thead>
-      <tbody>${matriz.map(r=>`<tr><td class="mentor-chip">${r.mt}${r.inativo?'<span class="pill gray" style="margin-left:8px">fora do projeto</span>':''}</td>${r.row.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--green);font-weight:700">${r.tot}</td></tr>`).join("")}
+      <tbody>${matriz.map(r=>`<tr><td class="mentor-chip">${esc(r.mt)}${r.inativo?'<span class="pill gray" style="margin-left:8px">fora do projeto</span>':''}</td>${r.row.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--green);font-weight:700">${r.tot}</td></tr>`).join("")}
       ${semMentorTot?`<tr style="opacity:.75"><td class="mentor-chip">Sem mentor identificado</td>${semMentorRow.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--amber);font-weight:700">${semMentorTot}</td></tr>`:''}</tbody></table></div>
       ${aguardSemMentor?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${aguardSemMentor} sessão(ões) aguardando confirmação sem mentor definido</div><a onclick="setView('sessoes')">ver</a></div>`:''}
     </div>
@@ -723,8 +739,12 @@ function renderDash(){
   </tr>`).join("")}</tbody></table></div></div>`:""}
   ${semSessao30.length?`<div class="panel detail" id="risco"><h3>Mentorados sem sessão há +30 dias</h3><div style="overflow-x:auto"><table><thead><tr><th>Mentorado</th><th>Última sessão</th><th></th></tr></thead><tbody>
   ${semSessao30.map(m=>{
-    const last = sessoesDe(m.id).filter(s=>s.status==="Concluída"&&s.data).map(s=>s.data).sort().pop();
-    return `<tr class="click" onclick="openMentorado('${m.id}','sessoes')"><td>${esc(m.nome)}</td><td class="mono">${fmtD(last)}</td><td><span class="pill amber">Contatar</span></td></tr>`;
+    const last = ultimaConcluida(m.id);
+    return `<tr class="click" onclick="openMentorado('${m.id}','sessoes')"><td>${esc(m.nome)}</td>`
+      + (last
+          ? `<td class="mono">${fmtD(last)}</td><td><span class="pill amber">Contatar</span></td>`
+          : `<td class="mono">nunca · fechou ${fmtD(m.data_fechamento)}</td><td><span class="pill red">Nunca começou</span></td>`)
+      + `</tr>`;
   }).join("")}</tbody></table></div></div>`:""}`;
 }
 
@@ -867,7 +887,7 @@ function pillMarco(status, modelo){
   }
   const map={CONCLUIDO:"green",EM_ANDAMENTO:"blue",BLOQUEADO:"red",AGUARDANDO_VALIDACAO:"amber",NAO_APLICAVEL:"gray",NAO_INICIADO:"gray"};
   const label={CONCLUIDO:"Concluído",EM_ANDAMENTO:"Em andamento",BLOQUEADO:"Bloqueado",AGUARDANDO_VALIDACAO:"Aguard. validação",NAO_APLICAVEL:"Não aplicável",NAO_INICIADO:"Não iniciado"};
-  return `<span class="pill ${map[status]||"gray"}">${label[status]||status}</span>`;
+  return `<span class="pill ${map[status]||"gray"}">${esc(label[status]||status)}</span>`;
 }
 function ultimosMeses(n){
   const out=[]; const d=new Date();
@@ -1046,8 +1066,8 @@ window.openMarco = function(marcoId, mentoradoId){
   ${!isSimples?`
   <div class="fgrid" style="grid-template-columns:1fr">
     <div class="f"><label>Progresso (%)</label><input id="mk_prog" type="number" min="0" max="100" value="${mm.progresso??""}"></div>
-    <div class="f"><label>Critérios pendentes (um por linha)</label><textarea id="mk_crit" rows="3">${(mm.criterios_pendentes||[]).join("\n")}</textarea></div>
-    <div class="f"><label>Bloqueios (um por linha)</label><textarea id="mk_bloq" rows="2">${(mm.bloqueios||[]).join("\n")}</textarea></div>
+    <div class="f"><label>Critérios pendentes (um por linha)</label><textarea id="mk_crit" rows="3">${esc((mm.criterios_pendentes||[]).join("\n"))}</textarea></div>
+    <div class="f"><label>Bloqueios (um por linha)</label><textarea id="mk_bloq" rows="2">${esc((mm.bloqueios||[]).join("\n"))}</textarea></div>
     <div class="f"><label>Próxima ação</label><input id="mk_acao" value="${esc(mm.proxima_acao)}"></div>
   </div>`:''}
   <button class="btn" onclick="salvarMarco('${marcoId}','${mentoradoId}')">Salvar</button>`;
@@ -1285,7 +1305,7 @@ window.openSessao = function(sid, mid){
   <div class="fgrid" style="grid-template-columns:1fr 1fr">
     <div class="f"><label>Etapa</label><select id="s_etapa">${ETAPAS.map(e=>`<option ${(s.etapa||sugestao)===e?"selected":""}>${e}</option>`).join("")}</select></div>
     <div class="f"><label>Status</label><select id="s_status">${S_STATUS.map(e=>`<option ${(s.status||"Agendada")===e?"selected":""}>${e}</option>`).join("")}</select></div>
-    <div class="f"><label>Mentor</label><select id="s_mentor"><option value="">—</option>${[...MENTORES, ...(s.mentor && !MENTORES.includes(s.mentor) ? [s.mentor] : [])].map(e=>`<option ${s.mentor===e?"selected":""}>${e}</option>`).join("")}</select></div>
+    <div class="f"><label>Mentor</label><select id="s_mentor"><option value="">—</option>${[...MENTORES, ...(s.mentor && !MENTORES.includes(s.mentor) ? [s.mentor] : [])].map(e=>`<option ${s.mentor===e?"selected":""}>${esc(e)}</option>`).join("")}</select></div>
     <div class="f"><label>Data</label><input id="s_data" type="date" value="${s.data||""}"></div>
     <div class="f"><label>Hora</label><input id="s_hora" type="time" value="${s.hora?s.hora.slice(0,5):""}"></div>
   </div>
@@ -1326,7 +1346,7 @@ window.openConfirmarSessao = function(sid, mid){
     <label>Quem atendeu esta sessão?</label>
     <select id="cf_mentor">
       <option value="">Selecione o mentor…</option>
-      ${opcoes.map(m=>`<option ${s.mentor===m?"selected":""}>${m}</option>`).join("")}
+      ${opcoes.map(m=>`<option ${s.mentor===m?"selected":""}>${esc(m)}</option>`).join("")}
     </select>
   </div>
   <div class="rowflex">
