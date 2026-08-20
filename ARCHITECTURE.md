@@ -24,7 +24,7 @@ Supabase  ──  Postgres + Auth + RLS
 
 **Não existe camada de servidor própria.** Não há middleware, rota de API nem
 função de servidor neste repositório. Isso tem uma consequência que governa todo
-o resto: **a autorização real é o RLS do Postgres.** O `isAdmin` do JavaScript
+o resto: **a autorização real é o RLS do Postgres.** O `pode()` do JavaScript
 serve para montar a interface, não para proteger dado — qualquer pessoa com um
 login válido pode conversar com a API direto e receberá exatamente o que as
 policies permitirem, independente do que a tela mostra.
@@ -39,7 +39,7 @@ policies permitirem, independente do que a tela mostra.
 | Automação | 2 jobs `pg_cron` + 2 Edge Functions (Deno) |
 | Deploy | Vercel, automático no push para `main`. Sem etapa de build |
 | Projeto Supabase | `matgynpiscyoshnjzolo` (região `sa-east-1`) |
-| Testes | `tests/` — 106 asserções em Node puro, sem dependência. Nenhum lint |
+| Testes | `tests/` — 132 asserções em Node puro, sem dependência. Nenhum lint |
 
 A chave usada no front (`SUPABASE_KEY`, formato `sb_publishable_…`) é **pública
 por desenho** e pode ficar no repositório. A `service_role` **não** aparece aqui
@@ -108,7 +108,8 @@ Um encontro coletivo é **N linhas, uma por participante** — ver
 `vencimento`, `valor`.
 
 **`profiles`** — espelha `auth.users`. `nome`, `email`, `role` com `CHECK`
-aceitando apenas `admin` e `mentor`.
+aceitando `admin`, `diretoria` e `mentor`. Não há `cs`: o atendimento usa
+`admin`.
 
 ### Trilha de progresso
 
@@ -139,6 +140,16 @@ nome textual, sem FK.
   de `mentorados` e é o que o mentor lê, já que `mentorados` só tem policy de
   admin. **Contorna o RLS deliberadamente**; qualquer coluna adicionada aqui
   passa a ser visível a todo mentor.
+
+  `authenticated` tem **só `SELECT`** nela, e isso é essencial. A view é
+  auto-atualizável e o dono é `postgres`, num schema sem `FORCE ROW LEVEL
+  SECURITY` — enquanto `insert/update/delete` estavam concedidos, qualquer
+  usuário logado podia alterar, criar e apagar mentorados por ela, contornando
+  `mentorados_admin_all`, e o `delete` levava o histórico de sessões junto pelo
+  `ON DELETE CASCADE`. Corrigido na migration
+  `revoke_write_on_mentorados_basic`. **Não reconceda escrita aqui:** é o que
+  sustenta o perfil `diretoria` ser somente-leitura. O app nunca escreveu por
+  essa view — todas as escritas vão para `mentorados` direto.
 - **`sessoes_orfas`** — sessões com `google_event_id` preenchido que a última
   execução do sync **não confirmou**. A regra é esperta: compara o `synced_at` da
   linha com o maior `synced_at` da tabela inteira (que é o carimbo da rodada mais
@@ -170,21 +181,26 @@ feature; ver o débito 5.
 
 ## Permissões
 
-Dois papéis: `admin` e `mentor`. A função `get_my_role()` (`SECURITY DEFINER`,
+Três papéis: `admin`, `diretoria` e `mentor`. A função `get_my_role()` (`SECURITY DEFINER`,
 `STABLE`) lê `profiles.role` do usuário logado e é usada por praticamente todas
 as policies.
 
-| Tabela | admin | mentor |
-|---|---|---|
-| `mentorados` | tudo | **nada** — lê via `mentorados_basic` |
-| `parcelas` | tudo | nada |
-| `sessoes` | tudo | `SELECT` + `UPDATE`, **sem escopo** |
-| `faturamento_mensal` | tudo | `SELECT` + `INSERT` + `UPDATE`, sem escopo |
-| `mentorado_marcos` | tudo | `SELECT` + `INSERT` + `UPDATE`, sem escopo |
-| `mentorado_canais` | tudo | `SELECT` + `INSERT` + `UPDATE`, sem escopo |
-| `rotas`, `canais`, `marcos_definicao` | escrita | leitura |
-| `profiles` | lê todos | lê o próprio |
-| `diagnosticos` | — | — (só `service_role`) |
+| Tabela | admin | diretoria | mentor |
+|---|---|---|---|
+| `mentorados` | tudo | `SELECT` | **nada** — lê via `mentorados_basic` |
+| `parcelas` | tudo | `SELECT` | nada |
+| `sessoes` | tudo | `SELECT` | `SELECT` + `UPDATE`, **sem escopo** |
+| `faturamento_mensal` | tudo | `SELECT` | `SELECT` + `INSERT` + `UPDATE`, sem escopo |
+| `mentorado_marcos` | tudo | `SELECT` | `SELECT` + `INSERT` + `UPDATE`, sem escopo |
+| `mentorado_canais` | tudo | `SELECT` | `SELECT` + `INSERT` + `UPDATE`, sem escopo |
+| `rotas`, `canais`, `marcos_definicao` | escrita | leitura | leitura |
+| `profiles` | lê todos | lê o próprio | lê o próprio |
+| `diagnosticos` | — | — | — (só `service_role`) |
+
+`diretoria` **não tem uma única policy de `INSERT`, `UPDATE` ou `DELETE`** —
+em nenhuma tabela. É o que torna o perfil somente-leitura verdadeiro e não
+apenas cosmético: esconder botão no front é acabamento, o limite é aqui.
+Não existe papel `cs`: quem está no atendimento usa `admin`.
 
 **"Sem escopo" quer dizer sem titularidade:** a policy checa apenas
 `get_my_role() = 'mentor'`, nunca `auth.uid()`. Qualquer mentor pode ler e
@@ -291,6 +307,24 @@ participante**, e a interface reagrupa com `agruparGrupo()` pela chave
   quando o atributo é parseado como JavaScript. Interpolar texto de coluna num
   `onclick` reabriria o XSS que a passada de `esc()` fechou.
 
+### Capacidades, não `isAdmin`
+
+O front decide o que mostrar por `pode("capacidade")`, sobre o mapa
+`CAPACIDADES` no início do script. Antes era um booleano `isAdmin`, que
+significava duas coisas ao mesmo tempo — *vê o financeiro* e *pode escrever*. O
+papel `diretoria` separa as duas, e um booleano não expressa isso.
+
+As capacidades são `verFinanceiro`, `criarMentorado`, `editarMentorado`,
+`editarFinanceiro`, `escreverSessao`, `criarSessao`, `escreverRotas` e
+`excluir`. Cada papel é uma lista de uma linha, o que deixa o recorte inteiro
+legível de uma vez — `diretoria: ["verFinanceiro"]` diz tudo.
+
+Ao acrescentar botão de escrita, envolva em `pode(...)`. A suíte tem uma
+varredura que reprova qualquer handler de escrita aparecendo nas telas de
+`diretoria`, com controle negativo em `admin` para garantir que o detector não
+está passando vazio — então esquecer o `pode(...)` falha o teste, não a produção.
+Ainda assim, isso é interface: quem impede a escrita é o RLS.
+
 ### O campo de data guarda o valor num input hidden
 
 `dateField(id, ...)` monta um `<input type="hidden">` com o **mesmo id** que o
@@ -381,6 +415,8 @@ O que está coberto — deliberadamente, o que já quebrou aqui ou quebraria cal
   de mentorado. O critério é ausência de `<img` cru **mais** presença de
   `&lt;img`: provar só a ausência não distingue escape de dado descartado no
   caminho.
+- **`diretoria` não recebe handler de escrita** em nenhuma tela ou modal, com
+  controle negativo em `admin` provando que a varredura acha quando existe.
 - **Nenhum texto de coluna dentro de `onclick`** — encontro em grupo referenciado
   por índice.
 - **Permissões por papel:** o que mentor não vê (Financeiro, alertas financeiros,
@@ -414,6 +450,13 @@ Em ordem aproximada de retorno sobre esforço.
 1. **Escopo de titularidade nas policies de mentor.** Depende de criar
    `mentor_id` com FK em `sessoes` e fazer o backfill. Hoje qualquer mentor lê e
    escreve tudo.
+
+   Relacionado, e independente do escopo: **não há tela para atribuir papel.**
+   `handle_new_user()` cria todo usuário como `mentor`, e `profiles_update_own`
+   tem `WITH CHECK (role = get_my_role())` — ninguém muda papel pela aplicação,
+   só `service_role`. Com dois papéis isso passava; com três, e com o CS usando
+   `admin`, cada admissão é um `UPDATE` manual, e no intervalo a pessoa fica com
+   acesso de mentor sem nenhum aviso na tela.
 2. **`sessoes.mentor` como FK** em vez de texto livre. Destrava o item 1, o
    filtro "meus mentorados" e a carga confiável por mentor.
 3. **A suíte não cobre os alertas nem o browser.** `tests/` cobre escape de HTML,

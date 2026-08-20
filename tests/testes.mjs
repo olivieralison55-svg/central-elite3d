@@ -9,6 +9,14 @@ import {carregarApp, preparar, criarRunner, escapado, semLixo, brl, XSS} from ".
 
 const t = criarRunner();
 
+/* Handlers de escrita que a interface pode oferecer. Usado na varredura do
+   papel diretoria e no controle negativo com admin, no fim do arquivo. */
+const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParcela",
+  "openParcela", "salvarParcela", "delParcela", "openSessao", "salvarSessao", "delSessao",
+  "openConfirmarSessao", "confirmarSessao", "openSessaoGrupo", "criarSessaoGrupo",
+  "confirmarGrupo", "openMarco", "salvarMarco", "salvarCanalMentorado", "salvarFaturamento",
+  "excluirFaturamento", "openNovoMentorado", "criarMentorado"];
+
 /* =======================================================================
  * Formatadores
  * ===================================================================== */
@@ -340,6 +348,107 @@ const t = criarRunner();
   mod.renderSessoes();
   globalThis.openGrupo(0);
   t.ok("pode confirmar o encontro em lote", app.modal().includes("Confirmar o encontro"));
+}
+
+/* =======================================================================
+ * Telas — papel diretoria (lê tudo, escreve nada)
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "diretoria");
+  const {mod} = app;
+
+  t.secao("Papel diretoria — capacidades");
+  t.ok("só tem verFinanceiro",
+    JSON.stringify(mod.CAPACIDADES.diretoria) === '["verFinanceiro"]',
+    JSON.stringify(mod.CAPACIDADES.diretoria));
+  t.ok("vê financeiro", mod.pode("verFinanceiro") === true);
+  ["criarMentorado", "editarMentorado", "editarFinanceiro", "escreverSessao",
+   "criarSessao", "escreverRotas", "excluir"].forEach((cap) => {
+    t.ok("não pode " + cap, mod.pode(cap) === false);
+  });
+  t.ok("rótulo próprio na barra lateral", mod.PAPEL_LABEL.diretoria === "Diretoria", mod.PAPEL_LABEL.diretoria);
+
+  t.secao("Papel diretoria — o que vê");
+  mod.renderFinanceiro();
+  const fin = app.tela();
+  t.ok("abre a tela Financeiro", semLixo(fin) && fin.includes("Contratos, entradas e parcelas"), fin.slice(0, 200));
+  mod.renderMentorados();
+  t.ok("vê a coluna Contrato", app.tela().includes("Contrato"), "coluna ausente");
+  mod.renderDash();
+  const dash = app.tela();
+  t.ok("vê os alertas financeiros",
+    dash.includes("Parcelas vencidas em aberto") && dash.includes("Contratos pendentes de assinatura"));
+  globalThis.openMentorado("m1", "completo");
+  const ficha = app.modal();
+  t.ok("vê o bloco financeiro da ficha", ficha.includes("Contrato e pagamento"));
+  t.ok("vê o valor da parcela", brl(ficha).includes("R$ 500,00"));
+
+  t.secao("Papel diretoria — não escreve");
+  /* Varredura: nenhuma tela ou modal pode oferecer handler de escrita.
+   * É o teste que pega botão novo esquecido — mais durável que checar um a um. */
+  const saidas = [];
+  for (const render of ["renderDash", "renderMentorados", "renderSessoes", "renderFinanceiro", "renderRotas"]) {
+    mod[render]();
+    saidas.push([render, app.tela()]);
+  }
+  mod.renderSessoes();                       // repovoa GRUPO_REG
+  globalThis.openGrupo(0);
+  saidas.push(["openGrupo", app.modal()]);
+  for (const sec of ["completo", "sessoes", "financeiro"]) {
+    globalThis.openMentorado("m1", sec);
+    saidas.push(["ficha:" + sec, app.modal()]);
+  }
+
+  let vazamentos = [];
+  for (const [nome, html] of saidas) {
+    for (const fn of ESCRITA) {
+      if (html.includes(fn + "(")) vazamentos.push(nome + " → " + fn);
+    }
+  }
+  t.ok("nenhum handler de escrita em nenhuma tela ou modal",
+    vazamentos.length === 0, vazamentos.join("; "));
+
+  /* Alguns pontos específicos que não são botão e passam batido fácil. */
+  globalThis.openMentorado("m1", "financeiro");
+  const fichaFin = app.modal();
+  t.ok("azulejo da parcela não tem onclick", !fichaFin.includes("toggleParcela"));
+  t.ok("sem lápis de editar parcela", !fichaFin.includes("parc-edit"));
+  t.ok("sem adicionar parcela", !fichaFin.includes("+ Adicionar parcela"));
+  t.ok("sem salvar alterações", !fichaFin.includes("Salvar alterações"));
+  mod.renderRotas();
+  const rotas = app.tela();
+  t.ok('sem botão "Marcar" na trilha', !rotas.includes(">Marcar<"));
+  t.ok("sem formulário de registrar faturamento", !rotas.includes("Registrar faturamento"));
+  t.ok("mas vê o gráfico e os registros", rotas.includes("Evolução mensal") && rotas.includes("Registros"));
+  mod.renderSessoes();
+  t.ok("sem registrar sessão em grupo", !app.tela().includes("+ Sessão em grupo"));
+  mod.renderDash();
+  t.ok("sem criar mentorado", !app.tela().includes("+ Novo mentorado"));
+}
+
+/* =======================================================================
+ * Controle negativo da varredura acima.
+ *
+ * "Nao achei handler de escrita" so vale se o detector souber achar quando
+ * ele existe. Com admin as mesmas telas devem estar cheias deles.
+ *
+ * Bloco separado de proposito: as instancias compartilham globalThis.document,
+ * entao a ultima criada passa a receber os renders. Nao intercale duas.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const achados = new Set();
+  const varrer = (html) => { for (const fn of ESCRITA) if (html.includes(fn + "(")) achados.add(fn); };
+
+  t.secao("Controle negativo (admin)");
+  for (const render of ["renderDash", "renderMentorados", "renderSessoes", "renderFinanceiro", "renderRotas"]) {
+    app.mod[render]();
+    varrer(app.tela());
+  }
+  globalThis.openMentorado("m1", "completo");
+  varrer(app.modal());
+  t.ok("a varredura acha handler de escrita quando ele existe",
+    achados.size >= 10, "achou so " + achados.size + ": " + [...achados].join(", "));
 }
 
 process.exit(t.fim() ? 1 : 0);

@@ -11,6 +11,12 @@
  *
  * `carregarApp()` devolve uma instância nova a cada chamada: o estado do app
  * vive dentro do closure do `new Function`, então dois papéis não se contaminam.
+ *
+ * **Não intercale duas instâncias.** Os stubs são instalados em `globalThis`
+ * (`document`, `window`, `supabase`), então a última instância criada é quem
+ * passa a receber os renders — inclusive os de uma instância anterior, cujo
+ * `tela()` continuaria lendo o mapa antigo e devolvendo HTML velho em silêncio.
+ * Um bloco `{ ... }` por instância, sem `carregarApp()` no meio.
  */
 import {readFileSync} from "node:fs";
 
@@ -26,7 +32,7 @@ const EXPORTA = [
   "esc", "fmtBRL", "fmtD", "dpLabel", "dateField", "monthField",
   "agruparGrupo", "statusGrupo", "resumoStatusGrupo", "ehGrupo", "eh1a1",
   "ETAPAS", "ETAPAS_GRUPO", "ETAPA_ORD", "chartScales", "progBar",
-  "sessoes1a1De", "sessoesGrupoDe",
+  "sessoes1a1De", "sessoesGrupoDe", "pode", "CAPACIDADES", "PAPEL_LABEL",
   "renderDash", "renderMentorados", "renderSessoes", "renderFinanceiro", "renderRotas",
 ];
 
@@ -180,7 +186,8 @@ export function preparar(app, papel = "admin") {
   app.estado.papel = papel;
   app.estado.M = M;
   app.estado.S = S;
-  app.estado.P = papel === "admin" ? P : [];   // mentor não carrega parcelas
+  /* quem não vê financeiro não carrega parcelas — é o que o loadAll faz */
+  app.estado.P = (papel === "admin" || papel === "diretoria") ? P : [];
   app.estado.ORFAS = [];
   app.estado.rotas(...rotas);
   return app;

@@ -18,31 +18,44 @@ Acesse o endereço acima e entre com o e-mail e a senha que o administrador
 cadastrou para você. Não existe "criar conta" nem "esqueci minha senha" — se
 precisar de acesso ou de uma nova senha, fale com o administrador.
 
+Ao pedir um acesso novo, **diga qual perfil a pessoa deve ter**. Todo login
+recém-criado entra como Mentor por padrão, e mudar isso é um ajuste manual no
+banco — se ninguém avisar, a pessoa fica com o acesso errado sem que apareça
+nenhum aviso na tela.
+
 Se aparecer *"Perfil não encontrado. Contate o admin"*, significa que o login
 existe mas o cadastro interno não foi criado. Também é caso de falar com o
 administrador.
 
 ---
 
-## Os dois tipos de acesso
+## Os três tipos de acesso
 
-Hoje existem apenas dois: **Administrador** e **Mentor**. Seu tipo aparece no
-canto inferior esquerdo, embaixo do seu nome.
+**Administrador**, **Diretoria** e **Mentor**. Seu tipo aparece no canto
+inferior esquerdo, embaixo do seu nome.
 
-| | Administrador | Mentor |
-|---|---|---|
-| Dashboard, Mentorados, Sessões, Rotas | ✅ | ✅ |
-| Aba **Financeiro** | ✅ | ❌ não aparece |
-| Contrato, entrada, restante e parcelas | ✅ vê e edita | ❌ não vê |
-| Faturamento do mentorado | ✅ | ✅ vê e registra |
-| Criar mentorado | ✅ | ❌ |
-| Editar dados do mentorado (nome, datas, links) | ✅ | ❌ |
-| Registrar e editar sessões | ✅ | ✅ |
-| Marcar progresso na trilha (Rotas) | ✅ | ✅ |
-| Excluir sessão, parcela ou faturamento | ✅ | ❌ |
+| | Administrador | Diretoria | Mentor |
+|---|---|---|---|
+| Dashboard, Mentorados, Sessões, Rotas | ✅ | ✅ | ✅ |
+| Aba **Financeiro** | ✅ | ✅ | ❌ não aparece |
+| Contrato, entrada, restante e parcelas | ✅ vê e edita | ✅ só vê | ❌ não vê |
+| Faturamento do mentorado | ✅ | ✅ só vê | ✅ vê e registra |
+| Criar mentorado | ✅ | ❌ | ❌ |
+| Editar dados do mentorado (nome, datas, links) | ✅ | ❌ | ❌ |
+| Registrar e editar sessões | ✅ | ❌ | ✅ |
+| Marcar progresso na trilha (Rotas) | ✅ | ❌ | ✅ |
+| Excluir sessão, parcela ou faturamento | ✅ | ❌ | ❌ |
 
-O mentor vê **todos** os mentorados do programa, não apenas os que atende.
-Isso é uma limitação atual conhecida — veja *Limitações* no fim.
+**Diretoria vê tudo e não altera nada.** É leitura em todas as telas, incluindo
+o Financeiro completo, sem nenhum botão de salvar, excluir ou confirmar. Não é
+só a interface que esconde: o banco não autoriza escrita nenhuma para esse
+perfil, então não há como alterar dado por acidente.
+
+**Atendimento (CS) usa o perfil de Administrador** — não existe um tipo separado
+para CS. Quem está no CS tem os mesmos acessos de quem administra.
+
+Todos os perfis veem **todos** os mentorados do programa, não apenas os que
+atendem. Isso é uma limitação atual conhecida — veja *Limitações* no fim.
 
 ---
 
@@ -215,6 +228,9 @@ Coisas que a ferramenta **não** faz hoje, para você não procurar em vão:
 - **Não há relatório exportável.** O que existe são as telas.
 - **A lista de mentores é fixa no código.** Incluir ou remover mentor exige
   alteração técnica, não é configurável na tela.
+- **Não há tela para definir o perfil de acesso.** Todo login novo nasce como
+  Mentor, e trocar para Administrador ou Diretoria é intervenção manual no
+  banco. Enquanto não trocarem, a pessoa vê o que um mentor vê.
 - **Valores das parcelas estão vazios.** A estrutura existe, mas o valor e o
   vencimento não vêm sendo preenchidos — então indicadores de inadimplência em
   reais não são confiáveis.

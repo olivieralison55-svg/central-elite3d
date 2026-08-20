@@ -371,7 +371,7 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
     <button data-view="financeiro" id="navFinanceiro"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 7l2.5-3h13L21 7"/><path d="M12 11v6M9.5 12.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg></span> Financeiro</button>
   </nav>
   <div class="side-foot">
-    Dados migrados da planilha<br>Central de Controle · v1.6
+    Dados migrados da planilha<br>Central de Controle · v1.7
     <div class="user-badge">
       <div class="who"><b id="userNome">—</b><span id="userRole">—</span></div>
       <button onclick="doLogout()">Sair</button>
@@ -475,6 +475,23 @@ let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:""};
 let rotaAtual = null; // slug da rota selecionada na tela Rotas
 let myRole = null, myProfile = null;
 
+/* Capacidades por papel. Antes bastava um booleano `isAdmin`, porque ele
+   significava duas coisas de uma vez: ver o financeiro E poder escrever. O
+   papel `diretoria` separa as duas — ve tudo, escreve nada — e um booleano
+   nao expressa mais isso. Listar as capacidades de cada papel numa linha
+   deixa o recorte inteiro auditavel de bate-pronto.
+
+   Isto e interface, nao seguranca: o limite real e o RLS do Postgres, onde
+   `diretoria` nao tem policy de INSERT, UPDATE nem DELETE em lugar nenhum. */
+const CAPACIDADES = {
+  admin:     ["verFinanceiro","criarMentorado","editarMentorado","editarFinanceiro",
+              "escreverSessao","criarSessao","escreverRotas","excluir"],
+  diretoria: ["verFinanceiro"],
+  mentor:    ["escreverSessao","escreverRotas"],
+};
+const PAPEL_LABEL = {admin:"Administrador", diretoria:"Diretoria", mentor:"Mentor"};
+const pode = (cap) => (CAPACIDADES[myRole] || []).includes(cap);
+
 /* ================= AUTH ================= */
 async function boot(){
   const { data: { session } } = await db.auth.getSession();
@@ -495,8 +512,8 @@ async function afterLogin(session){
   $("#loginScreen").style.display = "none";
   $("#mainShell").style.display = "flex";
   $("#userNome").textContent = profile.nome || profile.email;
-  $("#userRole").textContent = myRole === "admin" ? "Administrador" : "Mentor";
-  if(myRole !== "admin"){
+  $("#userRole").textContent = PAPEL_LABEL[myRole] || myRole;
+  if(!pode("verFinanceiro")){
     $("#navFinanceiro").style.display = "none";
     $("#navFinanceiroMobile").style.display = "none";
   }
@@ -515,10 +532,10 @@ window.doLogout = async function(){ await db.auth.signOut(); myRole=null; myProf
 
 /* ================= DATA ================= */
 async function loadAll(){
-  const mentorQuery = myRole === "admin"
+  const mentorQuery = pode("verFinanceiro")
     ? db.from("mentorados").select("*").order("data_fechamento",{ascending:true})
     : db.from("mentorados_basic").select("*").order("data_fechamento",{ascending:true});
-  const parcelaQuery = myRole === "admin"
+  const parcelaQuery = pode("verFinanceiro")
     ? db.from("parcelas").select("*").order("numero")
     : Promise.resolve({data:[], error:null});
   const [m,p,s,r,md,mm,fat,cn,mc,orf] = await Promise.all([
@@ -887,7 +904,7 @@ function render(){
   else if(view==="mentorados") renderMentorados();
   else if(view==="sessoes") renderSessoes();
   else if(view==="rotas") renderRotas();
-  else if(view==="financeiro" && myRole==="admin") renderFinanceiro();
+  else if(view==="financeiro" && pode("verFinanceiro")) renderFinanceiro();
   else { view="dash"; renderDash(); }
 }
 
@@ -950,7 +967,7 @@ function renderDash(){
     })),
   ].sort((a,b)=>((a.data+(a.hora||"99"))<(b.data+(b.hora||"99")))?-1:1).slice(0,8);
 
-  const isAdmin = myRole === "admin";
+  const verFin = pode("verFinanceiro");
 
   // Progressão por faturamento: só entra quem tem faturamento real registrado.
   // Nada é inventado — mentorado sem registro simplesmente não aparece na seção.
@@ -961,8 +978,8 @@ function renderDash(){
 
   // Itens de atenção: financeiros só para admin; risco de estagnação vale para todos
   const attnItems = [
-    isAdmin ? {label:"Contratos pendentes de assinatura", count:contratosPend, view:null} : null,
-    isAdmin ? {label:"Parcelas vencidas em aberto", count:vencidas.length, view:"financeiro"} : null,
+    verFin ? {label:"Contratos pendentes de assinatura", count:contratosPend, view:null} : null,
+    verFin ? {label:"Parcelas vencidas em aberto", count:vencidas.length, view:"financeiro"} : null,
     {label:"Mentorados sem sessão há +30 dias", count:semSessao30.length, view:null, anchor:"risco"},
     aguardConf ? {label:"Sessões aguardando confirmação", count:aguardConf, view:"sessoes"} : null,
     ORFAS.length ? {label:"Sessões sem evento no Google Agenda", count:ORFAS.length, anchor:"orfas"} : null,
@@ -971,7 +988,7 @@ function renderDash(){
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Dashboard</h2><div class="sub">Visão geral da operação · ${ativos.length} mentorados ativos</div></div>
-  ${isAdmin?'<button class="btn" onclick="openNovoMentorado()">+ Novo mentorado</button>':''}</div>
+  ${pode("criarMentorado")?'<button class="btn" onclick="openNovoMentorado()">+ Novo mentorado</button>':''}</div>
 
   <div class="panel ${temAtencao?"attention":""}">
     <h3>${temAtencao?"⚠ Precisa de atenção agora":"✓ Tudo em ordem"}</h3>
@@ -1056,7 +1073,7 @@ function renderMentorados(){
   if(filtro.statusFin==="ativos") list = list.filter(ehAtivo);
   if(filtro.statusFin==="pausados") list = list.filter(m=>situacaoDe(m)==="pausado");
 
-  const isAdmin = myRole === "admin";
+  const verFin = pode("verFinanceiro");
   list = applySort(list, "mentorados", {
     nome: m=>m.nome.toLowerCase(),
     fechamento: m=>m.data_fechamento||"",
@@ -1066,7 +1083,7 @@ function renderMentorados(){
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Mentorados</h2><div class="sub">${list.length} de ${M.length} registro(s) · dados financeiros ficam em Financeiro</div></div>
-  ${isAdmin?'<button class="btn" onclick="openNovoMentorado()">+ Novo mentorado</button>':''}</div>
+  ${pode("criarMentorado")?'<button class="btn" onclick="openNovoMentorado()">+ Novo mentorado</button>':''}</div>
   <div class="panel" style="padding:14px 16px">
   <div class="filters" style="margin-bottom:0">
     <input type="search" placeholder="Buscar por nome…" value="${esc(filtro.q)}" oninput="filtro.q=this.value;renderMentorados()">
@@ -1074,17 +1091,17 @@ function renderMentorados(){
       <option value="">Todos</option>
       <option value="ativos" ${filtro.statusFin==="ativos"?"selected":""}>Somente ativos</option>
       <option value="pausados" ${filtro.statusFin==="pausados"?"selected":""}>Somente pausados</option>
-      ${isAdmin?`<option value="contrato" ${filtro.statusFin==="contrato"?"selected":""}>Contrato pendente</option>`:''}
+      ${verFin?`<option value="contrato" ${filtro.statusFin==="contrato"?"selected":""}>Contrato pendente</option>`:''}
     </select>
   </div>
   </div>
   <div class="panel" style="padding:6px 10px;overflow-x:auto">
-  <table><thead><tr>${th("mentorados","nome","Mentorado")}${th("mentorados","fechamento","Fechamento")}${isAdmin?th("mentorados","contrato","Contrato"):''}${th("mentorados","sessoes","Sessões")}</tr></thead><tbody>
+  <table><thead><tr>${th("mentorados","nome","Mentorado")}${th("mentorados","fechamento","Fechamento")}${verFin?th("mentorados","contrato","Contrato"):''}${th("mentorados","sessoes","Sessões")}</tr></thead><tbody>
   ${list.map(m=>{
     return `<tr class="click" onclick="openMentorado('${m.id}','completo')" ${!ehAtivo(m)?'style="opacity:.55"':""}>
       <td style="font-weight:600">${esc(m.nome)} ${pillSituacao(m)}</td>
       <td class="mono">${fmtD(m.data_fechamento)}</td>
-      ${isAdmin?`<td>${pillContrato(m.contrato_status)}</td>`:''}
+      ${verFin?`<td>${pillContrato(m.contrato_status)}</td>`:''}
       <td>${progBar(m.id)}</td>
     </tr>`;
   }).join("")}</tbody></table>
@@ -1106,7 +1123,7 @@ function renderSessoes(){
   const grp = list.filter(ehGrupo);
   const mostraInd = filtro.tipoSessao !== "grupo";
   const mostraGrp = filtro.tipoSessao !== "individual";
-  const isAdmin = myRole === "admin";
+  const podeCriar = pode("criarSessao");
 
   const getters = {
     data: s=>s.data||"",
@@ -1129,7 +1146,7 @@ function renderSessoes(){
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Sessões</h2><div class="sub">${todas1a1.filter(s=>s.status==="Concluída").length} sessões 1:1 concluídas · ${todas1a1.filter(s=>s.status==="Agendada").length} agendadas · ${totalEncontros} encontro(s) em grupo</div></div>
-  ${isAdmin?'<button class="btn" onclick="openSessaoGrupo()">+ Sessão em grupo</button>':''}</div>
+  ${podeCriar?'<button class="btn" onclick="openSessaoGrupo()">+ Sessão em grupo</button>':''}</div>
 
   <div class="filters">
     <select onchange="filtro.tipoSessao=this.value;renderSessoes()">
@@ -1171,7 +1188,7 @@ function renderSessoes(){
     <td class="num">${e.itens.length}</td>
     <td>${pillSess(statusGrupo(e))}</td>
     <td class="lk">${[linkOr(e.link_meet,"meet"),linkOr(e.link_gravacao,"gravação"),linkOr(e.link_anotacoes,"anotações")].filter(Boolean).join(" · ")||"—"}</td>
-  </tr>`).join("")}</tbody></table></div>`:`<div class="empty">Nenhum encontro registrado${isAdmin?' — use "+ Sessão em grupo"':""}.</div>`}
+  </tr>`).join("")}</tbody></table></div>`:`<div class="empty">Nenhum encontro registrado${podeCriar?' — use "+ Sessão em grupo"':""}.</div>`}
   </div>`;
   }).join("")}`:''}`;
 }
@@ -1194,11 +1211,11 @@ window.openGrupo = function(idx){
   <div class="sess marco-row">
     <div class="et">${esc(nome(s.mentorado_id))}</div>
     <div>${pillSess(s.status)}</div>
-    <button class="btn sm ghost" onclick="openSessao('${s.id}','${s.mentorado_id}')">Editar</button>
+    ${pode("escreverSessao")?`<button class="btn sm ghost" onclick="openSessao('${s.id}','${s.mentorado_id}')">Editar</button>`:""}
   </div>`).join("")}
   </div>
 
-  ${pendentes.length?`
+  ${(pode("escreverSessao") && pendentes.length)?`
   <div class="sec"><h4>Confirmar o encontro</h4>
   <div class="fgrid" style="grid-template-columns:1fr auto;align-items:end;margin-bottom:8px">
     <div class="f"><label>Quem atendeu</label>
@@ -1397,7 +1414,7 @@ function renderRotas(){
     ${temMultiplosCanais?`<div class="rowflex" style="margin-bottom:12px">
       <span class="section-label" style="margin:0">Canal de venda deste mentorado:</span>
       <select id="mcCanalSel">${canaisDaRota.map(c=>`<option value="${c.id}" ${(canalDoMentorado?canalDoMentorado.canal_id:canalObj?.id)===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select>
-      <button class="btn sm ghost" onclick="salvarCanalMentorado('${sel}','${rota.id}')">Salvar</button>
+      ${pode("escreverRotas")?`<button class="btn sm ghost" onclick="salvarCanalMentorado('${sel}','${rota.id}')">Salvar</button>`:""}
     </div>`:''}
     ${marcosDoSel.length?`<div class="stepper">${marcosDoSel.map(({marco,mm},i)=>{
       const st = mm?mm.status:(rota.modelo==="simples"?"nao_passou":"NAO_INICIADO");
@@ -1411,7 +1428,7 @@ function renderRotas(){
           <div class="step-nome">${esc(marco.nome)}</div>
           <div class="step-meta">${pillMarco(st, rota.modelo)}${mm&&mm.data?`<span class="step-data">${fmtD(mm.data)}</span>`:""}${mm&&mm.progresso!=null?`<span class="step-data">${mm.progresso}%</span>`:""}</div>
         </div>
-        <button class="btn sm ghost" onclick="openMarco('${marco.id}','${sel}')">Marcar</button>
+        ${pode("escreverRotas")?`<button class="btn sm ghost" onclick="openMarco('${marco.id}','${sel}')">Marcar</button>`:""}
       </div>`;
     }).join("")}</div>`:`<div class="empty">Nenhum mentorado ativo.</div>`}
   </div>
@@ -1425,19 +1442,19 @@ function renderRotas(){
   <div class="panel"><h3>Evolução mensal · ${esc(nome(sel))}</h3>
   <div style="position:relative;height:220px"><canvas id="fatChart" role="img" aria-label="Faturamento mensal de ${esc(nome(sel))} no canal ${esc(canalObj.nome)}"></canvas></div>
   </div>
-  <div class="panel"><h3>Registrar faturamento</h3>
+  ${pode("escreverRotas")?`<div class="panel"><h3>Registrar faturamento</h3>
   <div class="fgrid fat-form">
     <div class="f"><label>Mês</label>${monthField("ft_mes", meses[meses.length-1])}</div>
     <div class="f"><label>Valor (R$)</label><input id="ft_valor" type="number" min="0" step="0.01" placeholder="0,00"></div>
     <div class="f" style="display:flex;align-items:flex-end"><button class="btn" style="width:100%" onclick="salvarFaturamento('${sel}','${canalObj.id}')">Salvar</button></div>
   </div>
-  </div>
+  </div>`:""}
   <div class="panel" style="overflow-x:auto"><h3>Registros</h3>
   <table><thead><tr>${th("rota_fat","mes","Mês")}${th("rota_fat","valor","Valor","num")}<th></th></tr></thead><tbody>
   ${registrosFatOrdenados.length?registrosFatOrdenados.map(f=>`<tr>
     <td class="mono">${MESES_PT[+f.mes.slice(5,7)-1]}/${f.mes.slice(2,4)}</td>
     <td class="num mono">${fmtBRL(f.valor)}</td>
-    <td>${myRole==="admin"?`<button class="btn sm ghost" onclick="excluirFaturamento('${f.id}')">Excluir</button>`:''}</td>
+    <td>${pode("excluir")?`<button class="btn sm ghost" onclick="excluirFaturamento('${f.id}')">Excluir</button>`:''}</td>
   </tr>`).join(""):`<tr><td colspan="3"><div class="empty">Nenhum registro ainda.</div></td></tr>`}
   </tbody></table></div>`:''}`;
 
@@ -1545,16 +1562,18 @@ let fichaSecao = "completo";
 window.openMentorado = function(id, secao){
   const m = M.find(x=>x.id===id); if(!m) return;
   if(secao) fichaSecao = secao;
-  const isAdmin = myRole === "admin";
-  // mentor nunca vê o recorte financeiro, mesmo que a seção chegue por outro caminho
-  const sec = (!isAdmin && fichaSecao==="financeiro") ? "sessoes" : fichaSecao;
+  const verFin = pode("verFinanceiro");
+  const editarM = pode("editarMentorado");
+  const escreverS = pode("escreverSessao");
+  // quem não vê financeiro nunca cai no recorte financeiro, venha por onde vier
+  const sec = (!verFin && fichaSecao==="financeiro") ? "sessoes" : fichaSecao;
   const ps = parcelasDe(id);
   const ss = sessoes1a1De(id);        // trilha de 12 etapas
   const ssGrupo = sessoesGrupoDe(id); // plantão e implementação
 
   const mostra = {
     basico:     sec==="completo",
-    financeiro: isAdmin && (sec==="completo" || sec==="financeiro"),
+    financeiro: verFin && (sec==="completo" || sec==="financeiro"),
     sessoes:    sec==="completo" || sec==="sessoes",
   };
   const legenda = {
@@ -1574,13 +1593,13 @@ window.openMentorado = function(id, secao){
 
   ${mostra.basico?`
   <div class="fgrid">
-    <div class="f"><label>Nome</label><input id="e_nome" value="${esc(m.nome)}" ${isAdmin?"":"disabled"}></div>
-    <div class="f"><label>Data de fechamento</label>${dateField("e_fech", m.data_fechamento, {disabled:!isAdmin})}</div>
+    <div class="f"><label>Nome</label><input id="e_nome" value="${esc(m.nome)}" ${editarM?"":"disabled"}></div>
+    <div class="f"><label>Data de fechamento</label>${dateField("e_fech", m.data_fechamento, {disabled:!editarM})}</div>
   </div>
   <div class="fgrid">
-    <div class="f"><label>Link Drive</label><input id="e_ldrive" value="${esc(m.link_drive)}" ${isAdmin?"":"disabled"}></div>
-    <div class="f"><label>Link Mapa Mental</label><input id="e_lmapa" value="${esc(m.link_mapa_mental)}" ${isAdmin?"":"disabled"}></div>
-    <div class="f"><label>Canal WhatsApp</label><input id="e_lwhats" value="${esc(m.link_whatsapp)}" ${isAdmin?"":"disabled"}></div>
+    <div class="f"><label>Link Drive</label><input id="e_ldrive" value="${esc(m.link_drive)}" ${editarM?"":"disabled"}></div>
+    <div class="f"><label>Link Mapa Mental</label><input id="e_lmapa" value="${esc(m.link_mapa_mental)}" ${editarM?"":"disabled"}></div>
+    <div class="f"><label>Canal WhatsApp</label><input id="e_lwhats" value="${esc(m.link_whatsapp)}" ${editarM?"":"disabled"}></div>
   </div>`:''}
 
   ${mostra.financeiro?`
@@ -1594,11 +1613,11 @@ window.openMentorado = function(id, secao){
   </div>
   </div>`:''}
 
-  ${(mostra.basico||mostra.financeiro)&&isAdmin?`<div class="rowflex">
+  ${(mostra.basico||mostra.financeiro)&&editarM?`<div class="rowflex">
     <button class="btn" onclick="salvarMentorado('${id}')">Salvar alterações</button>
   </div>`:''}
 
-  ${mostra.basico&&isAdmin?`
+  ${mostra.basico&&editarM?`
   <div class="sec"><h4>Situa&ccedil;&atilde;o</h4>
   <div class="fgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:0">
     <div class="f"><label>Situa&ccedil;&atilde;o</label><select id="e_situacao" onchange="togglePausaCampos()">
@@ -1614,17 +1633,17 @@ window.openMentorado = function(id, secao){
   <div class="sec"><h4>Parcelas ${ps.length?`· ${ps.filter(p=>p.status==="paga").length}/${ps.length} pagas`:""}</h4>
   ${ps.length?`<div class="parc-grid">${ps.map(p=>`
     <div class="parc ${p.status==="paga"?"paga":parcelaVencida(p)?"vencida":""}" title="Clique para alternar paga/aberta">
-      <span class="parc-edit" onclick="event.stopPropagation();openParcela('${p.id}','${id}')" title="Editar parcela">✎</span>
-      <div onclick="toggleParcela('${p.id}','${id}')">
+      ${pode("editarFinanceiro")?`<span class="parc-edit" onclick="event.stopPropagation();openParcela('${p.id}','${id}')" title="Editar parcela">✎</span>`:""}
+      <div ${pode("editarFinanceiro")?`onclick="toggleParcela('${p.id}','${id}')"`:""}>
         <b>#${p.numero}</b>${p.valor!=null?fmtBRL(Number(p.valor)):""}
         <div class="parc-sub">${p.status==="paga"?"paga ✓":p.vencimento?fmtDshort(p.vencimento):"aberta"}</div>
       </div>
     </div>`).join("")}</div>`:`<div class="empty" style="padding:12px">Sem parcelas (pagamento à vista ou não cadastrado).</div>`}
-  <div class="rowflex mt8">
+  ${pode("editarFinanceiro")?`<div class="rowflex mt8">
     ${dateField("np_venc", "", {style:"width:160px", title:"Vencimento da nova parcela", placeholder:"Vencimento"})}
     <input id="np_valor" type="number" min="0" step="0.01" placeholder="Valor (R$)" style="width:140px">
     <button class="btn sm ghost" onclick="addParcela('${id}')">+ Adicionar parcela</button>
-  </div></div>`:''}
+  </div>`:""}</div>`:''}
 
   ${mostra.sessoes?`
   <div class="sec"><h4>Sessões 1:1 com mentores</h4>
@@ -1636,11 +1655,11 @@ window.openMentorado = function(id, secao){
     <div><div class="mentor-chip">${esc(s.mentor||"— sem mentor")}</div>
       <div class="lk mt8">${[linkOr(s.link_meet,"meet"),linkOr(s.link_gravacao,"gravação"),linkOr(s.link_anotacoes,"anotações")].filter(Boolean).join(" · ")}</div></div>
     <div class="rowflex">
-      ${s.status==="Aguardando confirmação"?`<button class="btn sm" onclick="openConfirmarSessao('${s.id}','${id}')">Confirmar</button>`:''}
-      <button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>
+      ${(escreverS && s.status==="Aguardando confirmação")?`<button class="btn sm" onclick="openConfirmarSessao('${s.id}','${id}')">Confirmar</button>`:''}
+      ${escreverS?`<button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>`:""}
     </div>
   </div>`).join("")||`<div class="empty" style="padding:12px">Nenhuma sessão registrada ainda.</div>`}
-  ${isAdmin?`<button class="btn sm mt8" onclick="openSessao(null,'${id}')">+ Nova sessão</button>`:''}</div>
+  ${pode("criarSessao")?`<button class="btn sm mt8" onclick="openSessao(null,'${id}')">+ Nova sessão</button>`:''}</div>
   ${ssGrupo.length?`<div class="sec"><h4>Sessões em grupo &middot; ${ssGrupo.length}</h4>
   ${ssGrupo.slice().sort((a,b)=>(a.data||"")<(b.data||"")?1:-1).map(s=>`
   <div class="sess">
@@ -1650,8 +1669,8 @@ window.openMentorado = function(id, secao){
     <div><div class="mentor-chip">${esc(s.mentor||"— sem mentor")}</div>
       <div class="lk mt8">${[linkOr(s.link_meet,"meet"),linkOr(s.link_gravacao,"gravação"),linkOr(s.link_anotacoes,"anotações")].filter(Boolean).join(" &middot; ")}</div></div>
     <div class="rowflex">
-      ${s.status==="Aguardando confirmação"?`<button class="btn sm" onclick="openConfirmarSessao('${s.id}','${id}')">Confirmar</button>`:''}
-      <button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>
+      ${(escreverS && s.status==="Aguardando confirmação")?`<button class="btn sm" onclick="openConfirmarSessao('${s.id}','${id}')">Confirmar</button>`:''}
+      ${escreverS?`<button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>`:""}
     </div>
   </div>`).join("")}</div>`:''}`:''}`;
   $("#overlay").classList.add("open");
@@ -1782,7 +1801,7 @@ window.openSessao = function(sid, mid){
   </div>
   <div class="rowflex">
     <button class="btn" onclick="salvarSessao('${sid||""}','${mid}')">Salvar sessão</button>
-    ${(sid && myRole==="admin")?`<button class="btn danger sm" onclick="delSessao('${sid}','${mid}')">Excluir</button>`:""}
+    ${(sid && pode("excluir"))?`<button class="btn danger sm" onclick="delSessao('${sid}','${mid}')">Excluir</button>`:""}
   </div>`;
   $("#overlay").classList.add("open");
 }
