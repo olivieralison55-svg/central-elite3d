@@ -8,6 +8,7 @@ Documento técnico. Para o guia de uso, ver [README.md](README.md).
 
 Aplicação de página única em **HTML e JavaScript puros, num único arquivo**
 (`index.html`, ~1.870 linhas). Sem framework, sem build, sem `package.json`.
+O único outro código versionado é `tests/`, que roda no Node sem dependência.
 O navegador fala direto com o Postgres do Supabase via PostgREST.
 
 ```
@@ -38,7 +39,7 @@ policies permitirem, independente do que a tela mostra.
 | Automação | 2 jobs `pg_cron` + 2 Edge Functions (Deno) |
 | Deploy | Vercel, automático no push para `main`. Sem etapa de build |
 | Projeto Supabase | `matgynpiscyoshnjzolo` (região `sa-east-1`) |
-| Testes / lint | Nenhum |
+| Testes | `tests/` — 106 asserções em Node puro, sem dependência. Nenhum lint |
 
 A chave usada no front (`SUPABASE_KEY`, formato `sb_publishable_…`) é **pública
 por desenho** e pode ficar no repositório. A `service_role` **não** aparece aqui
@@ -357,6 +358,43 @@ E acesse `http://localhost:8080`. O login funciona normalmente contra o Supabase
 de produção — **atenção: é o banco real, não um ambiente de teste.** Não existe
 projeto de staging hoje.
 
+## Testes
+
+```bash
+node tests/testes.mjs
+```
+
+Sem dependência, sem instalar nada, sem tocar o banco. Sai com código 1 se algo
+falhar, então serve em hook de pre-push ou CI.
+
+`tests/ambiente.mjs` extrai o `<script>` inline do `index.html`, executa num
+escopo controlado com stubs mínimos de browser, e guarda o `innerHTML` atribuído
+a cada seletor. `carregarApp()` devolve uma instância nova por chamada — o estado
+do app vive no closure do `new Function`, então dois papéis não se contaminam.
+As escritas no Supabase são capturadas em vez de enviadas, o que permite afirmar
+sobre o payload: é assim que se verifica que um encontro em grupo grava uma linha
+por participante, com a mesma etapa, data e mentor.
+
+O que está coberto — deliberadamente, o que já quebrou aqui ou quebraria calado:
+
+- **Escape de HTML** em toda tela e modal, com payload de XSS armazenado num nome
+  de mentorado. O critério é ausência de `<img` cru **mais** presença de
+  `&lt;img`: provar só a ausência não distingue escape de dado descartado no
+  caminho.
+- **Nenhum texto de coluna dentro de `onclick`** — encontro em grupo referenciado
+  por índice.
+- **Permissões por papel:** o que mentor não vê (Financeiro, alertas financeiros,
+  registrar sessão em grupo) e o que vê (confirmar presença).
+- **Separação 1:1 x grupo:** classificação por etapa, agrupamento por
+  etapa+data+hora, e as contagens que precisam ficar 1:1 (barra de progresso,
+  legenda da trilha).
+- **Formato de data e de moeda**, incluindo o eixo do gráfico e o contrato do
+  campo de data (o `input hidden` com o id de antes).
+
+O que **não** está coberto, e por isso não substitui uma passada no browser:
+layout, CSS, evento real, posicionamento do popover do calendário, e qualquer
+coisa que dependa de estar logado.
+
 ## Deploy
 
 Push para `main` → a Vercel publica automaticamente em
@@ -378,8 +416,11 @@ Em ordem aproximada de retorno sobre esforço.
    escreve tudo.
 2. **`sessoes.mentor` como FK** em vez de texto livre. Destrava o item 1, o
    filtro "meus mentorados" e a carga confiável por mentor.
-3. **Nenhum teste.** O mínimo útil: escape de HTML, permissões por papel, e o
-   cálculo dos alertas.
+3. **A suíte não cobre os alertas nem o browser.** `tests/` cobre escape de HTML,
+   permissões por papel e a separação de sessões, mas o cálculo dos alertas do
+   dashboard (parada há +30 dias, órfãs do Calendar, aguardando confirmação) só é
+   verificado por "renderizou sem lixo" — não há asserção sobre quem deveria
+   entrar em cada lista. Nada roda em browser, nada roda em CI.
 4. **Sem histórico nem autoria** em `mentorados` e `sessoes` — nem `updated_at`,
    nem quem alterou. Impossível auditar mudanças.
 5. **`unique (mentorado_id, etapa)`** não existe em `sessoes`; já houve etapas
