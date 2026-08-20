@@ -180,6 +180,47 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
 .filters input,.filters select{width:auto;min-width:160px}
 .filters input[type=search]{min-width:250px}
 
+/* ---------- date picker ---------- */
+.dp{position:relative}
+.dp-input{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;background:var(--surface-input);border:1px solid var(--border);color:var(--foreground);border-radius:var(--radius-control);padding:11px 12px;font-family:inherit;font-size:13px;text-align:left;transition:border-color var(--speed) ease,box-shadow var(--speed) ease}
+.dp-input:hover:not(:disabled){border-color:var(--border-hover)}
+.dp-input[aria-expanded="true"]{border-color:var(--primary);box-shadow:0 0 0 3px rgba(185,255,70,.12)}
+.dp-input:disabled{opacity:.45;cursor:not-allowed}
+.dp-val{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dp-ph{color:var(--disabled-foreground)}
+.dp-ic{width:16px;height:16px;flex-shrink:0;stroke:var(--subtle-foreground);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.dp-input[aria-expanded="true"] .dp-ic{stroke:var(--primary)}
+.dp-pop{position:fixed;z-index:60;width:280px;background:var(--surface);border:1px solid var(--border-hover);border-radius:var(--radius-control);padding:14px;box-shadow:0 20px 44px rgba(9,10,10,.6)}
+.dp-head{display:flex;align-items:center;gap:6px;margin-bottom:12px}
+.dp-nav{width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid transparent;border-radius:8px;color:var(--subtle-foreground);font-size:16px;line-height:1}
+.dp-nav:hover{background:rgba(254,254,254,.05);color:var(--foreground)}
+.dp-title{flex:1;min-height:32px;background:none;border:1px solid transparent;border-radius:8px;color:var(--foreground);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:-.01em}
+.dp-title:hover:not(:disabled){background:rgba(254,254,254,.05);color:var(--primary)}
+.dp-title:disabled{cursor:default}
+.dp-week,.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dp-week{margin-bottom:4px}
+.dp-week span{padding:4px 0;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle-foreground);font-weight:600}
+.dp-day{height:32px;background:none;border:1px solid transparent;border-radius:8px;color:var(--foreground);font-size:12.5px;font-weight:500}
+.dp-day:hover{background:rgba(254,254,254,.06)}
+.dp-day.fora{color:var(--disabled-foreground)}
+.dp-day.hoje{border-color:var(--border-primary);color:var(--primary)}
+.dp-day.sel{background:var(--primary);border-color:var(--primary);color:var(--primary-foreground);font-weight:700}
+.dp-months{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.dp-month{min-height:38px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--foreground);font-size:12px;font-weight:600}
+.dp-month:hover{border-color:var(--border-primary);color:var(--primary)}
+.dp-month.sel{background:var(--primary);border-color:var(--primary);color:var(--primary-foreground)}
+.dp-foot{display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.dp-foot button{flex:1;min-height:34px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted-foreground);font-size:11.5px;font-weight:600}
+.dp-foot button:hover{border-color:var(--border-primary);color:var(--primary)}
+@media(max-width:420px){.dp-pop{width:calc(100vw - 24px)}}
+
+/* ---------- lista de seleção múltipla ---------- */
+.chk-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:4px;max-height:238px;overflow-y:auto;padding:10px;background:rgba(254,254,254,.02);border:1px solid var(--border);border-radius:var(--radius-control)}
+.chk{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;font-size:12.5px;cursor:pointer}
+.chk:hover{background:rgba(254,254,254,.05)}
+.chk input[type=checkbox]{width:16px;height:16px;min-height:0;padding:0;flex-shrink:0;accent-color:var(--primary);cursor:pointer}
+.chk span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* ---------- modal ---------- */
 .overlay{position:fixed;inset:0;background:rgba(9,10,10,.78);display:none;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:40px 16px}
 .overlay.open{display:flex}
@@ -410,7 +451,15 @@ const MENTORES = ["Evaldo","Luan","Sergio","Diovani","Petare","Michelle"];
 const MENTORES_HIST = ["Israel"];
 const TODOS_MENTORES = [...MENTORES, ...MENTORES_HIST];
 const ETAPAS = ["Diagnóstico de Negócio","Plano de Ação","Checkup 1","Checkup 2","Checkup 3","Checkup 4","Checkup 5","Checkup 6","Checkup 7","Checkup 8","Checkup 9","Checkup 10"];
-const ETAPA_ORD = Object.fromEntries(ETAPAS.map((e,i)=>[e,i+1]));
+/* Sessões em grupo: encontros coletivos, fora da trilha de 12 sessões 1:1.
+   Ordem 90+ para nunca colidir com a numeração das etapas individuais. */
+const ETAPAS_GRUPO = ["Plantão de Dúvida Semanal","Sessão de Implementação Mensal"];
+const ETAPA_ORD = Object.fromEntries([
+  ...ETAPAS.map((e,i)=>[e,i+1]),
+  ...ETAPAS_GRUPO.map((e,i)=>[e,90+i]),
+]);
+const ehGrupo = s => !!s && ETAPAS_GRUPO.includes(s.etapa);
+const eh1a1   = s => !ehGrupo(s);
 const S_STATUS = ["Não iniciada","Agendada","Aguardando confirmação","Concluída","Bloqueada"];
 // Data de hoje no fuso da operação. toISOString() devolve UTC — entre 21h e 00h
 // em Brasília isso já virava o dia seguinte, adiantando vencimentos e "próximas".
@@ -422,7 +471,7 @@ let CANAIS_DB = [], MC = []; // canais (por rota), mentorado_canais
 let FAT = []; // faturamento_mensal
 let ORFAS = []; // sessoes cujo evento sumiu do Google Calendar
 let view = "dash";
-let filtro = {q:"", mentor:"", statusFin:""};
+let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:""};
 let rotaAtual = null; // slug da rota selecionada na tela Rotas
 let myRole = null, myProfile = null;
 
@@ -493,6 +542,10 @@ async function loadAll(){
 }
 const parcelasDe = id => P.filter(x=>x.mentorado_id===id);
 const sessoesDe  = id => S.filter(x=>x.mentorado_id===id).sort((a,b)=>a.ordem-b.ordem);
+/* A trilha de 12 etapas e os encontros coletivos vivem na mesma tabela, mas
+   nunca devem ser somados: separe sempre pelo tipo antes de contar. */
+const sessoes1a1De   = id => sessoesDe(id).filter(eh1a1);
+const sessoesGrupoDe = id => sessoesDe(id).filter(ehGrupo);
 const nome = id => (M.find(x=>x.id===id)||{}).nome || "—";
 
 /* ================= HELPERS ================= */
@@ -532,7 +585,7 @@ function pillSess(v){
   return `<span class="pill ${map[v]||"gray"}">${esc(v||"—")}</span>`;
 }
 function progBar(mid){
-  const ss = sessoesDe(mid);
+  const ss = sessoes1a1De(mid); // a barra é a trilha 1:1; grupo não entra
   if(!ss.length) return `<span class="pill gray">0 sessões</span>`;
   return `<div class="prog">`+ss.map(s=>{
     const c = s.status==="Concluída"?"done":s.status==="Agendada"?"sched":s.status==="Bloqueada"?"block":"";
@@ -560,6 +613,233 @@ function linkOr(v, label){
   const url = /^https?:/i.test(v) ? v : null;
   return url ? `<a href="${esc(url)}" target="_blank">${label}</a>` : `<span style="color:var(--dim)" title="${esc(v)}">${label}*</span>`;
 }
+
+/* ================= SESSÕES EM GRUPO ================= */
+/* Um encontro coletivo é gravado como uma linha por participante, porque
+   sessoes.mentorado_id é obrigatório no banco. Sem reagrupar, um plantão com 30
+   inscritos apareceria como 30 linhas na agenda — a chave é etapa+data+hora. */
+function agruparGrupo(sessoes){
+  const mapa = new Map();
+  sessoes.forEach(s=>{
+    const chave = [s.etapa, s.data||"", s.hora||""].join("|");
+    let e = mapa.get(chave);
+    if(!e){
+      e = {chave, etapa:s.etapa, data:s.data, hora:s.hora, mentor:s.mentor||null,
+           link_meet:null, link_gravacao:null, link_anotacoes:null, itens:[]};
+      mapa.set(chave, e);
+    }
+    e.itens.push(s);
+    if(!e.mentor) e.mentor = s.mentor || null;
+    ["link_meet","link_gravacao","link_anotacoes"].forEach(k=>{ if(!e[k]) e[k] = s[k] || null; });
+  });
+  return [...mapa.values()];
+}
+const contagemStatus = e => e.itens.reduce((a,s)=>{ const k = s.status||"—"; a[k]=(a[k]||0)+1; return a; }, {});
+/* Status do encontro: o mais frequente entre os participantes. */
+const statusGrupo = e => Object.entries(contagemStatus(e)).sort((a,b)=>b[1]-a[1])[0][0];
+/* Plural dos status no resumo do encontro. "Aguardando confirmação" é
+   invariável; os outros só ganham "s". */
+const STATUS_PLURAL = {
+  "Não iniciada":"não iniciadas", "Agendada":"agendadas",
+  "Aguardando confirmação":"aguardando confirmação",
+  "Concluída":"concluídas", "Bloqueada":"bloqueadas",
+};
+const resumoStatusGrupo = e => Object.entries(contagemStatus(e)).sort((a,b)=>b[1]-a[1])
+  .map(([k,v])=>`${v} ${v===1?k.toLowerCase():(STATUS_PLURAL[k]||k.toLowerCase())}`).join(" · ");
+/* Encontros desenhados na tela atual. O onclick guarda só o índice — nunca
+   texto vindo do banco interpolado dentro de um atributo. */
+let GRUPO_REG = [];
+const regGrupo = e => GRUPO_REG.push(e) - 1;
+let grupoAberto = null; // encontro aberto no modal, para as ações em lote
+
+/* ================= CAMPO DE DATA (calendário) ================= */
+/* Um único componente para todo campo de data do sistema. O valor real continua
+   num input com o MESMO id de antes (agora hidden), então tudo que já lia
+   $("#id").value segue recebendo "YYYY-MM-DD" — ou "YYYY-MM" no modo mês.
+   O botão mostra a data no formato da aplicação (fmtD) e abre o calendário ao
+   clique em qualquer ponto do campo, não só num ícone.
+   O popover é filho de <body> e position:fixed de propósito: dentro do modal
+   ele seria cortado pelo overflow do overlay. */
+const DP_SEMANA = ["D","S","T","Q","Q","S","S"];
+const DP_MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const DP_ICON = `<svg class="dp-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>`;
+const dpPlaceholder = mode => mode==="month" ? "mm/aaaa" : "dd/mm/aaaa";
+
+function dpLabel(v, mode){
+  if(!v) return "";
+  if(mode==="month"){ const [y,m] = v.split("-"); return `${MESES_PT[+m-1]}/${y}`; }
+  return fmtD(v);
+}
+/* opt: {disabled, style, title, placeholder, mode:"day"|"month"} */
+function dateField(id, value, opt){
+  opt = opt || {};
+  const mode = opt.mode==="month" ? "month" : "day";
+  const v = (value||"").slice(0, mode==="month" ? 7 : 10);
+  const ph = opt.placeholder || dpPlaceholder(mode);
+  return `<div class="dp"${opt.style?` style="${esc(opt.style)}"`:""}>`
+    + `<input type="hidden" id="${esc(id)}" value="${esc(v)}">`
+    + `<button type="button" class="dp-input" data-dp="${esc(id)}" data-dp-mode="${mode}"`
+    + ` data-dp-ph="${esc(ph)}" aria-haspopup="dialog" aria-expanded="false"`
+    + `${opt.disabled?" disabled":""}${opt.title?` title="${esc(opt.title)}"`:""}>`
+    + `<span class="dp-val">${v?esc(dpLabel(v,mode)):`<span class="dp-ph">${esc(ph)}</span>`}</span>`
+    + DP_ICON + `</button></div>`;
+}
+const monthField = (id, value, opt) => dateField(id, value, Object.assign({}, opt||{}, {mode:"month"}));
+
+let dpState = null; // {id, mode, trigger, pop, cursor:"YYYY-MM", vista:"dias"|"meses"}
+const dpTrigger = id => document.querySelector('.dp-input[data-dp="'+id+'"]');
+const dpValor = id => { const el = document.getElementById(id); return el ? el.value : ""; };
+
+function dpSet(id, v){
+  const el = document.getElementById(id); if(!el) return;
+  el.value = v || "";
+  const trig = dpTrigger(id);
+  if(trig){
+    const mode = trig.dataset.dpMode;
+    trig.querySelector(".dp-val").innerHTML = v
+      ? esc(dpLabel(v, mode))
+      : `<span class="dp-ph">${esc(trig.dataset.dpPh || dpPlaceholder(mode))}</span>`;
+  }
+  /* mantém quem escutar "change" no campo funcionando como no input nativo */
+  el.dispatchEvent(new Event("change", {bubbles:true}));
+}
+function dpClose(){
+  if(!dpState) return;
+  dpState.pop.remove();
+  if(dpState.trigger.isConnected) dpState.trigger.setAttribute("aria-expanded","false");
+  dpState = null;
+}
+function dpOpen(trigger){
+  const jaAberto = dpState && dpState.trigger === trigger;
+  dpClose();
+  if(jaAberto) return;
+  const mode = trigger.dataset.dpMode==="month" ? "month" : "day";
+  const pop = document.createElement("div");
+  pop.className = "dp-pop";
+  pop.setAttribute("role","dialog");
+  pop.setAttribute("aria-label", mode==="month" ? "Selecionar mês" : "Selecionar data");
+  document.body.appendChild(pop);
+  dpState = {
+    id: trigger.dataset.dp, mode, trigger, pop,
+    cursor: (dpValor(trigger.dataset.dp) || HOJE).slice(0,7),
+    vista: mode==="month" ? "meses" : "dias",
+  };
+  trigger.setAttribute("aria-expanded","true");
+  dpRender();
+  dpPos();
+  const foco = pop.querySelector(".dp-day.sel, .dp-month.sel")
+    || pop.querySelector(".dp-day.hoje")
+    || pop.querySelector(".dp-day:not(.fora), .dp-month");
+  if(foco) foco.focus({preventScroll:true});
+}
+function dpPos(){
+  if(!dpState) return;
+  const r = dpState.trigger.getBoundingClientRect();
+  const w = dpState.pop.offsetWidth, h = dpState.pop.offsetHeight;
+  let top = r.bottom + 6;
+  if(top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  const left = Math.min(r.left, window.innerWidth - w - 8);
+  dpState.pop.style.top = top + "px";
+  dpState.pop.style.left = Math.max(8, left) + "px";
+}
+function dpRender(){
+  const {id, mode, cursor, vista, pop} = dpState;
+  const sel = dpValor(id);
+  const [cy, cm] = cursor.split("-").map(Number);
+  let corpo;
+  if(vista === "meses"){
+    corpo = `<div class="dp-months">${DP_MESES.map((_,i)=>{
+      const val = `${cy}-${String(i+1).padStart(2,"0")}`;
+      const ativo = mode==="month" ? sel===val : cursor===val;
+      return `<button type="button" class="dp-month ${ativo?"sel":""}" data-dp-mes="${val}">${MESES_PT[i]}</button>`;
+    }).join("")}</div>`;
+  } else {
+    const inicio = new Date(Date.UTC(cy, cm-1, 1)).getUTCDay();      // 0 = domingo
+    const noMes = new Date(Date.UTC(cy, cm, 0)).getUTCDate();
+    const noAnterior = new Date(Date.UTC(cy, cm-1, 0)).getUTCDate();
+    const cels = [];
+    for(let i=inicio-1; i>=0; i--) cels.push({d: noAnterior - i, desloc: -1});
+    for(let d=1; d<=noMes; d++)    cels.push({d, desloc: 0});
+    while(cels.length % 7)         cels.push({d: cels.length - inicio - noMes + 1, desloc: 1});
+    corpo = `<div class="dp-week">${DP_SEMANA.map(d=>`<span>${d}</span>`).join("")}</div>`
+      + `<div class="dp-grid">${cels.map(c=>{
+          const mRef = cm + c.desloc;
+          const y = mRef < 1 ? cy-1 : mRef > 12 ? cy+1 : cy;
+          const m = mRef < 1 ? 12   : mRef > 12 ? 1    : mRef;
+          const iso = `${y}-${String(m).padStart(2,"0")}-${String(c.d).padStart(2,"0")}`;
+          const cls = [c.desloc?"fora":"", iso===HOJE?"hoje":"", iso===sel?"sel":""].filter(Boolean).join(" ");
+          return `<button type="button" class="dp-day ${cls}" data-dp-dia="${iso}" aria-label="${esc(fmtD(iso))}">${c.d}</button>`;
+        }).join("")}</div>`;
+  }
+  pop.innerHTML = `
+  <div class="dp-head">
+    <button type="button" class="dp-nav" data-dp-passo="-1" aria-label="${vista==="meses"?"Ano anterior":"Mês anterior"}">‹</button>
+    <button type="button" class="dp-title" data-dp-vista="1"${mode==="month"?" disabled":""}>${vista==="meses"?cy:`${DP_MESES[cm-1]} ${cy}`}</button>
+    <button type="button" class="dp-nav" data-dp-passo="1" aria-label="${vista==="meses"?"Próximo ano":"Próximo mês"}">›</button>
+  </div>
+  ${corpo}
+  <div class="dp-foot">
+    <button type="button" data-dp-hoje="1">${mode==="month"?"Mês atual":"Hoje"}</button>
+    <button type="button" data-dp-limpar="1">Limpar</button>
+  </div>`;
+}
+/* Delegação em captura: pega o clique antes de qualquer handler inline. */
+document.addEventListener("click", e=>{
+  const alvo = e.target;
+  if(!alvo || !alvo.closest) return;
+  const trig = alvo.closest(".dp-input");
+  if(trig){
+    if(!trig.disabled){ e.preventDefault(); e.stopPropagation(); dpOpen(trig); }
+    return;
+  }
+  if(!alvo.closest(".dp-pop")){ dpClose(); return; }
+  if(!dpState) return;
+  const b = alvo.closest("button"); if(!b) return;
+  const {id, mode} = dpState;
+  if(b.dataset.dpDia){ dpSet(id, b.dataset.dpDia); dpClose(); return; }
+  if(b.dataset.dpMes){
+    if(mode === "month"){ dpSet(id, b.dataset.dpMes); dpClose(); }
+    else { dpState.cursor = b.dataset.dpMes; dpState.vista = "dias"; dpRender(); dpPos(); }
+    return;
+  }
+  if(b.dataset.dpPasso){
+    const passo = +b.dataset.dpPasso;
+    let [y, m] = dpState.cursor.split("-").map(Number);
+    if(dpState.vista === "meses") y += passo;
+    else { m += passo; if(m < 1){ m = 12; y--; } if(m > 12){ m = 1; y++; } }
+    dpState.cursor = `${y}-${String(m).padStart(2,"0")}`;
+    dpRender(); dpPos(); return;
+  }
+  if(b.dataset.dpVista){
+    dpState.vista = dpState.vista === "meses" ? "dias" : "meses";
+    dpRender(); dpPos(); return;
+  }
+  if(b.dataset.dpHoje){ dpSet(id, mode==="month" ? HOJE.slice(0,7) : HOJE); dpClose(); return; }
+  if(b.dataset.dpLimpar){ dpSet(id, ""); dpClose(); return; }
+}, true);
+/* Teclado: Esc fecha, setas andam pelo calendário. */
+document.addEventListener("keydown", e=>{
+  if(!dpState) return;
+  if(e.key === "Escape"){
+    const t = dpState.trigger; dpClose();
+    if(t.isConnected) t.focus();
+    e.preventDefault(); e.stopPropagation(); return;
+  }
+  const passos = {ArrowLeft:-1, ArrowRight:1, ArrowUp:-7, ArrowDown:7};
+  if(!(e.key in passos) || dpState.vista !== "dias") return;
+  const atual = e.target.closest && e.target.closest("[data-dp-dia]");
+  if(!atual) return;
+  e.preventDefault();
+  const d = new Date(atual.dataset.dpDia + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + passos[e.key]);
+  const iso = d.toISOString().slice(0,10);
+  dpState.cursor = iso.slice(0,7);
+  dpRender(); dpPos();
+  const prox = dpState.pop.querySelector('[data-dp-dia="'+iso+'"]');
+  if(prox) prox.focus({preventScroll:true});
+}, true);
+window.addEventListener("resize", dpClose);
+window.addEventListener("scroll", dpPos, true);
 
 /* ================= ORDENAÇÃO GENÉRICA ================= */
 let sortState = {};
@@ -602,6 +882,7 @@ function setView(v){
 }
 document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>setView(b.dataset.view));
 function render(){
+  dpClose(); // calendário aberto não sobrevive a um re-render da tela
   if(view==="dash") renderDash();
   else if(view==="mentorados") renderMentorados();
   else if(view==="sessoes") renderSessoes();
@@ -612,9 +893,17 @@ function render(){
 
 /* ================= DASHBOARD ================= */
 function renderDash(){
+  GRUPO_REG.length = 0;
   const ativos = M.filter(ehAtivo);
-  const concl = S.filter(s=>s.status==="Concluída").length;
-  const agend = S.filter(s=>s.status==="Agendada");
+  /* Sessões 1:1 e em grupo contadas separadamente: somar as duas inflaria o
+     total e distorceria a trilha de 12 sessões. */
+  const S1 = S.filter(eh1a1), SG = S.filter(ehGrupo);
+  const temGrupo = SG.length > 0;
+  const concl = S1.filter(s=>s.status==="Concluída").length;
+  const agend = S1.filter(s=>s.status==="Agendada");
+  const grupoConcl = agruparGrupo(SG.filter(s=>s.status==="Concluída"));
+  const grupoAgend = agruparGrupo(SG.filter(s=>s.status==="Agendada"));
+  const presencasGrupo = SG.filter(s=>s.status==="Concluída").length;
   const aguardConf = S.filter(s=>s.status==="Aguardando confirmação").length;
   const contratosPend = ativos.filter(m=>m.contrato_status!=="Assinado").length;
   const vencidas = P.filter(p=>parcelaVencida(p) && ehAtivo(M.find(m=>m.id===p.mentorado_id)));
@@ -623,33 +912,43 @@ function renderDash(){
      nenhuma é medido pela data de fechamento. Antes esse grupo era descartado
      por um "if(!ss.length) return false", o que escondia justamente o caso
      mais grave: contrato fechado há meses e a mentoria nunca começou. */
-  const ultimaConcluida = mid => sessoesDe(mid)
+  const ultimaConcluida = mid => sessoes1a1De(mid)
     .filter(s=>s.status==="Concluída"&&s.data).map(s=>s.data).sort().pop() || null;
   const semSessao30 = ativos.filter(m=>{
-    if(sessoesDe(m.id).some(s=>s.status==="Agendada")) return false;
+    if(sessoes1a1De(m.id).some(s=>s.status==="Agendada")) return false;
     const ref = ultimaConcluida(m.id) || m.data_fechamento;
     if(!ref) return false;
     return (new Date(HOJE)-new Date(ref))/864e5 > 30;
   });
 
   // matriz mentor x etapa
-  const etapasAtivas = [...new Set(S.map(s=>s.etapa))].sort((a,b)=>ETAPA_ORD[a]-ETAPA_ORD[b]);
+  const etapasAtivas = [...new Set(S1.map(s=>s.etapa))].sort((a,b)=>ETAPA_ORD[a]-ETAPA_ORD[b]);
   // Deriva a lista de quem aparece na matriz dos proprios dados: assim ninguem
   // some da contagem ao sair do projeto, nem depende de estar na constante.
   const mentoresComSessao = [...new Set(S.filter(s=>s.status==="Concluída"&&s.mentor).map(s=>s.mentor))];
   const matriz = mentoresComSessao.map(mt=>{
-    const row = etapasAtivas.map(et=>S.filter(s=>s.mentor===mt&&s.etapa===et&&s.status==="Concluída").length);
-    return {mt,row,tot:row.reduce((a,b)=>a+b,0), inativo: !MENTORES.includes(mt)};
+    const row = etapasAtivas.map(et=>S1.filter(s=>s.mentor===mt&&s.etapa===et&&s.status==="Concluída").length);
+    const grupo = agruparGrupo(SG.filter(s=>s.mentor===mt&&s.status==="Concluída")).length;
+    return {mt,row,grupo,tot:row.reduce((a,b)=>a+b,0)+grupo, inativo: !MENTORES.includes(mt)};
   }).filter(r=>r.tot>0).sort((a,b)=>b.tot-a.tot);
   // Sessoes concluidas sem mentor identificado: ficam visiveis em vez de sumir.
-  const semMentorRow = etapasAtivas.map(et=>S.filter(s=>!s.mentor&&s.etapa===et&&s.status==="Concluída").length);
-  const semMentorTot = semMentorRow.reduce((a,b)=>a+b,0);
+  const semMentorRow = etapasAtivas.map(et=>S1.filter(s=>!s.mentor&&s.etapa===et&&s.status==="Concluída").length);
+  const semMentorGrupo = agruparGrupo(SG.filter(s=>!s.mentor&&s.status==="Concluída")).length;
+  const semMentorTot = semMentorRow.reduce((a,b)=>a+b,0) + semMentorGrupo;
   const aguardSemMentor = S.filter(s=>!s.mentor&&s.status==="Aguardando confirmação").length;
 
   // Cinto de segurança: "próximas" nunca mostra data passada, mesmo que algo
   // fique preso em "Agendada" no banco. Ordena por data + hora.
-  const proximas = S.filter(s=>s.status==="Agendada" && s.data && s.data>=HOJE)
-    .sort((a,b)=>((a.data+(a.hora||"99"))<(b.data+(b.hora||"99")))?-1:1).slice(0,8);
+  const proximas = [
+    ...S1.filter(s=>s.status==="Agendada" && s.data && s.data>=HOJE).map(s=>({
+      grupo:false, data:s.data, hora:s.hora, etapa:s.etapa, mentor:s.mentor,
+      quem:nome(s.mentorado_id), mid:s.mentorado_id,
+    })),
+    ...agruparGrupo(SG.filter(s=>s.status==="Agendada" && s.data && s.data>=HOJE)).map(e=>({
+      grupo:true, data:e.data, hora:e.hora, etapa:e.etapa, mentor:e.mentor,
+      quem:`${e.itens.length} participante(s)`, entrada:e,
+    })),
+  ].sort((a,b)=>((a.data+(a.hora||"99"))<(b.data+(b.hora||"99")))?-1:1).slice(0,8);
 
   const isAdmin = myRole === "admin";
 
@@ -689,8 +988,9 @@ function renderDash(){
   <div class="section-label">Números gerais</div>
   <div class="cards quiet">
     <div class="card"><div class="k">Mentorados ativos</div><div class="v">${ativos.length}</div><div class="d">${M.filter(m=>situacaoDe(m)==="pausado").length} pausado(s) &middot; ${M.filter(m=>situacaoDe(m)==="cancelado").length} cancelado(s)</div></div>
-    <div class="card"><div class="k">Sessões concluídas</div><div class="v">${concl}</div><div class="d">no total</div></div>
-    <div class="card"><div class="k">Agendadas</div><div class="v">${agend.length}</div><div class="d">próximas sessões</div></div>
+    <div class="card"><div class="k">Sessões 1:1 concluídas</div><div class="v">${concl}</div><div class="d">no total</div></div>
+    <div class="card"><div class="k">Agendadas</div><div class="v">${agend.length}</div><div class="d">próximas sessões 1:1</div></div>
+    <div class="card"><div class="k">Encontros em grupo</div><div class="v">${grupoConcl.length}</div><div class="d">${presencasGrupo} presença(s) &middot; ${grupoAgend.length} agendado(s)</div></div>
   </div>
 
   ${comFaturamento.length?`
@@ -717,16 +1017,16 @@ function renderDash(){
   <div class="grid2">
     <div class="panel detail">
       <h3>Sessões concluídas por mentor</h3>
-      <div style="overflow-x:auto"><table><thead><tr><th>Mentor</th>${etapasAtivas.map(e=>`<th class="num" title="${e}">${e.replace("Diagnóstico de Negócio","Diag.").replace("Plano de Ação","Plano").replace("Checkup ","C")}</th>`).join("")}<th class="num">Total</th></tr></thead>
-      <tbody>${matriz.map(r=>`<tr><td class="mentor-chip">${esc(r.mt)}${r.inativo?'<span class="pill gray" style="margin-left:8px">fora do projeto</span>':''}</td>${r.row.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--green);font-weight:700">${r.tot}</td></tr>`).join("")}
-      ${semMentorTot?`<tr style="opacity:.75"><td class="mentor-chip">Sem mentor identificado</td>${semMentorRow.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--amber);font-weight:700">${semMentorTot}</td></tr>`:''}</tbody></table></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Mentor</th>${etapasAtivas.map(e=>`<th class="num" title="${e}">${e.replace("Diagnóstico de Negócio","Diag.").replace("Plano de Ação","Plano").replace("Checkup ","C")}</th>`).join("")}${temGrupo?`<th class="num" title="Encontros em grupo">Grupo</th>`:""}<th class="num">Total</th></tr></thead>
+      <tbody>${matriz.map(r=>`<tr><td class="mentor-chip">${esc(r.mt)}${r.inativo?'<span class="pill gray" style="margin-left:8px">fora do projeto</span>':''}</td>${r.row.map(v=>`<td class="num">${v||"·"}</td>`).join("")}${temGrupo?`<td class="num">${r.grupo||"·"}</td>`:""}<td class="num" style="color:var(--green);font-weight:700">${r.tot}</td></tr>`).join("")}
+      ${semMentorTot?`<tr style="opacity:.75"><td class="mentor-chip">Sem mentor identificado</td>${semMentorRow.map(v=>`<td class="num">${v||"·"}</td>`).join("")}${temGrupo?`<td class="num">${semMentorGrupo||"·"}</td>`:""}<td class="num" style="color:var(--amber);font-weight:700">${semMentorTot}</td></tr>`:''}</tbody></table></div>
       ${aguardSemMentor?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${aguardSemMentor} sessão(ões) aguardando confirmação sem mentor definido</div><a onclick="setView('sessoes')">ver</a></div>`:''}
     </div>
     <div class="panel detail">
       <h3>Próximas sessões agendadas</h3>
       <div style="overflow-x:auto">
       ${proximas.length ? `<table><thead><tr><th>Data</th><th>Mentorado</th><th>Etapa</th><th>Mentor</th></tr></thead><tbody>
-      ${proximas.map(s=>`<tr class="click" onclick="openMentorado('${s.mentorado_id}','sessoes')"><td>${cellDataHora(s.data, s.hora)}</td><td>${esc(nome(s.mentorado_id))}</td><td>${esc(s.etapa)}</td><td>${esc(s.mentor||"—")}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Nenhuma sessão agendada. Agende pela ficha do mentorado.</div>`}
+      ${proximas.map(p=>`<tr class="click" onclick="${p.grupo?`openGrupo(${regGrupo(p.entrada)})`:`openMentorado('${p.mid}','sessoes')`}"><td>${cellDataHora(p.data, p.hora)}</td><td>${p.grupo?`<span class="pill blue">grupo</span> `:""}${esc(p.quem)}</td><td>${esc(p.etapa)}</td><td>${esc(p.mentor||"—")}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Nenhuma sessão agendada. Agende pela ficha do mentorado.</div>`}
       </div>
     </div>
   </div>
@@ -761,7 +1061,7 @@ function renderMentorados(){
     nome: m=>m.nome.toLowerCase(),
     fechamento: m=>m.data_fechamento||"",
     contrato: m=>m.contrato_status||"",
-    sessoes: m=>sessoesDe(m.id).filter(s=>s.status==="Concluída").length,
+    sessoes: m=>sessoes1a1De(m.id).filter(s=>s.status==="Concluída").length,
   }, "nome", "asc");
 
   $("#app").innerHTML = `
@@ -793,25 +1093,56 @@ function renderMentorados(){
 }
 
 /* ================= SESSÕES (agenda) ================= */
+/* A tela é dividida em dois blocos: sessões 1:1 com mentores (a trilha de 12
+   etapas) e sessões em grupo (plantão semanal e implementação mensal). A
+   divisão vale também para os contadores do topo, o filtro de tipo e os
+   agrupamentos por categoria. */
 function renderSessoes(){
+  GRUPO_REG.length = 0;
   let list = S.slice();
   if(filtro.mentor==="__sem__") list = list.filter(s=>!s.mentor);
   else if(filtro.mentor) list = list.filter(s=>s.mentor===filtro.mentor);
-  const grupos = {
-    "agendadas": {titulo:"Agendadas", itens: list.filter(s=>s.status==="Agendada")},
-    "concluidas": {titulo:"Concluídas (últimas 30)", itens: list.filter(s=>s.status==="Concluída").slice(0,30)},
-    "bloqueadas": {titulo:"Bloqueadas", itens: list.filter(s=>s.status==="Bloqueada")},
-  };
+  const ind = list.filter(eh1a1);
+  const grp = list.filter(ehGrupo);
+  const mostraInd = filtro.tipoSessao !== "grupo";
+  const mostraGrp = filtro.tipoSessao !== "individual";
+  const isAdmin = myRole === "admin";
+
   const getters = {
     data: s=>s.data||"",
     mentorado: s=>nome(s.mentorado_id).toLowerCase(),
     etapa: s=>ETAPA_ORD[s.etapa]||99,
     mentor: s=>s.mentor||"",
   };
+  const gettersGrupo = {
+    data: e=>e.data||"",
+    mentor: e=>e.mentor||"",
+    participantes: e=>e.itens.length,
+  };
+  const blocos = [
+    {key:"agendadas",  titulo:"Agendadas",               itens: ind.filter(s=>s.status==="Agendada")},
+    {key:"concluidas", titulo:"Concluídas (últimas 30)", itens: ind.filter(s=>s.status==="Concluída").slice(0,30)},
+    {key:"bloqueadas", titulo:"Bloqueadas",              itens: ind.filter(s=>s.status==="Bloqueada")},
+  ];
+  const todas1a1 = S.filter(eh1a1);
+  const totalEncontros = agruparGrupo(S.filter(ehGrupo)).length;
+
   $("#app").innerHTML = `
-  <div class="topbar"><div><h2>Sessões</h2><div class="sub">${S.filter(s=>s.status==="Concluída").length} concluídas · ${S.filter(s=>s.status==="Agendada").length} agendadas</div></div></div>
-  <div class="filters"><select onchange="filtro.mentor=this.value;renderSessoes()"><option value="">Todos os mentores</option>${TODOS_MENTORES.map(m=>`<option ${filtro.mentor===m?"selected":""}>${m}</option>`).join("")}<option value="__sem__" ${filtro.mentor==="__sem__"?"selected":""}>— sem mentor —</option></select></div>
-  ${Object.entries(grupos).map(([key,{titulo,itens}])=>{
+  <div class="topbar"><div><h2>Sessões</h2><div class="sub">${todas1a1.filter(s=>s.status==="Concluída").length} sessões 1:1 concluídas · ${todas1a1.filter(s=>s.status==="Agendada").length} agendadas · ${totalEncontros} encontro(s) em grupo</div></div>
+  ${isAdmin?'<button class="btn" onclick="openSessaoGrupo()">+ Sessão em grupo</button>':''}</div>
+
+  <div class="filters">
+    <select onchange="filtro.tipoSessao=this.value;renderSessoes()">
+      <option value="">Todos os tipos</option>
+      <option value="individual" ${filtro.tipoSessao==="individual"?"selected":""}>Somente 1:1 com mentores</option>
+      <option value="grupo" ${filtro.tipoSessao==="grupo"?"selected":""}>Somente em grupo</option>
+    </select>
+    <select onchange="filtro.mentor=this.value;renderSessoes()"><option value="">Todos os mentores</option>${TODOS_MENTORES.map(m=>`<option ${filtro.mentor===m?"selected":""}>${m}</option>`).join("")}<option value="__sem__" ${filtro.mentor==="__sem__"?"selected":""}>— sem mentor —</option></select>
+  </div>
+
+  ${mostraInd?`
+  <div class="section-label">Sessões 1:1 com mentores</div>
+  ${blocos.map(({key,titulo,itens})=>{
     const tableKey = "sessoes_"+key;
     const g = applySort(itens, tableKey, getters, "data", key==="concluidas"?"desc":"asc");
     return `
@@ -824,7 +1155,118 @@ function renderSessoes(){
     <td class="lk">${[linkOr(s.link_meet,"meet"),linkOr(s.link_gravacao,"gravação"),linkOr(s.link_anotacoes,"anotações")].filter(Boolean).join(" · ")||"—"}</td>
   </tr>`).join("")}</tbody></table></div>`:`<div class="empty">Nada por aqui.</div>`}
   </div>`;
-  }).join("")}`;
+  }).join("")}`:''}
+
+  ${mostraGrp?`
+  <div class="section-label">Sessões em grupo</div>
+  ${ETAPAS_GRUPO.map((cat,i)=>{
+    const tableKey = "grupo_"+i;
+    const enc = applySort(agruparGrupo(grp.filter(s=>s.etapa===cat)), tableKey, gettersGrupo, "data", "desc");
+    return `
+  <div class="panel"><h3>${esc(cat)} · ${enc.length} encontro(s)</h3>
+  ${enc.length?`<div style="overflow-x:auto"><table><thead><tr>${th(tableKey,"data","Data")}${th(tableKey,"mentor","Mentor")}${th(tableKey,"participantes","Participantes","num")}<th>Status</th><th>Links</th></tr></thead><tbody>
+  ${enc.map(e=>`<tr class="click" onclick="openGrupo(${regGrupo(e)})">
+    <td>${cellDataHora(e.data, e.hora)}</td>
+    <td>${esc(e.mentor||"—")}</td>
+    <td class="num">${e.itens.length}</td>
+    <td>${pillSess(statusGrupo(e))}</td>
+    <td class="lk">${[linkOr(e.link_meet,"meet"),linkOr(e.link_gravacao,"gravação"),linkOr(e.link_anotacoes,"anotações")].filter(Boolean).join(" · ")||"—"}</td>
+  </tr>`).join("")}</tbody></table></div>`:`<div class="empty">Nenhum encontro registrado${isAdmin?' — use "+ Sessão em grupo"':""}.</div>`}
+  </div>`;
+  }).join("")}`:''}`;
+}
+
+/* ---- encontro em grupo: detalhe e presenças ---- */
+window.openGrupo = function(idx){
+  const e = GRUPO_REG[idx]; if(!e) return;
+  grupoAberto = e;
+  const pendentes = e.itens.filter(s=>s.status!=="Concluída");
+  const links = [linkOr(e.link_meet,"meet"),linkOr(e.link_gravacao,"gravação"),linkOr(e.link_anotacoes,"anotações")].filter(Boolean).join(" · ");
+  const box = $("#modalBox"); box.className="modal";
+  box.innerHTML = `
+  <header><div><h3>${esc(e.etapa)}</h3><div class="sub" style="color:var(--mut);font-size:12px;margin-top:3px">${fmtD(e.data)}${e.hora?" · "+e.hora.slice(0,5):""} · ${esc(e.mentor||"sem mentor")} · ${e.itens.length} participante(s)</div></div>
+  <button class="x" onclick="closeModal()">✕</button></header>
+
+  <div class="lk" style="margin-bottom:18px">${links||'<span style="color:var(--dim)">Sem links registrados</span>'}</div>
+
+  <div class="sec" style="margin-top:0;border-top:none;padding-top:0"><h4>Presenças · ${resumoStatusGrupo(e)}</h4>
+  ${e.itens.slice().sort((a,b)=>nome(a.mentorado_id).localeCompare(nome(b.mentorado_id),"pt-BR")).map(s=>`
+  <div class="sess marco-row">
+    <div class="et">${esc(nome(s.mentorado_id))}</div>
+    <div>${pillSess(s.status)}</div>
+    <button class="btn sm ghost" onclick="openSessao('${s.id}','${s.mentorado_id}')">Editar</button>
+  </div>`).join("")}
+  </div>
+
+  ${pendentes.length?`
+  <div class="sec"><h4>Confirmar o encontro</h4>
+  <div class="fgrid" style="grid-template-columns:1fr auto;align-items:end;margin-bottom:8px">
+    <div class="f"><label>Quem atendeu</label>
+      <select id="gc_mentor"><option value="">Selecione o mentor…</option>${[...MENTORES, ...(e.mentor && !MENTORES.includes(e.mentor) ? [e.mentor] : [])].map(m=>`<option ${e.mentor===m?"selected":""}>${esc(m)}</option>`).join("")}</select>
+    </div>
+    <button class="btn" onclick="confirmarGrupo()">Marcar ${pendentes.length} como concluída</button>
+  </div>
+  <div style="color:var(--dim);font-size:11.5px">Marca de uma vez todos os participantes que ainda não estão concluídos. Ausências individuais ficam em Editar.</div>
+  </div>`:''}`;
+  $("#overlay").classList.add("open");
+}
+/* Confirmar em lote exige o mentor, mesma regra da confirmação individual:
+   sem isso a sessão entra concluída sem dono e some da contagem por mentor. */
+window.confirmarGrupo = async function(){
+  const e = grupoAberto; if(!e) return;
+  const mentor = $("#gc_mentor") ? $("#gc_mentor").value : "";
+  if(!mentor) return toast("Selecione quem atendeu a sessão", true);
+  const ids = e.itens.filter(s=>s.status!=="Concluída").map(s=>s.id);
+  if(!ids.length) return toast("Nada a confirmar");
+  const {error} = await db.from("sessoes").update({status:"Concluída", mentor}).in("id", ids);
+  if(error) return toast(error.message, true);
+  toast(`${ids.length} presença(s) confirmada(s)`); closeModal(); await loadAll();
+}
+
+/* ---- registrar um encontro em grupo (uma linha por participante) ---- */
+window.openSessaoGrupo = function(){
+  const ativos = M.filter(ehAtivo).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  const box = $("#modalBox"); box.className="modal";
+  box.innerHTML = `
+  <header><div><h3>Nova sessão em grupo</h3><div class="sub" style="color:var(--mut);font-size:12px;margin-top:3px">Um encontro coletivo é registrado como uma presença por participante.</div></div>
+  <button class="x" onclick="closeModal()">✕</button></header>
+  <div class="fgrid" style="grid-template-columns:1fr 1fr">
+    <div class="f"><label>Categoria</label><select id="g_etapa">${ETAPAS_GRUPO.map(e=>`<option>${esc(e)}</option>`).join("")}</select></div>
+    <div class="f"><label>Status</label><select id="g_status">${S_STATUS.map(e=>`<option ${e==="Agendada"?"selected":""}>${e}</option>`).join("")}</select></div>
+    <div class="f"><label>Mentor</label><select id="g_mentor"><option value="">—</option>${MENTORES.map(e=>`<option>${esc(e)}</option>`).join("")}</select></div>
+    <div class="f"><label>Data</label>${dateField("g_data", HOJE)}</div>
+    <div class="f"><label>Hora</label><input id="g_hora" type="time"></div>
+  </div>
+  <div class="fgrid" style="grid-template-columns:1fr 1fr">
+    <div class="f"><label>Link Meet</label><input id="g_meet" placeholder="https://…"></div>
+    <div class="f"><label>Link gravação</label><input id="g_grav" placeholder="https://…"></div>
+  </div>
+  <div class="sec"><h4>Participantes</h4>
+  <div class="rowflex" style="margin-bottom:10px">
+    <button class="btn sm ghost" onclick="marcarTodosGrupo(true)">Selecionar todos (${ativos.length})</button>
+    <button class="btn sm ghost" onclick="marcarTodosGrupo(false)">Limpar seleção</button>
+  </div>
+  ${ativos.length?`<div class="chk-list">${ativos.map(m=>`<label class="chk"><input type="checkbox" class="g-part" value="${m.id}"><span>${esc(m.nome)}</span></label>`).join("")}</div>`:`<div class="empty">Nenhum mentorado ativo.</div>`}
+  </div>
+  <div class="rowflex"><button class="btn" onclick="criarSessaoGrupo()">Registrar encontro</button></div>`;
+  $("#overlay").classList.add("open");
+}
+window.marcarTodosGrupo = function(v){
+  document.querySelectorAll(".g-part").forEach(c=>{ c.checked = v; });
+}
+window.criarSessaoGrupo = async function(){
+  const etapa = $("#g_etapa").value;
+  const ids = [...document.querySelectorAll(".g-part:checked")].map(c=>c.value);
+  if(!ids.length) return toast("Selecione ao menos um participante", true);
+  const base = {
+    etapa, ordem: ETAPA_ORD[etapa]||99, status: $("#g_status").value,
+    mentor: $("#g_mentor").value||null, data: $("#g_data").value||null, hora: $("#g_hora").value||null,
+    link_meet: $("#g_meet").value||null, link_gravacao: $("#g_grav").value||null,
+  };
+  const {error} = await db.from("sessoes").insert(ids.map(id=>Object.assign({mentorado_id:id}, base)));
+  if(error) return toast(error.message, true);
+  toast(`Encontro registrado para ${ids.length} participante(s)`);
+  closeModal(); await loadAll();
 }
 
 /* ================= FINANCEIRO ================= */
@@ -985,7 +1427,7 @@ function renderRotas(){
   </div>
   <div class="panel"><h3>Registrar faturamento</h3>
   <div class="fgrid fat-form">
-    <div class="f"><label>Mês</label><input id="ft_mes" type="month" value="${meses[meses.length-1]}"></div>
+    <div class="f"><label>Mês</label>${monthField("ft_mes", meses[meses.length-1])}</div>
     <div class="f"><label>Valor (R$)</label><input id="ft_valor" type="number" min="0" step="0.01" placeholder="0,00"></div>
     <div class="f" style="display:flex;align-items:flex-end"><button class="btn" style="width:100%" onclick="salvarFaturamento('${sel}','${canalObj.id}')">Salvar</button></div>
   </div>
@@ -1017,7 +1459,8 @@ function renderRotas(){
       type:"bar",
       data:{ labels: meses.map(m=>MESES_PT[+m.slice(5,7)-1]+"/"+m.slice(2,4)), datasets:[{data:dadosFatChart, backgroundColor:cssToken("--primary"), borderRadius:4, maxBarThickness:34}] },
       options:{ responsive:true, maintainAspectRatio:false,
-        scales:chartScales({callback:v=>"R$ "+(v>=1000?(v/1000)+"k":v)}),
+        /* eixo em real cheio (R$ 1.000,00), mesmo padrão do tooltip e dos cards */
+        scales:chartScales({callback:v=>fmtBRL(v)}),
         plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>fmtBRL(c.raw)}}} }
     });
   }
@@ -1061,7 +1504,7 @@ window.openMarco = function(marcoId, mentoradoId){
     <div class="f"><label>Status</label><select id="mk_status">
       ${(isSimples?["nao_passou","passou"]:RICO_STATUS).map(s=>`<option value="${s}" ${((mm.status)||(isSimples?"nao_passou":"NAO_INICIADO"))===s?"selected":""}>${isSimples?(s==="passou"?"Passou":"Não passou"):s}</option>`).join("")}
     </select></div>
-    <div class="f"><label>Data</label><input id="mk_data" type="date" value="${mm.data||""}"></div>
+    <div class="f"><label>Data</label>${dateField("mk_data", mm.data)}</div>
   </div>
   ${!isSimples?`
   <div class="fgrid" style="grid-template-columns:1fr">
@@ -1105,7 +1548,9 @@ window.openMentorado = function(id, secao){
   const isAdmin = myRole === "admin";
   // mentor nunca vê o recorte financeiro, mesmo que a seção chegue por outro caminho
   const sec = (!isAdmin && fichaSecao==="financeiro") ? "sessoes" : fichaSecao;
-  const ps = parcelasDe(id), ss = sessoesDe(id);
+  const ps = parcelasDe(id);
+  const ss = sessoes1a1De(id);        // trilha de 12 etapas
+  const ssGrupo = sessoesGrupoDe(id); // plantão e implementação
 
   const mostra = {
     basico:     sec==="completo",
@@ -1130,7 +1575,7 @@ window.openMentorado = function(id, secao){
   ${mostra.basico?`
   <div class="fgrid">
     <div class="f"><label>Nome</label><input id="e_nome" value="${esc(m.nome)}" ${isAdmin?"":"disabled"}></div>
-    <div class="f"><label>Data de fechamento</label><input id="e_fech" type="date" value="${m.data_fechamento||""}" ${isAdmin?"":"disabled"}></div>
+    <div class="f"><label>Data de fechamento</label>${dateField("e_fech", m.data_fechamento, {disabled:!isAdmin})}</div>
   </div>
   <div class="fgrid">
     <div class="f"><label>Link Drive</label><input id="e_ldrive" value="${esc(m.link_drive)}" ${isAdmin?"":"disabled"}></div>
@@ -1159,8 +1604,8 @@ window.openMentorado = function(id, secao){
     <div class="f"><label>Situa&ccedil;&atilde;o</label><select id="e_situacao" onchange="togglePausaCampos()">
       ${["ativo","pausado","cancelado"].map(v=>`<option value="${v}" ${situacaoDe(m)===v?"selected":""}>${v==="ativo"?"Ativo":v==="pausado"?"Pausado":"Cancelado"}</option>`).join("")}
     </select></div>
-    <div class="f pausa-campo" style="display:${situacaoDe(m)==="pausado"?"block":"none"}"><label>Pausado em</label><input id="e_pausado_em" type="date" value="${m.pausado_em||""}"></div>
-    <div class="f pausa-campo" style="display:${situacaoDe(m)==="pausado"?"block":"none"}"><label>Retorno previsto</label><input id="e_retorno" type="date" value="${m.retorno_previsto||""}"></div>
+    <div class="f pausa-campo" style="display:${situacaoDe(m)==="pausado"?"block":"none"}"><label>Pausado em</label>${dateField("e_pausado_em", m.pausado_em)}</div>
+    <div class="f pausa-campo" style="display:${situacaoDe(m)==="pausado"?"block":"none"}"><label>Retorno previsto</label>${dateField("e_retorno", m.retorno_previsto)}</div>
   </div>
   <div class="rowflex mt8"><button class="btn sm" onclick="salvarSituacao('${id}')">Salvar situa&ccedil;&atilde;o</button></div>
   </div>`:''}
@@ -1176,13 +1621,13 @@ window.openMentorado = function(id, secao){
       </div>
     </div>`).join("")}</div>`:`<div class="empty" style="padding:12px">Sem parcelas (pagamento à vista ou não cadastrado).</div>`}
   <div class="rowflex mt8">
-    <input id="np_venc" type="date" style="width:160px" title="Vencimento da nova parcela">
+    ${dateField("np_venc", "", {style:"width:160px", title:"Vencimento da nova parcela", placeholder:"Vencimento"})}
     <input id="np_valor" type="number" min="0" step="0.01" placeholder="Valor (R$)" style="width:140px">
     <button class="btn sm ghost" onclick="addParcela('${id}')">+ Adicionar parcela</button>
   </div></div>`:''}
 
   ${mostra.sessoes?`
-  <div class="sec"><h4>Trilha de sessões</h4>
+  <div class="sec"><h4>Sessões 1:1 com mentores</h4>
   ${ss.map(s=>`
   <div class="sess">
     <div class="et">${esc(s.etapa)}</div>
@@ -1195,10 +1640,23 @@ window.openMentorado = function(id, secao){
       <button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>
     </div>
   </div>`).join("")||`<div class="empty" style="padding:12px">Nenhuma sessão registrada ainda.</div>`}
-  ${isAdmin?`<button class="btn sm mt8" onclick="openSessao(null,'${id}')">+ Nova sessão</button>`:''}</div>`:''}`;
+  ${isAdmin?`<button class="btn sm mt8" onclick="openSessao(null,'${id}')">+ Nova sessão</button>`:''}</div>
+  ${ssGrupo.length?`<div class="sec"><h4>Sessões em grupo &middot; ${ssGrupo.length}</h4>
+  ${ssGrupo.slice().sort((a,b)=>(a.data||"")<(b.data||"")?1:-1).map(s=>`
+  <div class="sess">
+    <div class="et">${esc(s.etapa)}</div>
+    <div>${pillSess(s.status)}</div>
+    <div class="dt">${cellDataHora(s.data, s.hora)}</div>
+    <div><div class="mentor-chip">${esc(s.mentor||"— sem mentor")}</div>
+      <div class="lk mt8">${[linkOr(s.link_meet,"meet"),linkOr(s.link_gravacao,"gravação"),linkOr(s.link_anotacoes,"anotações")].filter(Boolean).join(" &middot; ")}</div></div>
+    <div class="rowflex">
+      ${s.status==="Aguardando confirmação"?`<button class="btn sm" onclick="openConfirmarSessao('${s.id}','${id}')">Confirmar</button>`:''}
+      <button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>
+    </div>
+  </div>`).join("")}</div>`:''}`:''}`;
   $("#overlay").classList.add("open");
 }
-window.closeModal = ()=>$("#overlay").classList.remove("open");
+window.closeModal = ()=>{ dpClose(); $("#overlay").classList.remove("open"); };
 $("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeModal(); });
 
 window.salvarMentorado = async function(id){
@@ -1262,7 +1720,7 @@ window.openParcela = function(pid, mid){
   <header><h3>Parcela #${p.numero} &middot; ${esc(nome(mid))}</h3><button class="x" onclick="openMentorado('${mid}')">&#10005;</button></header>
   <div class="fgrid" style="grid-template-columns:1fr 1fr">
     <div class="f"><label>N&uacute;mero</label><input id="p_num" type="number" min="1" max="12" value="${p.numero}"></div>
-    <div class="f"><label>Vencimento</label><input id="p_venc" type="date" value="${p.vencimento||""}"></div>
+    <div class="f"><label>Vencimento</label>${dateField("p_venc", p.vencimento)}</div>
     <div class="f"><label>Valor (R$)</label><input id="p_valor" type="number" min="0" step="0.01" value="${p.valor!=null?p.valor:""}"></div>
     <div class="f"><label>Status</label><select id="p_status">
       ${["aberta","paga"].map(v=>`<option value="${v}" ${p.status===v?"selected":""}>${v==="paga"?"Paga":"Aberta"}</option>`).join("")}
@@ -1296,17 +1754,25 @@ window.delParcela = async function(pid, mid){
 /* ================= SESSÃO (form) ================= */
 window.openSessao = function(sid, mid){
   const s = sid ? S.find(x=>x.id===sid) : {};
-  const ss = sessoesDe(mid);
-  const usadas = new Set(ss.map(x=>x.etapa));
+  const usadas = new Set(sessoes1a1De(mid).map(x=>x.etapa));
   const sugestao = ETAPAS.find(e=>!usadas.has(e)) || "Checkup extra";
+  /* Etapa fora das listas conhecidas (registro antigo) vira opção própria:
+     sem isso o select cai na primeira opção e salvar trocaria a etapa. */
+  const etapaAtual = s.etapa || "";
+  const conhecidas = [...ETAPAS, ...ETAPAS_GRUPO];
+  const selecionada = etapaAtual || sugestao;
   const box = $("#modalBox"); box.className="modal narrow";
   box.innerHTML = `
   <header><h3>${sid?"Editar sessão":"Nova sessão"} · ${esc(nome(mid))}</h3><button class="x" onclick="openMentorado('${mid}')">✕</button></header>
   <div class="fgrid" style="grid-template-columns:1fr 1fr">
-    <div class="f"><label>Etapa</label><select id="s_etapa">${ETAPAS.map(e=>`<option ${(s.etapa||sugestao)===e?"selected":""}>${e}</option>`).join("")}</select></div>
+    <div class="f"><label>Etapa</label><select id="s_etapa">
+      <optgroup label="Sessões 1:1 com mentores">${ETAPAS.map(e=>`<option ${selecionada===e?"selected":""}>${e}</option>`).join("")}</optgroup>
+      <optgroup label="Sessões em grupo">${ETAPAS_GRUPO.map(e=>`<option ${selecionada===e?"selected":""}>${esc(e)}</option>`).join("")}</optgroup>
+      ${(etapaAtual && !conhecidas.includes(etapaAtual))?`<optgroup label="Registro atual"><option selected>${esc(etapaAtual)}</option></optgroup>`:""}
+    </select></div>
     <div class="f"><label>Status</label><select id="s_status">${S_STATUS.map(e=>`<option ${(s.status||"Agendada")===e?"selected":""}>${e}</option>`).join("")}</select></div>
     <div class="f"><label>Mentor</label><select id="s_mentor"><option value="">—</option>${[...MENTORES, ...(s.mentor && !MENTORES.includes(s.mentor) ? [s.mentor] : [])].map(e=>`<option ${s.mentor===e?"selected":""}>${esc(e)}</option>`).join("")}</select></div>
-    <div class="f"><label>Data</label><input id="s_data" type="date" value="${s.data||""}"></div>
+    <div class="f"><label>Data</label>${dateField("s_data", s.data)}</div>
     <div class="f"><label>Hora</label><input id="s_hora" type="time" value="${s.hora?s.hora.slice(0,5):""}"></div>
   </div>
   <div class="fgrid" style="grid-template-columns:1fr">
@@ -1376,7 +1842,7 @@ window.openNovoMentorado = function(){
   <header><h3>Novo mentorado</h3><button class="x" onclick="closeModal()">✕</button></header>
   <div class="fgrid" style="grid-template-columns:1fr 1fr">
     <div class="f" style="grid-column:1/-1"><label>Nome</label><input id="n_nome" placeholder="Nome completo ou razão social"></div>
-    <div class="f"><label>Data de fechamento</label><input id="n_fech" type="date" value="${HOJE}"></div>
+    <div class="f"><label>Data de fechamento</label>${dateField("n_fech", HOJE)}</div>
     <div class="f"><label>Entrada</label><select id="n_ent"><option>Pago</option><option>Pago parcial</option><option>Ainda não</option><option>Patrocinado</option></select></div>
     <div class="f"><label>Forma entrada</label><input id="n_entf" placeholder="pix, cartão…"></div>
     <div class="f"><label>Contrato</label><select id="n_contr"><option>Ainda não</option><option>Aguardando assinatura</option><option>Assinado</option></select></div>
