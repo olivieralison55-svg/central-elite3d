@@ -187,6 +187,8 @@ Coisas que a ferramenta **não** faz hoje, para você não procurar em vão:
 
 ---
 
+## Detalhes técnicos
+
 Estão em [ARCHITECTURE.md](ARCHITECTURE.md): modelo de dados, permissões,
 automações, decisões de projeto e pontos de atenção para quem for mexer no
 código.
