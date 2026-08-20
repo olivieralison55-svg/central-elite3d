@@ -59,17 +59,21 @@ aos casos. Quando não há nada pendente, o título vira **"Tudo em ordem"**.
 Abaixo dele:
 
 - **Números gerais** — mentorados ativos (com pausados e cancelados ao lado),
-  total de sessões concluídas e quantas estão agendadas.
+  sessões 1:1 concluídas, quantas estão agendadas, e os encontros em grupo —
+  contados como encontros, com o total de presenças ao lado. Sessão 1:1 e sessão
+  em grupo nunca são somadas.
 - **Progressão por faturamento** — mentorados ordenados pelo faturamento
   acumulado que foi registrado, com faixa (Iniciante, Bronze, Prata, Ouro,
   Platina, Diamante) e quanto falta para a próxima. Só aparece quem tem
   faturamento registrado; ninguém é estimado ou inventado.
-- **Sessões concluídas por mentor** — uma matriz de mentor × etapa. Serve para
-  ver carga e distribuição. Quem saiu do projeto aparece marcado como *fora do
+- **Sessões concluídas por mentor** — uma matriz de mentor × etapa da trilha,
+  mais uma coluna **Grupo** com os encontros coletivos que a pessoa conduziu
+  (só aparece quando existe algum). Serve para ver carga e distribuição. Quem saiu do projeto aparece marcado como *fora do
   projeto* e continua contando no histórico. Sessões concluídas sem mentor
   identificado aparecem numa linha própria em vez de desaparecer da conta.
-- **Próximas sessões agendadas** — as 8 mais próximas. Nunca mostra data
-  passada.
+- **Próximas sessões agendadas** — as 8 mais próximas, 1:1 e em grupo juntas.
+  Um encontro coletivo ocupa uma linha só, com a etiqueta *grupo* no lugar do
+  nome. Nunca mostra data passada.
 - **Sessões sem evento no Google Agenda** — ver *Alertas* abaixo.
 - **Mentorados sem sessão há +30 dias** — ver *Alertas* abaixo.
 
@@ -82,20 +86,36 @@ A lista de todos os registros. Busca por nome e filtro por *Somente ativos*,
 
 A coluna **Sessões** é uma barra de progresso: cada tracinho é uma sessão da
 trilha — verde concluída, azul agendada, vermelho bloqueada, cinza não iniciada.
-Passe o mouse para ver a etapa e o status.
+Passe o mouse para ver a etapa e o status. Só a trilha 1:1 entra nessa barra;
+encontros em grupo não contam como avanço da trilha.
 
 Quem está pausado ou cancelado aparece esmaecido, com uma etiqueta ao lado.
 Clique em qualquer coluna do cabeçalho para ordenar.
 
 ### Sessões
 
-A agenda, separada em três blocos: **Agendadas**, **Concluídas** (últimas 30) e
-**Bloqueadas**. Pode filtrar por mentor, incluindo a opção *— sem mentor —*
-para achar sessões que ninguém assumiu.
+A agenda, dividida em dois grupos.
 
-Cada linha traz data e hora, mentorado, etapa, mentor, status e os links
-disponíveis (meet, gravação, anotações). Se um link estiver salvo em formato
-inválido, ele aparece com um asterisco e não é clicável.
+**Sessões 1:1 com mentores** são os encontros individuais da trilha: o
+Diagnóstico, o Plano de Ação e os Checkups. Vêm em três blocos — **Agendadas**,
+**Concluídas** (últimas 30) e **Bloqueadas**. Cada linha traz data e hora,
+mentorado, etapa, mentor, status e os links disponíveis (meet, gravação,
+anotações). Se um link estiver salvo em formato inválido, ele aparece com um
+asterisco e não é clicável.
+
+**Sessões em grupo** são os encontros coletivos, num painel por categoria:
+**Plantão de Dúvida Semanal** e **Sessão de Implementação Mensal**. Aqui cada
+linha é o encontro inteiro, não um participante — mostra data, mentor, quantos
+participantes e o status predominante. Clicar abre a lista de presenças, onde se
+ajusta participante por participante ou se confirma o encontro todo de uma vez.
+Confirmar em lote exige informar quem atendeu, mesma regra da confirmação
+individual.
+
+No topo, dois filtros: por tipo (só 1:1, só grupo, ou ambos) e por mentor, este
+último com a opção *— sem mentor —* para achar sessões que ninguém assumiu.
+
+O administrador registra um encontro coletivo em **+ Sessão em grupo**: escolhe
+a categoria, data, hora, mentor e links, e marca quem participou.
 
 ### Rotas
 
@@ -130,6 +150,17 @@ pagamentos e parcelas; das outras telas mostra tudo.
 pausado ou cancelado, e onde ficam os links de Drive, mapa mental e grupo de
 WhatsApp.
 
+A trilha 1:1 e os encontros em grupo do mentorado ficam em blocos separados. A
+contagem de *"N de 12 concluídas"* no topo da ficha considera só a trilha.
+
+### Campos de data
+
+Todo campo de data do sistema abre um calendário ao clique, em qualquer ponto do
+campo — não só num ícone. Dá para andar mês a mês pelas setas, clicar no título
+para escolher o mês numa grade e pular de ano, ou navegar pelo teclado. **Hoje**
+preenche com a data de hoje e **Limpar** esvazia o campo. A data aparece sempre
+como DD/MM/AAAA.
+
 ---
 
 ## Os alertas e o que fazer com cada um
@@ -162,7 +193,10 @@ Duas coisas importantes decorrem disso:
 
 **Manual, feito pela equipe:** cadastro do mentorado, contrato, entrada,
 restante, parcelas, situação (pausado/cancelado), links, marcos da trilha,
-canal de venda, faturamento mensal, e a confirmação de quem atendeu cada sessão.
+canal de venda, faturamento mensal, a confirmação de quem atendeu cada sessão,
+e **todo encontro em grupo**. O sync só cria sessão quando identifica etapa *e*
+mentorado no título do evento, e as categorias coletivas não estão no
+reconhecedor — plantão e implementação nunca chegam por ele.
 
 ---
 
@@ -184,6 +218,14 @@ Coisas que a ferramenta **não** faz hoje, para você não procurar em vão:
 - **Valores das parcelas estão vazios.** A estrutura existe, mas o valor e o
   vencimento não vêm sendo preenchidos — então indicadores de inadimplência em
   reais não são confiáveis.
+- **Encontro em grupo não é um registro único.** Ele existe como uma presença
+  por participante, e a tela reagrupa por categoria + data + hora. Na prática:
+  mudar a data, a hora ou o mentor de um encontro já registrado exige editar
+  cada participante, e alterar só parte deles parte o encontro em dois.
+- **O gráfico de faturamento está quase sem dados.** A tela existe e a
+  formatação em real está correta, mas o faturamento mensal quase não vem sendo
+  registrado — hoje o gráfico não mostra praticamente nada. Mesmo caso das
+  parcelas acima: é origem de dado, não tela.
 
 ---
 
