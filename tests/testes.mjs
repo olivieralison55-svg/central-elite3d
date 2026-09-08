@@ -137,6 +137,13 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     sess.slice(sess.indexOf('class="sub"'), sess.indexOf('class="sub"') + 150));
   t.ok("tem coluna Participantes", sess.includes("Participantes"));
   t.ok("tem filtro de tipo", sess.includes("Somente 1:1 com mentores") && sess.includes("Somente em grupo"));
+  /* Nao havia bloco para "Aguardando confirmacao": essas sessoes so eram
+     alcancaveis pela ficha de cada mentorado, uma por uma. */
+  t.ok("tem bloco de Aguardando confirmação", sess.includes("Aguardando confirmação ·"),
+    sess.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 300));
+  t.ok("a sessão aguardando confirmação aparece na tela",
+    sess.slice(sess.indexOf("Aguardando confirmação ·")).includes("Bruno Dias"),
+    sess.slice(sess.indexOf("Aguardando confirmação ·"), sess.indexOf("Aguardando confirmação ·") + 500));
   t.ok("admin vê o botão de registrar grupo", sess.includes("+ Sessão em grupo"));
   t.ok("escapa nome de mentorado", escapado(sess));
   /* esc() não protege dentro de onclick: `&#39;` volta a ser `'` no parse de JS.
@@ -546,6 +553,97 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("mentor fora das listas aparece com o nome intacto",
     total1a1(desconhecido, "Vanessa Sousa") === "2",
     painel(desconhecido).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 200));
+}
+
+/* =======================================================================
+ * Alerta do dashboard leva direto nas linhas
+ *
+ * "conferir" mandava para a tela de Sessões inteira e deixava a pessoa
+ * procurar a linha errada no meio de tudo — sem saber nem quais eram.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const {mod} = app;
+
+  app.estado.S = [
+    /* O par: uma reunião, duas linhas (mesmo mentorado, data, hora e mentor). */
+    {id:"x1", mentorado_id:"m1", etapa:"Plano de Ação", ordem:2, status:"Concluída", mentor:"Evaldo", data:"2026-07-16", hora:"14:00:00", google_event_id:"ev1"},
+    {id:"x2", mentorado_id:"m1", etapa:"Checkup 5",     ordem:7, status:"Concluída", mentor:"Evaldo", data:"2026-07-16", hora:"14:00:00"},
+    // Concluída sem data: alerta próprio.
+    {id:"x3", mentorado_id:"m2", etapa:"Checkup 1", ordem:3, status:"Concluída", mentor:"Luan", data:null, hora:null},
+    // Aguardando confirmação sem mentor: alerta próprio.
+    {id:"x4", mentorado_id:"m2", etapa:"Checkup 2", ordem:4, status:"Aguardando confirmação", mentor:null, data:"2026-07-20", hora:"10:00:00"},
+    // Nada de errado: não pode aparecer em nenhum dos recortes.
+    {id:"x5", mentorado_id:"m3", etapa:"Checkup 1", ordem:3, status:"Concluída", mentor:"Sergio", data:"2026-07-22", hora:"09:00:00"},
+  ];
+  /* O alerta de "sem data" só existe com um mês selecionado: sem recorte, uma
+     sessão sem data continua entrando na conta e não há o que avisar. */
+  app.estado.mesMatriz = "2026-07";
+  mod.renderDash();
+  const dash = app.tela();
+
+  t.secao("Links dos alertas");
+  t.ok("alerta de dobradas foca em vez de só trocar de tela",
+    dash.includes(`onclick="focarSessoes('dobradas')"`) &&
+    !dash.includes(`duas etapas — contei uma vez cada</div><a onclick="setView('sessoes')"`));
+  t.ok("alerta de sem data foca", dash.includes(`onclick="focarSessoes('semData')"`));
+  t.ok("alerta de sem mentor foca", dash.includes(`onclick="focarSessoes('semMentor')"`));
+
+  t.secao("Foco nas reuniões dobradas");
+  globalThis.focarSessoes("dobradas");
+  const dob = app.tela();
+  t.ok("abre a tela de Sessões", dob.includes("<h2>Sessões</h2>"), dob.slice(0, 120));
+  t.ok("renderiza sem lixo", semLixo(dob), dob.slice(0, 200));
+  t.ok("explica o que a pessoa está vendo",
+    dob.includes("Reuniões gravadas em duas etapas") && dob.includes("mostrar todas as sessões"));
+  /* As DUAS linhas do par: sem as duas lado a lado não há como decidir qual
+     etapa está errada. */
+  t.ok("mostra as duas linhas do par",
+    dob.includes(">Plano de Ação") && dob.includes(">Checkup 5"),
+    dob.slice(dob.indexOf("Concluídas"), dob.indexOf("Concluídas") + 400));
+  t.ok("esconde o que o alerta não aponta",
+    !dob.includes("Diego") && !dob.includes("Checkup 1<"),
+    dob.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 300));
+  t.ok("diz qual das duas foi contada",
+    dob.includes(">contada</span>") && dob.includes(">ignorada · mesma reunião</span>"));
+  t.ok("destaca as linhas apontadas", (dob.match(/<tr class="click alvo"/g) || []).length === 2,
+    String((dob.match(/<tr class="click alvo"/g) || []).length));
+  t.ok("não corta em 30 sob foco", dob.includes("<h3>Concluídas ·") && !dob.includes("últimas 30"));
+
+  t.secao("Sair do foco");
+  globalThis.limparFoco();
+  const tudo = app.tela();
+  t.ok("volta a mostrar tudo",
+    !tudo.includes("mostrar todas as sessões") && tudo.includes("Checkup 1"));
+  t.ok("o marcador continua na linha mesmo sem foco",
+    tudo.includes(">ignorada · mesma reunião</span>"));
+  t.ok("sem foco o corte de 30 volta", tudo.includes("últimas 30"));
+
+  globalThis.focarSessoes("dobradas");
+  mod.setView("dash");
+  mod.setView("sessoes");
+  t.ok("trocar de tela descarta o foco",
+    !app.tela().includes("mostrar todas as sessões"), app.tela().slice(0, 200));
+
+  t.secao("Foco nos outros dois alertas");
+  globalThis.focarSessoes("semData");
+  const sd = app.tela();
+  t.ok("sem data mostra só a linha sem data",
+    sd.includes(">sem data</span>") && !sd.includes(">Plano de Ação"),
+    sd.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 250));
+  globalThis.focarSessoes("semMentor");
+  const sm = app.tela();
+  t.ok("sem mentor mostra só a aguardando sem mentor",
+    sm.includes(">sem mentor</span>") && sm.includes("Aguardando"),
+    sm.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 250));
+
+  /* Um filtro ativo esconderia a linha que o alerta aponta e a tela abriria
+     vazia sem explicar por quê. */
+  app.estado.filtro.mentor = "Sergio";
+  globalThis.focarSessoes("dobradas");
+  t.ok("focar zera os filtros que esconderiam o alvo",
+    app.estado.filtro.mentor === "" && app.tela().includes(">contada</span>"),
+    "filtro.mentor=" + JSON.stringify(app.estado.filtro.mentor));
 }
 
 /* =======================================================================

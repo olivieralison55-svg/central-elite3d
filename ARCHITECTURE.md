@@ -305,6 +305,35 @@ são reuniões distintas, ainda que a etapa esteja errada. É o que acontece qua
 o mentor reaproveita um convite recorrente titulado "Plano de Ação" para o que é
 um checkup. Isso não distorce o fechamento — distorce a trilha.
 
+### Os alertas do dashboard apontam linhas, não telas
+
+Cada alerta publica em `FOCO_ALERTA` os ids das linhas que ele contou, e o link
+chama `focarSessoes(<nome do alerta>)` — **o nome, nunca o id**. Passar id por
+handler inline seria furo de escape: `esc()` não protege dentro de `onclick`,
+porque `&#39;` volta a ser `'` no parse de JS. É a mesma razão pela qual
+`openGrupo` recebe um índice de `GRUPO_REG`.
+
+`foco` recorta `renderSessoes` para esses ids, **antes** dos filtros de tipo e
+mentor — um filtro ativo não deveria conseguir esconder a linha que o alerta
+aponta, e por isso `focarSessoes` também os zera. `setView` descarta o foco ao
+sair da tela: ele pertence ao alerta que trouxe a pessoa até ali.
+
+Sob foco, "Concluídas" não corta em 30. O alerta pode apontar uma sessão de
+meses atrás, e o corte esconderia exatamente a linha que a pessoa veio conferir.
+
+As etiquetas nas linhas (`contada`, `ignorada · mesma reunião`, `sem data`,
+`sem mentor`) saem de `reunioesConcluidas1a1()` — o **mesmo** helper que o
+dashboard usa para contar. Duas implementações da regra divergiriam, e é ela que
+decide o fechamento dos mentores.
+
+### `Aguardando confirmação` não tinha bloco na tela de Sessões
+
+Corrigido em 08/09/2026. Os blocos eram Agendadas, Concluídas e Bloqueadas, então
+as 27 sessões nesse estado só eram alcançáveis abrindo a ficha de cada mentorado,
+uma por uma — e o alerta "aguardando confirmação sem mentor definido" mandava
+para uma tela onde elas não apareciam. `Não iniciada` (42 linhas) continua sem
+bloco de propósito: são as vagas da trilha que ninguém tocou, não pendência.
+
 ### `sessoes.mentor` é texto, não referência
 
 Não há FK para `profiles`. Isso é o que impede qualquer isolamento por mentor,

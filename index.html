@@ -160,6 +160,15 @@ td{padding:12px;border-bottom:1px solid var(--border);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr.click{cursor:pointer}
 tr.click:hover td{background:var(--surface-active)}
+/* Linha apontada por um alerta do dashboard. Barra na lateral em vez de fundo
+   colorido: o fundo brigaria com o :hover e com o zebrado da tabela. */
+tr.alvo td{background:var(--warning-dim)}
+tr.alvo td:first-child{box-shadow:inset 3px 0 0 var(--warning)}
+.panel.foco{border-color:rgba(232,161,60,.35);background:var(--warning-dim)}
+.panel.foco .foco-topo{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.panel.foco h3{color:var(--warning);margin-bottom:0}
+.panel.foco .foco-topo a{font-size:11.5px;color:var(--muted-foreground);text-decoration:underline;cursor:pointer;white-space:nowrap}
+.panel.foco .foco-dica{font-size:12.5px;color:var(--subtle-foreground);line-height:1.55;margin-top:10px;max-width:78ch}
 td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:-.01em}
 
 .pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:var(--radius-pill);font-size:11px;font-weight:600;white-space:nowrap;border:1px solid transparent}
@@ -476,6 +485,15 @@ let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:""};
    historico inteiro. `null` significa "ainda no padrao": quem resolve e o
    renderDash, que sabe quais meses tem sessao. */
 let mesMatriz = null;
+/* Foco: o alerta do dashboard manda a tela de Sessoes mostrar so as linhas que
+   ele contou, em vez de despejar a tela inteira e deixar a pessoa procurar.
+   `{ids, titulo, dica}`, ou null para a tela normal. */
+let foco = null;
+/* Os ids que cada alerta aponta, preenchidos pelo renderDash a cada render.
+   Passar id por handler inline seria furo de escape -- `esc()` nao protege
+   dentro de onclick, porque `&#39;` volta a ser `'` no parse de JS. O handler
+   recebe so o nome do alerta. */
+const FOCO_ALERTA = {dobradas:[], semData:[], semMentor:[]};
 let rotaAtual = null; // slug da rota selecionada na tela Rotas
 let myRole = null, myProfile = null;
 
@@ -911,6 +929,7 @@ function applySort(arr, tableKey, getters, defaultField, defaultDir){
 
 /* ================= RENDER ROUTER ================= */
 function setView(v){
+  if(v!=="sessoes") foco = null; // foco e do alerta que trouxe a pessoa aqui
   view=v;
   document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
   render();
@@ -924,6 +943,55 @@ function render(){
   else if(view==="rotas") renderRotas();
   else if(view==="financeiro" && pode("verFinanceiro")) renderFinanceiro();
   else { view="dash"; renderDash(); }
+}
+
+/* Leva o alerta do dashboard direto nas linhas que ele conta. Zera os filtros
+   de tipo e mentor: um filtro ativo esconderia justamente o que o alerta
+   aponta, e a tela abriria vazia sem explicar por que. */
+window.focarSessoes = function(chave){
+  const ALERTAS = {
+    dobradas: {titulo:"Reuniões gravadas em duas etapas",
+      dica:"Cada par abaixo é a mesma reunião — mesmo mentorado, data, hora e mentor — gravada em duas etapas. Contei uma vez cada, na linha marcada como <b>contada</b>. Para resolver: corrija a etapa errada ou apague a linha sobrando, pela ficha do mentorado."},
+    semData: {titulo:"Sessões concluídas sem data",
+      dica:"Sessão concluída sem data não entra em mês nenhum, então fica fora de todo fechamento mensal. Preencha a data pela ficha do mentorado."},
+    semMentor: {titulo:"Aguardando confirmação sem mentor definido",
+      dica:"Sem mentor na linha, a sessão não é creditada a ninguém quando for concluída — cai em <i>Sem mentor identificado</i>. Defina o mentor pela ficha do mentorado."},
+  };
+  const a = ALERTAS[chave];
+  if(!a) return;
+  foco = {ids:(FOCO_ALERTA[chave]||[]).slice(), titulo:a.titulo, dica:a.dica};
+  filtro.tipoSessao = ""; filtro.mentor = "";
+  setView("sessoes"); // nao zera o foco: so limpa quando o destino nao e sessoes
+};
+window.limparFoco = function(){ foco = null; renderSessoes(); };
+
+/* Agrupa as sessoes 1:1 concluidas em REUNIOES. Vive fora do renderDash porque
+   a tela de Sessoes marca as mesmas linhas: duas implementacoes da mesma regra
+   divergiriam, e e ela que decide o fechamento dos mentores.
+
+   Uma reuniao pode estar gravada duas vezes -- o sync procura a linha manual
+   por `etapa` e insere outra quando o titulo do evento nomeia etapa diferente
+   da que esta na trilha. Mesmo mentorado, data, hora e mentor e a mesma reuniao. */
+function reunioesConcluidas1a1(){
+  const porSlot = new Map();
+  S.filter(s=>eh1a1(s)&&s.status==="Concluída").forEach(s=>{
+    // Sem data nao da para afirmar que e a mesma reuniao: cada uma fica sozinha.
+    const k = s.data ? `${s.mentorado_id}|${s.data}|${s.hora||""}|${s.mentor||""}` : `sem-data|${s.id}`;
+    if(!porSlot.has(k)) porSlot.set(k, []);
+    porSlot.get(k).push(s);
+  });
+  /* Fica a linha registrada na mao (`google_event_id` nulo): a etapa dela foi
+     escolhida por uma pessoa olhando a trilha, nao herdada do titulo que alguem
+     digitou no Calendar. Empate desfeito pelo id, para a escolha nao variar. */
+  const escolher = ls => ls.length===1 ? ls[0]
+    : ls.slice().sort((a,b)=>((a.google_event_id?1:0)-(b.google_event_id?1:0)) || (a.id<b.id?-1:1))[0];
+  const slots = [...porSlot.values()];
+  const reunioes = slots.map(escolher);
+  return {
+    reunioes,
+    dobradas: slots.filter(ls=>ls.length>1).map(itens=>({itens, escolhida:escolher(itens)})),
+    contadas: new Set(reunioes.map(s=>s.id)),
+  };
 }
 
 /* ================= DASHBOARD ================= */
@@ -970,18 +1038,7 @@ function renderDash(){
      Ao colapsar o slot, fica a linha registrada na mao (`google_event_id` nulo):
      a etapa dela foi escolhida por uma pessoa olhando a trilha, nao herdada do
      titulo que alguem digitou no Google Agenda. */
-  const S1concl = S1.filter(s=>s.status==="Concluída");
-  const porSlot = new Map();
-  S1concl.forEach(s=>{
-    // Sem data nao da para afirmar que e a mesma reuniao: cada uma fica sozinha.
-    const k = s.data ? `${s.mentorado_id}|${s.data}|${s.hora||""}|${s.mentor||""}` : `sem-data|${s.id}`;
-    if(!porSlot.has(k)) porSlot.set(k, []);
-    porSlot.get(k).push(s);
-  });
-  const melhorDoSlot = ls => ls.length===1 ? ls[0]
-    : ls.slice().sort((a,b)=>((a.google_event_id?1:0)-(b.google_event_id?1:0)) || (a.id<b.id?-1:1))[0];
-  const dobradas = [...porSlot.values()].filter(ls=>ls.length>1);
-  const reunioes1a1 = [...porSlot.values()].map(melhorDoSlot);
+  const {reunioes: reunioes1a1, dobradas} = reunioesConcluidas1a1();
 
   /* `sessoes.mentor` e texto livre no banco, sem FK para `profiles`. Duas
      grafias do mesmo nome viravam duas linhas na tabela e partiam a contagem em
@@ -1011,7 +1068,7 @@ function renderDash(){
   const reunioesMes = reunioes1a1.filter(noMes);
   const grupoMes = agruparGrupo(SGconcl.filter(noMes));
   const temGrupoMes = grupoMes.length > 0;
-  const dobradasMes = dobradas.filter(ls=>noMes(melhorDoSlot(ls)));
+  const dobradasMes = dobradas.filter(d=>noMes(d.escolhida));
   // Concluida sem data nao entra em mes nenhum: some do recorte em vez de errar.
   const semDataFora = mesMatriz ? reunioes1a1.filter(s=>!s.data).length : 0;
 
@@ -1036,6 +1093,12 @@ function renderDash(){
   const semMentorGrupo = grupoMes.filter(e=>!temMentor(e)).length;
   const semMentorTot = semMentorReunioes.length + semMentorGrupo;
   const aguardSemMentor = S.filter(s=>!s.mentor&&s.status==="Aguardando confirmação").length;
+  /* Publica o que cada alerta aponta, para o link levar direto nas linhas.
+     Nas dobradas vao as DUAS linhas do par: para decidir qual etapa esta errada
+     e preciso ver as duas lado a lado, nao so a que ficou de fora da conta. */
+  FOCO_ALERTA.dobradas  = dobradasMes.flatMap(d=>d.itens.map(s=>s.id));
+  FOCO_ALERTA.semData   = reunioes1a1.filter(s=>!s.data).map(s=>s.id);
+  FOCO_ALERTA.semMentor = S.filter(s=>!s.mentor&&s.status==="Aguardando confirmação").map(s=>s.id);
 
   // Cinto de segurança: "próximas" nunca mostra data passada, mesmo que algo
   // fique preso em "Agendada" no banco. Ordena por data + hora.
@@ -1127,9 +1190,9 @@ function renderDash(){
       <tbody>${matriz.map(r=>`<tr><td class="mentor-chip">${esc(r.mt)}${r.inativo?'<span class="pill gray" style="margin-left:8px">fora do projeto</span>':''}</td>${r.row.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--green);font-weight:700">${r.tot1a1||"·"}</td>${temGrupoMes?`<td class="num" title="${r.presencas} presença(s) somada(s)">${r.grupo||"·"}</td>`:""}</tr>`).join("")}
       ${semMentorTot?`<tr style="opacity:.75"><td class="mentor-chip">Sem mentor identificado</td>${semMentorRow.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--amber);font-weight:700">${semMentorReunioes.length||"·"}</td>${temGrupoMes?`<td class="num">${semMentorGrupo||"·"}</td>`:""}</tr>`:''}</tbody></table></div>
       ${matriz.length||semMentorTot?"":`<div class="empty">Nenhuma sessão concluída ${mesMatriz?"neste mês":"registrada"}.</div>`}
-      ${dobradasMes.length?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${dobradasMes.length} reunião(ões) gravada(s) em duas etapas — contei uma vez cada</div><a onclick="setView('sessoes')">conferir</a></div>`:''}
-      ${semDataFora?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${semDataFora} sessão(ões) concluída(s) sem data — fora de qualquer mês</div><a onclick="setView('sessoes')">conferir</a></div>`:''}
-      ${aguardSemMentor?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${aguardSemMentor} sessão(ões) aguardando confirmação sem mentor definido</div><a onclick="setView('sessoes')">ver</a></div>`:''}
+      ${dobradasMes.length?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${dobradasMes.length} reunião(ões) gravada(s) em duas etapas — contei uma vez cada</div><a onclick="focarSessoes('dobradas')">conferir</a></div>`:''}
+      ${semDataFora?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${semDataFora} sessão(ões) concluída(s) sem data — fora de qualquer mês</div><a onclick="focarSessoes('semData')">conferir</a></div>`:''}
+      ${aguardSemMentor?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${aguardSemMentor} sessão(ões) aguardando confirmação sem mentor definido</div><a onclick="focarSessoes('semMentor')">ver</a></div>`:''}
     </div>
     <div class="panel detail">
       <h3>Próximas sessões agendadas</h3>
@@ -1209,13 +1272,34 @@ function renderMentorados(){
 function renderSessoes(){
   GRUPO_REG.length = 0;
   let list = S.slice();
+  /* Foco: so as linhas que o alerta do dashboard contou. Vem antes dos filtros
+     de tipo e mentor de proposito -- o alerta aponta linhas especificas, e um
+     filtro nao deveria conseguir escondê-las. */
+  const focoIds = foco ? new Set(foco.ids) : null;
+  if(focoIds) list = list.filter(s=>focoIds.has(s.id));
   if(filtro.mentor==="__sem__") list = list.filter(s=>!s.mentor);
   else if(filtro.mentor) list = list.filter(s=>s.mentor===filtro.mentor);
   const ind = list.filter(eh1a1);
   const grp = list.filter(ehGrupo);
-  const mostraInd = filtro.tipoSessao !== "grupo";
-  const mostraGrp = filtro.tipoSessao !== "individual";
+  /* Sob foco, secao que ficaria vazia nao aparece: um painel "0" nao informa
+     nada e faz a tela parecer quebrada. */
+  const mostraInd = filtro.tipoSessao !== "grupo" && (!foco || ind.length > 0);
+  const mostraGrp = filtro.tipoSessao !== "individual" && (!foco || grp.length > 0);
   const podeCriar = pode("criarSessao");
+
+  /* Marcadores: mesma regra do fechamento, por isso vem do mesmo helper que o
+     dashboard usa. Aparecem sempre, com ou sem foco -- sao poucas linhas e
+     quem estiver navegando a tela ganha o aviso de graca. */
+  const {dobradas, contadas} = reunioesConcluidas1a1();
+  const emDobro = new Set(dobradas.flatMap(d=>d.itens.map(s=>s.id)));
+  const marcaLinha = s => {
+    if(emDobro.has(s.id)) return contadas.has(s.id)
+      ? ' <span class="pill green" title="Das linhas desta mesma reunião, é esta que entra na contagem do mentor">contada</span>'
+      : ' <span class="pill amber" title="Mesma reunião (mesmo mentorado, data, hora e mentor) de outra linha já contada — esta ficou fora para não contar em dobro">ignorada · mesma reunião</span>';
+    if(s.status==="Concluída" && !s.data) return ' <span class="pill amber" title="Concluída sem data não entra em nenhum mês do fechamento">sem data</span>';
+    if(s.status==="Aguardando confirmação" && !s.mentor) return ' <span class="pill amber" title="Sem mentor na linha, a sessão não será creditada a ninguém">sem mentor</span>';
+    return "";
+  };
 
   const getters = {
     data: s=>s.data||"",
@@ -1229,8 +1313,17 @@ function renderSessoes(){
     participantes: e=>e.itens.length,
   };
   const blocos = [
+    /* "Aguardando confirmacao" nao tinha bloco nenhum: as 27 sessoes nesse
+       estado (08/09/2026) so eram alcancaveis abrindo a ficha de cada mentorado,
+       uma por uma, e o alerta do dashboard mandava para uma tela onde elas nao
+       apareciam. Vem primeiro porque e o unico bloco que pede acao: cada uma
+       confirmada entra no fechamento do mes. */
+    {key:"aguardando", titulo:"Aguardando confirmação",  itens: ind.filter(s=>s.status==="Aguardando confirmação")},
     {key:"agendadas",  titulo:"Agendadas",               itens: ind.filter(s=>s.status==="Agendada")},
-    {key:"concluidas", titulo:"Concluídas (últimas 30)", itens: ind.filter(s=>s.status==="Concluída").slice(0,30)},
+    /* Sob foco nao corta: o alerta pode apontar uma sessao de meses atras, e o
+       corte em 30 esconderia exatamente a linha que a pessoa veio conferir. */
+    {key:"concluidas", titulo: foco ? "Concluídas" : "Concluídas (últimas 30)",
+     itens: foco ? ind.filter(s=>s.status==="Concluída") : ind.filter(s=>s.status==="Concluída").slice(0,30)},
     {key:"bloqueadas", titulo:"Bloqueadas",              itens: ind.filter(s=>s.status==="Bloqueada")},
   ];
   const todas1a1 = S.filter(eh1a1);
@@ -1249,6 +1342,12 @@ function renderSessoes(){
     <select onchange="filtro.mentor=this.value;renderSessoes()"><option value="">Todos os mentores</option>${TODOS_MENTORES.map(m=>`<option ${filtro.mentor===m?"selected":""}>${m}</option>`).join("")}<option value="__sem__" ${filtro.mentor==="__sem__"?"selected":""}>— sem mentor —</option></select>
   </div>
 
+  ${foco?`<div class="panel foco">
+    <div class="foco-topo"><h3>${esc(foco.titulo)} · ${list.length} linha(s)</h3><a onclick="limparFoco()">mostrar todas as sessões</a></div>
+    <div class="foco-dica">${foco.dica}</div>
+    ${list.length?"":'<div class="empty">Nada a conferir aqui — as linhas apontadas pelo alerta já foram resolvidas. Volte ao dashboard para recarregar a contagem.</div>'}
+  </div>`:""}
+
   ${mostraInd?`
   <div class="section-label">Sessões 1:1 com mentores</div>
   ${blocos.map(({key,titulo,itens})=>{
@@ -1257,9 +1356,9 @@ function renderSessoes(){
     return `
   <div class="panel"><h3>${titulo} · ${g.length}</h3>
   ${g.length?`<div style="overflow-x:auto"><table><thead><tr>${th(tableKey,"data","Data")}${th(tableKey,"mentorado","Mentorado")}${th(tableKey,"etapa","Etapa")}${th(tableKey,"mentor","Mentor")}<th>Status</th><th>Links</th></tr></thead><tbody>
-  ${g.map(s=>`<tr class="click" onclick="openMentorado('${s.mentorado_id}','sessoes')">
+  ${g.map(s=>`<tr class="click${focoIds&&focoIds.has(s.id)?" alvo":""}" onclick="openMentorado('${s.mentorado_id}','sessoes')">
     <td>${cellDataHora(s.data, s.hora)}</td>
-    <td>${esc(nome(s.mentorado_id))}</td><td>${esc(s.etapa)}</td><td>${esc(s.mentor||"—")}</td>
+    <td>${esc(nome(s.mentorado_id))}</td><td>${esc(s.etapa)}${marcaLinha(s)}</td><td>${esc(s.mentor||"—")}</td>
     <td>${pillSess(s.status)}</td>
     <td class="lk">${[linkOr(s.link_meet,"meet"),linkOr(s.link_gravacao,"gravação"),linkOr(s.link_anotacoes,"anotações")].filter(Boolean).join(" · ")||"—"}</td>
   </tr>`).join("")}</tbody></table></div>`:`<div class="empty">Nada por aqui.</div>`}

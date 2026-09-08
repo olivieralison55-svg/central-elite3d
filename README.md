@@ -127,11 +127,24 @@ Clique em qualquer coluna do cabeçalho para ordenar.
 A agenda, dividida em dois grupos.
 
 **Sessões 1:1 com mentores** são os encontros individuais da trilha: o
-Diagnóstico, o Plano de Ação e os Checkups. Vêm em três blocos — **Agendadas**,
-**Concluídas** (últimas 30) e **Bloqueadas**. Cada linha traz data e hora,
-mentorado, etapa, mentor, status e os links disponíveis (meet, gravação,
-anotações). Se um link estiver salvo em formato inválido, ele aparece com um
-asterisco e não é clicável.
+Diagnóstico, o Plano de Ação e os Checkups. Vêm em quatro blocos —
+**Aguardando confirmação**, **Agendadas**, **Concluídas** (últimas 30) e
+**Bloqueadas**. Cada linha traz data e hora, mentorado, etapa, mentor, status e
+os links disponíveis (meet, gravação, anotações). Se um link estiver salvo em
+formato inválido, ele aparece com um asterisco e não é clicável.
+
+*Aguardando confirmação* vem primeiro porque é o único bloco que pede ação:
+cada sessão confirmada ali entra no fechamento do mês.
+
+Algumas linhas trazem uma etiqueta ao lado da etapa, apontando o que precisa de
+correção:
+
+| Etiqueta | O que significa |
+|---|---|
+| **contada** | Das linhas desta mesma reunião, é esta que entra na contagem do mentor. |
+| **ignorada · mesma reunião** | Mesmo mentorado, data, hora e mentor de outra linha já contada. Ficou fora para não contar em dobro — corrija a etapa errada ou apague a linha sobrando. |
+| **sem data** | Concluída sem data não entra em nenhum mês do fechamento. |
+| **sem mentor** | Aguardando confirmação sem mentor na linha: quando for concluída, não será creditada a ninguém. |
 
 **Sessões em grupo** são os encontros coletivos, num painel por categoria:
 **Plantão de Dúvida Semanal** e **Sessão de Implementação Mensal**. Aqui cada
@@ -194,6 +207,16 @@ como DD/MM/AAAA.
 ---
 
 ## Os alertas e o que fazer com cada um
+
+Clicar em **conferir** ou **ver** num alerta não abre a tela inteira: abre a
+tela de Sessões mostrando **só as linhas que aquele alerta contou**, com um
+painel no topo explicando o problema e o que fazer, e as linhas destacadas. Os
+filtros de tipo e mentor são zerados, senão poderiam esconder justamente o que o
+alerta aponta. *Mostrar todas as sessões* sai do recorte, e trocar de tela
+também.
+
+Nas reuniões gravadas em duas etapas, o recorte traz **as duas linhas do par** —
+sem ver as duas lado a lado não há como decidir qual etapa está errada.
 
 | Alerta | O que significa | O que fazer |
 |---|---|---|
