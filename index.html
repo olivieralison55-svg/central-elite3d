@@ -472,6 +472,10 @@ let FAT = []; // faturamento_mensal
 let ORFAS = []; // sessoes cujo evento sumiu do Google Calendar
 let view = "dash";
 let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:""};
+/* Mes selecionado na matriz de sessoes por mentor ("YYYY-MM"), ou "" para o
+   historico inteiro. `null` significa "ainda no padrao": quem resolve e o
+   renderDash, que sabe quais meses tem sessao. */
+let mesMatriz = null;
 let rotaAtual = null; // slug da rota selecionada na tela Rotas
 let myRole = null, myProfile = null;
 
@@ -531,6 +535,20 @@ window.doLogin = doLogin;
 window.doLogout = async function(){ await db.auth.signOut(); myRole=null; myProfile=null; showLogin(); };
 
 /* ================= DATA ================= */
+/* PostgREST corta em 1000 linhas por request e nao devolve erro quando corta.
+   `sessoes` e a tabela que cresce mais rapido -- um encontro em grupo grava uma
+   linha por participante -- e a que alimenta o fechamento dos mentores, entao
+   precisa vir inteira ou a contagem subnotifica calada. */
+async function paginado(construir){
+  const PASSO = 1000;
+  const todas = [];
+  for(let de = 0;; de += PASSO){
+    const {data, error} = await construir().range(de, de+PASSO-1);
+    if(error) return {data:null, error};
+    todas.push(...(data||[]));
+    if((data||[]).length < PASSO) return {data:todas, error:null};
+  }
+}
 async function loadAll(){
   const mentorQuery = pode("verFinanceiro")
     ? db.from("mentorados").select("*").order("data_fechamento",{ascending:true})
@@ -541,7 +559,7 @@ async function loadAll(){
   const [m,p,s,r,md,mm,fat,cn,mc,orf] = await Promise.all([
     mentorQuery,
     parcelaQuery,
-    db.from("sessoes").select("*").order("ordem"),
+    paginado(()=>db.from("sessoes").select("*").order("ordem")),
     db.from("rotas").select("*").order("ordem"),
     db.from("marcos_definicao").select("*").order("ordem"),
     db.from("mentorado_marcos").select("*"),
@@ -909,6 +927,9 @@ function render(){
 }
 
 /* ================= DASHBOARD ================= */
+/* Seletor de mes da matriz de mentores. Handler em window, como os outros: e o
+   que o onchange inline alcanca, e e por onde a suite mexe no recorte. */
+window.setMesMatriz = function(v){ mesMatriz = v; renderDash(); };
 function renderDash(){
   GRUPO_REG.length = 0;
   const ativos = M.filter(ehAtivo);
@@ -938,20 +959,82 @@ function renderDash(){
     return (new Date(HOJE)-new Date(ref))/864e5 > 30;
   });
 
-  // matriz mentor x etapa
+  /* ===== matriz mentor x etapa: a base do fechamento dos mentores =====
+
+     Conta REUNIAO, nao linha. Uma mesma reuniao pode estar gravada duas vezes:
+     o sync do Calendar procura a linha ja existente por `etapa`, entao quando o
+     titulo do evento nomeia uma etapa diferente da que estava na trilha, ele nao
+     acha a linha manual e insere outra. Sobram duas sessoes concluidas com o
+     mesmo mentorado, data, hora e mentor -- uma reuniao paga em dobro.
+
+     Ao colapsar o slot, fica a linha registrada na mao (`google_event_id` nulo):
+     a etapa dela foi escolhida por uma pessoa olhando a trilha, nao herdada do
+     titulo que alguem digitou no Google Agenda. */
+  const S1concl = S1.filter(s=>s.status==="Concluída");
+  const porSlot = new Map();
+  S1concl.forEach(s=>{
+    // Sem data nao da para afirmar que e a mesma reuniao: cada uma fica sozinha.
+    const k = s.data ? `${s.mentorado_id}|${s.data}|${s.hora||""}|${s.mentor||""}` : `sem-data|${s.id}`;
+    if(!porSlot.has(k)) porSlot.set(k, []);
+    porSlot.get(k).push(s);
+  });
+  const melhorDoSlot = ls => ls.length===1 ? ls[0]
+    : ls.slice().sort((a,b)=>((a.google_event_id?1:0)-(b.google_event_id?1:0)) || (a.id<b.id?-1:1))[0];
+  const dobradas = [...porSlot.values()].filter(ls=>ls.length>1);
+  const reunioes1a1 = [...porSlot.values()].map(melhorDoSlot);
+
+  /* `sessoes.mentor` e texto livre no banco, sem FK para `profiles`. Duas
+     grafias do mesmo nome viravam duas linhas na tabela e partiam a contagem em
+     duas. Hoje os dados estao limpos -- isto e o que impede uma grafia nova,
+     vinda do sync ou de edicao direta no banco, de reabrir o problema calada. */
+  const chaveMentor = mt => (mt||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toLowerCase();
+  const CANON_MENTOR = Object.fromEntries(TODOS_MENTORES.map(m=>[chaveMentor(m), m]));
+  const nomeMentor = s => CANON_MENTOR[chaveMentor(s.mentor)] || (s.mentor||"").replace(/\s+/g," ").trim();
+  const temMentor = s => !!chaveMentor(s.mentor);
+
+  /* Recorte por mes. Os meses saem das proprias reunioes concluidas, mais o mes
+     corrente -- senao o mes que acabou de comecar nao teria opcao no seletor. */
+  const mesDe = s => (s.data||"").slice(0,7);
+  const SGconcl = SG.filter(s=>s.status==="Concluída");
+  const mesesComReuniao = [...new Set([...reunioes1a1.filter(s=>s.data).map(mesDe),
+    ...SGconcl.filter(s=>s.data).map(mesDe)])].sort().reverse();
+  const mesesMatriz = [...new Set([HOJE.slice(0,7), ...mesesComReuniao])].sort().reverse();
+  /* Padrao: o mes corrente, que e o do fechamento. Se ele ainda nao tem sessao
+     concluida nenhuma -- comeco de mes, ou nada confirmado ainda -- cai no mes
+     mais recente que tem, senao a tabela abriria vazia parecendo defeito. Qual
+     mes ficou escolhido esta escrito no seletor, entao nao da para confundir. */
+  if(mesMatriz === null) mesMatriz = mesesComReuniao.includes(HOJE.slice(0,7))
+    ? HOJE.slice(0,7) : (mesesComReuniao[0] || "");
+  if(mesMatriz && !mesesMatriz.includes(mesMatriz)) mesMatriz = "";
+  const noMes = s => !mesMatriz || mesDe(s)===mesMatriz;
+
+  const reunioesMes = reunioes1a1.filter(noMes);
+  const grupoMes = agruparGrupo(SGconcl.filter(noMes));
+  const temGrupoMes = grupoMes.length > 0;
+  const dobradasMes = dobradas.filter(ls=>noMes(melhorDoSlot(ls)));
+  // Concluida sem data nao entra em mes nenhum: some do recorte em vez de errar.
+  const semDataFora = mesMatriz ? reunioes1a1.filter(s=>!s.data).length : 0;
+
   const etapasAtivas = [...new Set(S1.map(s=>s.etapa))].sort((a,b)=>ETAPA_ORD[a]-ETAPA_ORD[b]);
   // Deriva a lista de quem aparece na matriz dos proprios dados: assim ninguem
   // some da contagem ao sair do projeto, nem depende de estar na constante.
-  const mentoresComSessao = [...new Set(S.filter(s=>s.status==="Concluída"&&s.mentor).map(s=>s.mentor))];
+  const mentoresComSessao = [...new Set([
+    ...reunioesMes.filter(temMentor).map(nomeMentor), ...grupoMes.filter(temMentor).map(nomeMentor)])];
   const matriz = mentoresComSessao.map(mt=>{
-    const row = etapasAtivas.map(et=>S1.filter(s=>s.mentor===mt&&s.etapa===et&&s.status==="Concluída").length);
-    const grupo = agruparGrupo(SG.filter(s=>s.mentor===mt&&s.status==="Concluída")).length;
-    return {mt,row,grupo,tot:row.reduce((a,b)=>a+b,0)+grupo, inativo: !MENTORES.includes(mt)};
-  }).filter(r=>r.tot>0).sort((a,b)=>b.tot-a.tot);
+    const minhas = reunioesMes.filter(s=>nomeMentor(s)===mt);
+    const row = etapasAtivas.map(et=>minhas.filter(s=>s.etapa===et).length);
+    /* 1:1 e grupo ficam em colunas separadas de proposito. Somar os dois num
+       total unico misturava unidades: uma sessao individual e um encontro
+       coletivo com 30 inscritos entravam com peso 1 cada. */
+    const encontros = grupoMes.filter(e=>nomeMentor(e)===mt);
+    return {mt, row, tot1a1:minhas.length, grupo:encontros.length,
+            presencas:encontros.reduce((a,e)=>a+e.itens.length,0), inativo:!MENTORES.includes(mt)};
+  }).filter(r=>r.tot1a1||r.grupo).sort((a,b)=>(b.tot1a1-a.tot1a1)||(b.grupo-a.grupo));
   // Sessoes concluidas sem mentor identificado: ficam visiveis em vez de sumir.
-  const semMentorRow = etapasAtivas.map(et=>S1.filter(s=>!s.mentor&&s.etapa===et&&s.status==="Concluída").length);
-  const semMentorGrupo = agruparGrupo(SG.filter(s=>!s.mentor&&s.status==="Concluída")).length;
-  const semMentorTot = semMentorRow.reduce((a,b)=>a+b,0) + semMentorGrupo;
+  const semMentorReunioes = reunioesMes.filter(s=>!temMentor(s));
+  const semMentorRow = etapasAtivas.map(et=>semMentorReunioes.filter(s=>s.etapa===et).length);
+  const semMentorGrupo = grupoMes.filter(e=>!temMentor(e)).length;
+  const semMentorTot = semMentorReunioes.length + semMentorGrupo;
   const aguardSemMentor = S.filter(s=>!s.mentor&&s.status==="Aguardando confirmação").length;
 
   // Cinto de segurança: "próximas" nunca mostra data passada, mesmo que algo
@@ -1033,10 +1116,19 @@ function renderDash(){
   <div class="section-label">Detalhe analítico</div>
   <div class="grid2">
     <div class="panel detail">
-      <h3>Sessões concluídas por mentor</h3>
-      <div style="overflow-x:auto"><table><thead><tr><th>Mentor</th>${etapasAtivas.map(e=>`<th class="num" title="${e}">${e.replace("Diagnóstico de Negócio","Diag.").replace("Plano de Ação","Plano").replace("Checkup ","C")}</th>`).join("")}${temGrupo?`<th class="num" title="Encontros em grupo">Grupo</th>`:""}<th class="num">Total</th></tr></thead>
-      <tbody>${matriz.map(r=>`<tr><td class="mentor-chip">${esc(r.mt)}${r.inativo?'<span class="pill gray" style="margin-left:8px">fora do projeto</span>':''}</td>${r.row.map(v=>`<td class="num">${v||"·"}</td>`).join("")}${temGrupo?`<td class="num">${r.grupo||"·"}</td>`:""}<td class="num" style="color:var(--green);font-weight:700">${r.tot}</td></tr>`).join("")}
-      ${semMentorTot?`<tr style="opacity:.75"><td class="mentor-chip">Sem mentor identificado</td>${semMentorRow.map(v=>`<td class="num">${v||"·"}</td>`).join("")}${temGrupo?`<td class="num">${semMentorGrupo||"·"}</td>`:""}<td class="num" style="color:var(--amber);font-weight:700">${semMentorTot}</td></tr>`:''}</tbody></table></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+        <h3 style="margin:0">Sessões concluídas por mentor</h3>
+        <select style="width:auto;min-width:158px" onchange="setMesMatriz(this.value)">
+          <option value="" ${mesMatriz?"":"selected"}>Todos os meses</option>
+          ${mesesMatriz.map(mm=>`<option value="${mm}" ${mesMatriz===mm?"selected":""}>${DP_MESES[+mm.slice(5,7)-1]} ${mm.slice(0,4)}</option>`).join("")}
+        </select>
+      </div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Mentor</th>${etapasAtivas.map(e=>`<th class="num" title="${e}">${e.replace("Diagnóstico de Negócio","Diag.").replace("Plano de Ação","Plano").replace("Checkup ","C")}</th>`).join("")}<th class="num" title="Sessões 1:1 concluídas, contadas por reunião">1:1</th>${temGrupoMes?`<th class="num" title="Encontros em grupo realizados — não presenças">Grupo</th>`:""}</tr></thead>
+      <tbody>${matriz.map(r=>`<tr><td class="mentor-chip">${esc(r.mt)}${r.inativo?'<span class="pill gray" style="margin-left:8px">fora do projeto</span>':''}</td>${r.row.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--green);font-weight:700">${r.tot1a1||"·"}</td>${temGrupoMes?`<td class="num" title="${r.presencas} presença(s) somada(s)">${r.grupo||"·"}</td>`:""}</tr>`).join("")}
+      ${semMentorTot?`<tr style="opacity:.75"><td class="mentor-chip">Sem mentor identificado</td>${semMentorRow.map(v=>`<td class="num">${v||"·"}</td>`).join("")}<td class="num" style="color:var(--amber);font-weight:700">${semMentorReunioes.length||"·"}</td>${temGrupoMes?`<td class="num">${semMentorGrupo||"·"}</td>`:""}</tr>`:''}</tbody></table></div>
+      ${matriz.length||semMentorTot?"":`<div class="empty">Nenhuma sessão concluída ${mesMatriz?"neste mês":"registrada"}.</div>`}
+      ${dobradasMes.length?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${dobradasMes.length} reunião(ões) gravada(s) em duas etapas — contei uma vez cada</div><a onclick="setView('sessoes')">conferir</a></div>`:''}
+      ${semDataFora?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${semDataFora} sessão(ões) concluída(s) sem data — fora de qualquer mês</div><a onclick="setView('sessoes')">conferir</a></div>`:''}
       ${aguardSemMentor?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${aguardSemMentor} sessão(ões) aguardando confirmação sem mentor definido</div><a onclick="setView('sessoes')">ver</a></div>`:''}
     </div>
     <div class="panel detail">

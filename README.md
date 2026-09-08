@@ -79,11 +79,28 @@ Abaixo dele:
   acumulado que foi registrado, com faixa (Iniciante, Bronze, Prata, Ouro,
   Platina, Diamante) e quanto falta para a próxima. Só aparece quem tem
   faturamento registrado; ninguém é estimado ou inventado.
-- **Sessões concluídas por mentor** — uma matriz de mentor × etapa da trilha,
-  mais uma coluna **Grupo** com os encontros coletivos que a pessoa conduziu
-  (só aparece quando existe algum). Serve para ver carga e distribuição. Quem saiu do projeto aparece marcado como *fora do
-  projeto* e continua contando no histórico. Sessões concluídas sem mentor
-  identificado aparecem numa linha própria em vez de desaparecer da conta.
+- **Sessões concluídas por mentor** — uma matriz de mentor × etapa da trilha.
+  É a tabela usada no fechamento dos mentores, e é a única do dashboard com
+  **filtro de mês** próprio: abre no mês corrente e, se ele ainda não tem
+  nenhuma sessão concluída, no mês mais recente que tem — nunca vazia por
+  padrão. *Todos os meses* devolve o histórico acumulado.
+
+  Os totais ficam em **duas colunas separadas, nunca somadas**: **1:1** conta
+  sessões individuais e **Grupo** conta *encontros coletivos conduzidos* — não
+  presenças (o número de presenças está no title da célula). Somar as duas
+  misturaria unidades: um plantão com 30 inscritos entraria com peso 1, igual a
+  uma sessão individual.
+
+  A contagem é por **reunião, não por linha do banco**. Quando o mesmo
+  mentorado tem duas sessões concluídas na mesma data, hora e mentor, é uma
+  reunião gravada duas vezes (ver *Encontro em grupo é N linhas* no
+  ARCHITECTURE) e entra uma vez só; a tabela avisa quantas colapsou. Duas
+  grafias do mesmo mentor viram uma linha só, não duas.
+
+  Quem saiu do projeto aparece marcado como *fora do projeto* e continua
+  contando no histórico. Sessões concluídas sem mentor identificado aparecem
+  numa linha própria em vez de desaparecer da conta, e sessões concluídas sem
+  data são avisadas à parte — elas não entram em mês nenhum.
 - **Próximas sessões agendadas** — as 8 mais próximas, 1:1 e em grupo juntas.
   Um encontro coletivo ocupa uma linha só, com a etiqueta *grupo* no lugar do
   nome. Nunca mostra data passada.

@@ -171,11 +171,11 @@ Existem e importam, porque os `upsert` do app dependem delas:
 | `rotas` | `nome`, `slug` |
 | `sessoes` | `google_event_id` |
 
-Note o que **falta**: `sessoes` não tem único em `(mentorado_id, etapa)`, e já
-houve etapas duplicadas por mentorado em produção. **Cuidado:** as sessões em
-grupo passaram a depender dessa ausência — um mentorado tem uma linha de
-`Plantão de Dúvida Semanal` por semana. Criar o único ingênuo quebraria a
-feature; ver o débito 5.
+Note o que **falta**: `sessoes` não tem único em `(mentorado_id, etapa)`, e há
+etapas repetidas por mentorado em produção. **Não crie esse único** — nem o
+parcial: as repetições são reuniões reais em datas diferentes, e as sessões em
+grupo dependem da ausência dele (um mentorado tem uma linha de `Plantão de
+Dúvida Semanal` por semana). O débito 5 explica por quê.
 
 ---
 
@@ -278,10 +278,44 @@ diferentes:
 Esquecer o `EMAIL_MENTOR` faz as sessões daquele mentor entrarem sem mentor
 identificado, silenciosamente.
 
+### A matriz do dashboard conta reunião, não linha
+
+A tabela "Sessões concluídas por mentor" é a base do fechamento dos mentores,
+então ela não conta linhas de `sessoes` — conta **reuniões**, agrupando por
+`(mentorado_id, data, hora, mentor)`. O motivo é um caminho estreito do sync:
+
+```
+.eq("mentorado_id", …).eq("etapa", etapaInfo.etapa).is("google_event_id", null)
+```
+
+O sync procura a linha manual **por etapa**. Quando o título do evento no Google
+nomeia uma etapa diferente da que já estava na trilha — mentor abre o convite
+como "Plano de Ação" e a sessão registrada na ficha era "Checkup 5" — ele não
+acha nada e **insere outra linha**. Sobram duas sessões concluídas no mesmo
+mentorado, data, hora e mentor: uma reunião, dois registros, contada em dobro no
+fechamento. Em 08/09/2026 havia 5 casos assim em produção, inflando quatro
+mentores (Evaldo +2, Diovani +1, Sergio +1, Petare +1).
+
+Ao colapsar o slot fica a linha com `google_event_id` **nulo** — a registrada na
+mão, cuja etapa uma pessoa escolheu olhando a trilha, em vez da herdada do
+título que alguém digitou no Calendar. A tabela mostra quantas colapsou.
+
+Repetir a mesma etapa **em datas diferentes** é outro caso e não é colapsado:
+são reuniões distintas, ainda que a etapa esteja errada. É o que acontece quando
+o mentor reaproveita um convite recorrente titulado "Plano de Ação" para o que é
+um checkup. Isso não distorce o fechamento — distorce a trilha.
+
 ### `sessoes.mentor` é texto, não referência
 
 Não há FK para `profiles`. Isso é o que impede qualquer isolamento por mentor,
 e o que torna a carga por mentor aproximada em vez de exata.
+
+A matriz do dashboard normaliza o nome antes de agrupar (sem acento, espaço
+colapsado, caixa baixa) e reexibe pela grafia canônica de `TODOS_MENTORES`.
+Em 08/09/2026 os dados estavam limpos — uma grafia por mentor, nenhum espaço
+sobrando. A normalização é o que impede uma grafia nova, vinda do sync ou de
+edição direta no banco, de partir a contagem de um mentor em duas linhas sem
+ninguém perceber.
 
 Existe um caminho para corrigir: o `EMAIL_MENTOR` da edge function já mapeia
 e-mail → nome, e `profiles` também tem e-mail. Dá para fazer o backfill de um
@@ -466,11 +500,19 @@ Em ordem aproximada de retorno sobre esforço.
    entrar em cada lista. Nada roda em browser, nada roda em CI.
 4. **Sem histórico nem autoria** em `mentorados` e `sessoes` — nem `updated_at`,
    nem quem alterou. Impossível auditar mudanças.
-5. **`unique (mentorado_id, etapa)`** não existe em `sessoes`; já houve etapas
-   duplicadas por mentorado, o que distorce contagem de progresso. O único tem
-   de ser **parcial**, restrito à trilha 1:1 (`where ordem < 90`): encontro em
-   grupo é uma linha por participante por data e repete a etapa de propósito.
-   As demais tabelas têm suas chaves de unicidade em ordem.
+5. **~~`unique (mentorado_id, etapa)`~~ — não faça.** Este débito estava
+   errado e fica registrado para não voltar. A ideia era um único parcial na
+   trilha 1:1 (`where ordem < 90`) contra as etapas duplicadas por mentorado.
+   Os dados mostram por que não serve: em 08/09/2026 havia 11 pares
+   `(mentorado_id, etapa)` repetidos e **nenhum era linha duplicada** — eram
+   reuniões distintas, em datas distintas, cada uma com seu `google_event_id`,
+   porque o mentor reaproveita um convite titulado "Plano de Ação" para o que é
+   um checkup. Criar o único exigiria **apagar registro de reunião que
+   aconteceu** (subnotificando o fechamento de quem a conduziu) e faria o
+   `insert` do sync falhar calado a cada novo caso. O problema é de rótulo, não
+   de duplicidade: corrige-se no título do evento e na etapa da linha, não com
+   restrição de banco. Para a contagem, ver *A matriz do dashboard conta
+   reunião, não linha*. As demais tabelas têm suas chaves de unicidade em ordem.
 6. **Colunas de estado sem `CHECK`** — `ciclo`, `contrato_status`,
    `entrada_status`, `restante_status`. Há registros com valor de *situação*
    gravado na coluna de *ciclo*.

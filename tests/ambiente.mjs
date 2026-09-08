@@ -61,6 +61,8 @@ export function carregarApp() {
     const q = {
       select: () => q, order: () => q, eq: () => q, in: (_c, v) => { q._ids = v; return q; },
       is: () => q, single: () => q, maybeSingle: () => q,
+      // O cliente real tem .range() -- paginado() em loadAll depende dele.
+      range: () => q,
       insert(v) { escritas.push({tabela, op: "insert", dados: v}); return q; },
       update(v) { escritas.push({tabela, op: "update", dados: v, get ids() { return q._ids; }}); return q; },
       upsert(v) { escritas.push({tabela, op: "upsert", dados: v}); return q; },
@@ -118,6 +120,7 @@ export function carregarApp() {
         rotas(r, mk, mm, cn, mc, f){ ROTAS=r; MARCOS=mk; MM=mm; CANAIS_DB=cn; MC=mc; FAT=f;
           rotaAtual = r[0] && r[0].slug },
         get filtro(){ return filtro },
+        get mesMatriz(){ return mesMatriz }, set mesMatriz(v){ mesMatriz = v },
         get GRUPO_REG(){ return GRUPO_REG },
       },
     };`)();

@@ -159,6 +159,9 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   app.estado.filtro.tipoSessao = "";
 
   t.secao("Dashboard (admin)");
+  /* A matriz por mentor abre no mes corrente. Estas asserções são sobre o
+     histórico inteiro, então o recorte é dito de propósito. */
+  app.estado.mesMatriz = "";
   mod.renderDash();
   const dash = app.tela();
   t.ok("renderiza sem lixo", semLixo(dash), dash.slice(0, 300));
@@ -168,7 +171,9 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("card de grupo conta encontros, não linhas",
     dash.includes('>1</div><div class="d">2 presença(s)'),
     dash.slice(dash.indexOf("Encontros em grupo"), dash.indexOf("Encontros em grupo") + 200));
-  t.ok("matriz por mentor tem coluna Grupo", dash.includes('title="Encontros em grupo">Grupo<'));
+  t.ok("matriz por mentor tem coluna Grupo", dash.includes(">Grupo</th>"));
+  t.ok("matriz separa 1:1 de grupo em vez de somar",
+    dash.includes(">1:1</th>") && !dash.includes('<th class="num">Total</th>'));
   t.ok("próximas mostra o encontro agregado",
     dash.includes('<span class="pill blue">grupo</span> 2 participante(s)'));
   t.ok("próximas não repete o grupo por participante",
@@ -424,6 +429,123 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("sem registrar sessão em grupo", !app.tela().includes("+ Sessão em grupo"));
   mod.renderDash();
   t.ok("sem criar mentorado", !app.tela().includes("+ Novo mentorado"));
+}
+
+/* =======================================================================
+ * Matriz de sessões por mentor: a base do fechamento
+ *
+ * Conta reunião, não linha. Uma reunião chega gravada duas vezes quando o
+ * título do evento no Google nomeia uma etapa diferente da que já estava na
+ * trilha: o sync procura a linha existente por etapa, não acha, e insere outra.
+ * Em produção isso já inflou a contagem de quatro mentores.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const {mod} = app;
+
+  app.estado.S = [
+    /* Uma reunião, duas linhas: o sync chamou de "Plano de Ação" o que a trilha
+       registrou como "Checkup 5". Mesmo mentorado, data, hora e mentor. */
+    {id:"d1", mentorado_id:"m1", etapa:"Plano de Ação", ordem:2, status:"Concluída", mentor:"Evaldo", data:"2026-07-16", hora:"14:00:00", google_event_id:"ev1"},
+    {id:"d2", mentorado_id:"m1", etapa:"Checkup 5",     ordem:7, status:"Concluída", mentor:"Evaldo", data:"2026-07-16", hora:"14:00:00", google_event_id:null},
+    // Mesmo dia e mentor, horas diferentes: são duas reuniões, não uma.
+    {id:"d3", mentorado_id:"m2", etapa:"Checkup 1", ordem:3, status:"Concluída", mentor:"Luan", data:"2026-07-20", hora:"10:00:00"},
+    {id:"d4", mentorado_id:"m2", etapa:"Checkup 2", ordem:4, status:"Concluída", mentor:"Luan", data:"2026-07-20", hora:"15:00:00"},
+    // Duas grafias do mesmo mentor: não podem virar duas linhas na tabela.
+    {id:"d5", mentorado_id:"m3", etapa:"Checkup 1", ordem:3, status:"Concluída", mentor:" Sérgio ", data:"2026-07-21", hora:"09:00:00"},
+    {id:"d6", mentorado_id:"m3", etapa:"Checkup 2", ordem:4, status:"Concluída", mentor:"Sergio",   data:"2026-07-22", hora:"09:00:00"},
+    // Agosto: fica fora quando o recorte é julho.
+    {id:"d7", mentorado_id:"m2", etapa:"Checkup 3", ordem:5, status:"Concluída", mentor:"Luan", data:"2026-08-04", hora:"10:00:00"},
+    // Concluída sem data: não entra em mês nenhum.
+    {id:"d8", mentorado_id:"m1", etapa:"Checkup 6", ordem:8, status:"Concluída", mentor:"Luan", data:null, hora:null},
+  ];
+
+  const painel = (html) => {
+    const i = html.indexOf("Sessões concluídas por mentor");
+    return html.slice(i, html.indexOf("</table>", i));
+  };
+  const linhaDe = (html, mentor) =>
+    (painel(html).match(/<tr>.*?<\/tr>/g) || []).find(r => r.includes(">" + mentor + "<")) || "";
+  const celulas = (html, mentor) =>
+    [...linhaDe(html, mentor).matchAll(/<td class="num"[^>]*>([^<]*)<\/td>/g)].map(m => m[1]);
+  const total1a1 = (html, mentor) => {
+    const m = linhaDe(html, mentor).match(/--green\);font-weight:700">([^<]*)</);
+    return m ? m[1] : null;
+  };
+
+  t.secao("Matriz por mentor — conta reunião, não linha");
+  app.estado.mesMatriz = "2026-07";
+  mod.renderDash();
+  const jul = app.tela();
+  t.ok("renderiza sem lixo", semLixo(jul), jul.slice(0, 200));
+  /* Colunas de julho: Plano, C1, C2, C3, C5, C6 — e o total 1:1 no fim. */
+  t.ok("reunião gravada em duas etapas conta uma vez",
+    total1a1(jul, "Evaldo") === "1", "Evaldo: " + JSON.stringify(celulas(jul, "Evaldo")));
+  t.ok("ao colapsar fica a etapa registrada na mão, não a do título do evento",
+    celulas(jul, "Evaldo").join(",") === "·,·,·,·,1,·,1", JSON.stringify(celulas(jul, "Evaldo")));
+  t.ok("mesmo dia em horas diferentes são duas reuniões",
+    total1a1(jul, "Luan") === "2", "Luan: " + JSON.stringify(celulas(jul, "Luan")));
+  t.ok("duas grafias do mesmo mentor viram uma linha só",
+    total1a1(jul, "Sergio") === "2" && !painel(jul).includes("Sérgio"),
+    "Sergio: " + JSON.stringify(celulas(jul, "Sergio")));
+  t.ok("avisa a reunião contada em duas etapas",
+    jul.includes("1 reunião(ões) gravada(s) em duas etapas"));
+  t.ok("avisa a concluída sem data, que não entra em mês nenhum",
+    jul.includes("1 sessão(ões) concluída(s) sem data"));
+
+  t.secao("Filtro de mês da matriz");
+  app.estado.mesMatriz = "2026-08";
+  mod.renderDash();
+  const ago = app.tela();
+  t.ok("agosto conta só o que é de agosto",
+    total1a1(ago, "Luan") === "1" && !linhaDe(ago, "Evaldo"),
+    "Luan: " + JSON.stringify(celulas(ago, "Luan")));
+  t.ok("o mês selecionado fica marcado no seletor",
+    ago.includes('<option value="2026-08" selected>'));
+
+  app.estado.mesMatriz = "";
+  mod.renderDash();
+  const tudo = app.tela();
+  t.ok('"todos os meses" soma os meses e a sessão sem data',
+    total1a1(tudo, "Luan") === "4", "Luan: " + JSON.stringify(celulas(tudo, "Luan")));
+  t.ok("sem recorte não avisa sobre sessão sem data",
+    !tudo.includes("sem data — fora de qualquer mês"));
+  t.secao("Mês padrão da matriz");
+  /* O padrão é o mês corrente, mas ele costuma estar vazio no começo do mês —
+     e uma tabela vazia na abertura do dashboard é lida como defeito. */
+  app.estado.mesMatriz = null;
+  mod.renderDash();
+  const padrao = app.tela();
+  t.ok("sem escolha, abre no mês mais recente que tem sessão",
+    padrao.includes('<option value="2026-08" selected>'),
+    (padrao.match(/<option value="[^"]*" selected>/) || ["nenhum"])[0]);
+
+  app.estado.mesMatriz = null;
+  app.estado.S = [{id:"z1", mentorado_id:"m1", etapa:"Checkup 1", ordem:3,
+                   status:"Concluída", mentor:"Luan", data:null, hora:null}];
+  mod.renderDash();
+  t.ok("sem nenhum mês com data, cai em todos os meses e ainda conta",
+    app.tela().includes('<option value="" selected>'), app.tela().slice(0,120));
+
+  t.ok("mês sem sessão nenhuma não finge que a tabela existe",
+    (() => { app.estado.mesMatriz = "2026-07";
+             app.estado.S = [];
+             mod.renderDash();
+             return app.tela().includes("Nenhuma sessão concluída"); })());
+
+  /* Mentor fora das três listas: o nome é exibido como veio, só com o espaço
+     normalizado. Um erro de escape na normalização corromperia justamente este
+     caso — quem está nas listas é salvo pelo nome canônico e esconderia o bug. */
+  app.estado.mesMatriz = "2026-07";
+  app.estado.S = [
+    {id:"v1", mentorado_id:"m1", etapa:"Checkup 1", ordem:3, status:"Concluída", mentor:"Vanessa Sousa",       data:"2026-07-02", hora:"10:00:00"},
+    {id:"v2", mentorado_id:"m2", etapa:"Checkup 2", ordem:4, status:"Concluída", mentor:"  Vanessa   Sousa ", data:"2026-07-03", hora:"10:00:00"},
+  ];
+  mod.renderDash();
+  const desconhecido = app.tela();
+  t.ok("mentor fora das listas aparece com o nome intacto",
+    total1a1(desconhecido, "Vanessa Sousa") === "2",
+    painel(desconhecido).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 200));
 }
 
 /* =======================================================================
