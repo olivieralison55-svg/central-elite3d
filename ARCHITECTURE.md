@@ -504,6 +504,27 @@ Alterações de banco não estão versionadas neste repositório: são aplicadas
 migrations no projeto Supabase. As duas mais recentes são
 `harden_profiles_role_privilege_escalation` e `constrain_sessoes_status_domain`.
 
+### A edge function é versionada aqui; o deploy é manual
+
+`supabase/functions/sync-google-calendar/index.ts` passou a viver no repo em
+08/09/2026 — antes existia só no Supabase, sem histórico nem diff. **O push não
+a publica:** a Vercel serve só o `index.html`, e a função roda no Supabase. Para
+publicar, da raiz do repo:
+
+```bash
+npx supabase@latest login
+npx supabase@latest functions deploy sync-google-calendar --project-ref matgynpiscyoshnjzolo --use-api
+```
+
+Docker não é necessário (a CLI cai para deploy via API; `--use-api` força).
+`--project-ref` dispensa o `supabase link`. O `verify_jwt = true` está fixado em
+`supabase/config.toml` de propósito: a função escreve em `sessoes` com a
+`service_role` key, e um deploy que o virasse para `false` a deixaria aberta a
+qualquer chamada sem token.
+
+**Ao mexer nela, confira se o arquivo do repo está à frente do que roda:**
+`get_edge_function` pelo MCP devolve o código publicado.
+
 ---
 
 ## Débitos conhecidos

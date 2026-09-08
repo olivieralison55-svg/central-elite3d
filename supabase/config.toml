@@ -1,0 +1,10 @@
+# Configuracao minima, so o que o deploy da edge function precisa. O resto dos
+# defaults da CLI serve -- este repo nao roda stack local (nao ha `supabase start`).
+project_id = "matgynpiscyoshnjzolo"
+
+# Declarado de proposito, nao por depender do default: se `verify_jwt` virasse
+# false num deploy, a funcao passaria a aceitar chamada de qualquer um sem
+# token, e ela escreve na tabela `sessoes` com a service_role key. A doc
+# recomenda fixar aqui justamente para o valor nao variar entre deploys.
+[functions.sync-google-calendar]
+verify_jwt = true
