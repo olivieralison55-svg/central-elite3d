@@ -671,4 +671,144 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     achados.size >= 10, "achou so " + achados.size + ": " + [...achados].join(", "));
 }
 
+/* =======================================================================
+ * Busca por mentorado e botão de criar mentorado.
+ *
+ * A busca existe em todas as telas que listam mentorado, e em todas ela recorta
+ * só as listas: os cards e os alertas continuam contando a operação inteira —
+ * um total que encolhe ao digitar deixa de ser total. O botão de criar aparece
+ * nas cinco telas, sempre atrás da mesma permissão.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const {mod, estado} = app;
+  const limpar = () => { estado.filtro.q = estado.filtro.qDash = estado.filtro.qSessoes = estado.filtro.qFin = estado.filtro.qRotas = ""; };
+
+  t.secao("Comparação da busca");
+  t.ok("ignora caixa", mod.casaBusca("ana", "Ana Clara"));
+  t.ok("ignora acento nos dois lados", mod.casaBusca("jose", "José Antônio") && mod.casaBusca("josé", "Jose Antonio"));
+  t.ok("casa por partes fora de ordem", mod.casaBusca("silva ana", "Ana Paula da Silva"));
+  t.ok("termo vazio não filtra nada", mod.casaBusca("", "qualquer"));
+  t.ok("não casa quem não tem o termo", !mod.casaBusca("bruno", "Ana Clara"));
+
+  t.secao("Botão de criar mentorado em todas as telas");
+  for (const render of ["renderDash", "renderMentorados", "renderSessoes", "renderFinanceiro", "renderRotas"]) {
+    mod[render]();
+    t.ok(render + " oferece criar mentorado", app.tela().includes("openNovoMentorado()"),
+      app.tela().slice(0, 200));
+  }
+
+  t.secao("Caixa de busca em todas as telas");
+  const CAIXAS = {renderDash: "busca_qDash", renderMentorados: "busca_q", renderSessoes: "busca_qSessoes",
+    renderFinanceiro: "busca_qFin", renderRotas: "busca_qRotas"};
+  for (const [render, id] of Object.entries(CAIXAS)) {
+    mod[render]();
+    t.ok(render + " tem caixa de busca", app.tela().includes(`id="${id}"`), app.tela().slice(0, 200));
+  }
+
+  t.secao("Busca recorta a tela de Mentorados");
+  limpar();
+  estado.filtro.q = "bruno";
+  mod.renderMentorados();
+  t.ok("mostra quem casa", app.tela().includes("Bruno Dias"));
+  t.ok("esconde quem não casa", !app.tela().includes("Ana Clara"));
+  t.ok("devolve o texto digitado para a caixa", app.tela().includes('value="bruno"'));
+
+  t.secao("Busca recorta a tela de Sessões");
+  limpar();
+  mod.renderSessoes();
+  const subSemBusca = app.tela().match(/<div class="sub">([^<]*)<\/div>/)[1];
+  estado.filtro.qSessoes = "bruno";
+  mod.renderSessoes();
+  const sessBusca = app.tela();
+  t.ok("mantém a linha 1:1 de quem casa", sessBusca.includes("Bruno Dias"));
+  t.ok("esconde a linha 1:1 de quem não casa",
+    !sessBusca.slice(sessBusca.indexOf("Sessões 1:1 com mentores")).includes("Ana Clara"));
+  /* O encontro em grupo aparece agregado: filtrar linha a linha faria a coluna
+     "Participantes" contar 1 e mentir sobre quem esteve na sala. */
+  t.ok("encontro em grupo com o participante continua com todos",
+    sessBusca.includes("<td class=\"num\">3</td>"),
+    sessBusca.slice(sessBusca.indexOf("Plantão"), sessBusca.indexOf("Plantão") + 400));
+  t.ok("os totais do topo não encolhem",
+    sessBusca.includes(`<div class="sub">${subSemBusca}</div>`), subSemBusca);
+  estado.filtro.qSessoes = "michelle";
+  mod.renderSessoes();
+  t.ok("busca por mentor acha o encontro em grupo dele",
+    app.tela().includes("Sessão de Implementação Mensal · 1 encontro(s)"),
+    app.tela().replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 250));
+
+  t.secao("Busca recorta o Financeiro");
+  limpar();
+  estado.filtro.qFin = "bruno";
+  mod.renderFinanceiro();
+  const finBusca = app.tela();
+  t.ok("situação por mentorado mostra só quem casa",
+    finBusca.includes("Bruno Dias") && !finBusca.includes("Ana Clara"), finBusca.slice(0, 200));
+  /* A parcela vencida é da Ana: sai da tabela, mas o card continua contando 1 —
+     cobrança que some do total ao digitar um nome vira cobrança esquecida. */
+  t.ok("card de vencidas continua no total da operação",
+    finBusca.includes('<div class="k">Parcelas vencidas</div><div class="v">1</div>'),
+    finBusca.slice(finBusca.indexOf("Parcelas vencidas"), finBusca.indexOf("Parcelas vencidas") + 160));
+  t.ok("explica que a busca escondeu a cobrança",
+    finBusca.includes("casa com a busca"),
+    finBusca.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 300));
+
+  t.secao("Busca recorta o Dashboard");
+  limpar();
+  estado.filtro.qDash = "bruno";
+  mod.renderDash();
+  const dashBusca = app.tela();
+  t.ok("cards continuam no total da operação", dashBusca.includes("3</div><div class=\"d\">1 pausado(s)"),
+    dashBusca.slice(dashBusca.indexOf("Mentorados ativos"), dashBusca.indexOf("Mentorados ativos") + 200));
+  t.ok("próximas sessões escondem quem não casa",
+    !dashBusca.slice(dashBusca.indexOf("Próximas sessões")).includes("Ana Clara"),
+    dashBusca.slice(dashBusca.indexOf("Próximas sessões"), dashBusca.indexOf("Próximas sessões") + 400));
+
+  t.secao("Busca recorta o seletor de Rotas");
+  limpar();
+  estado.filtro.qRotas = "bruno";
+  mod.renderRotas();
+  const rotBusca = app.tela();
+  const seletor = rotBusca.slice(rotBusca.indexOf('id="rotaSelMentorado"'), rotBusca.indexOf('id="rotaSelMentorado"') + 400);
+  t.ok("seletor lista só quem casa", seletor.includes("Bruno Dias") && !seletor.includes("Ana Clara"), seletor);
+  estado.filtro.qRotas = "zzz";
+  mod.renderRotas();
+  t.ok("busca sem resultado avisa em vez de abrir a ficha de outro",
+    app.tela().includes("Nenhum mentorado encontrado") || app.tela().includes("nenhum mentorado encontrado"),
+    app.tela().replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 300));
+  t.ok("busca sem resultado não deixa lixo na tela", semLixo(app.tela()), app.tela().slice(0, 300));
+  limpar();
+
+  t.secao("Busca na lista de participantes do encontro em grupo");
+  globalThis.openSessaoGrupo();
+  const modalGrupo = app.modal();
+  t.ok("tem caixa de busca", modalGrupo.includes('id="g_busca"'), modalGrupo.slice(0, 200));
+  /* A busca esconde por atributo, sem re-render: e o `data-nome` que ela le, e
+     as marcacoes ja feitas continuam no DOM. */
+  t.ok("cada participante carrega o nome para a busca ler",
+    (modalGrupo.match(/class="chk" data-nome=/g) || []).length === 3,
+    String((modalGrupo.match(/class="chk" data-nome=/g) || []).length));
+  t.ok("escapa o nome no atributo da busca", escapado(modalGrupo));
+
+  const lAna = {dataset: {nome: "Ana Clara"}, hidden: false};
+  const lBruno = {dataset: {nome: "Bruno Dias"}, hidden: false};
+  const cAna = {checked: false, closest: () => lAna};
+  const cBruno = {checked: false, closest: () => lBruno};
+  app.responder("#g_lista .chk", [lAna, lBruno]);
+  app.responder(".g-part", [cAna, cBruno]);
+
+  globalThis.filtrarParticipantes("bruno");
+  t.ok("esconde quem não casa", lAna.hidden === true && lBruno.hidden === false);
+  globalThis.marcarTodosGrupo(true);
+  t.ok("selecionar alcança só quem a busca deixou visível",
+    cAna.checked === false && cBruno.checked === true);
+  /* Marcação escondida sobrando entraria no encontro sem ninguém ver. */
+  cAna.checked = true;
+  globalThis.marcarTodosGrupo(false);
+  t.ok("limpar alcança inclusive quem a busca escondeu",
+    cAna.checked === false && cBruno.checked === false);
+  globalThis.filtrarParticipantes("");
+  t.ok("busca vazia devolve todo mundo", lAna.hidden === false && lBruno.hidden === false);
+}
+
 process.exit(t.fim() ? 1 : 0);

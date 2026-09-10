@@ -34,7 +34,7 @@ const EXPORTA = [
   "ETAPAS", "ETAPAS_GRUPO", "ETAPA_ORD", "chartScales", "progBar",
   "sessoes1a1De", "sessoesGrupoDe", "pode", "CAPACIDADES", "PAPEL_LABEL",
   "renderDash", "renderMentorados", "renderSessoes", "renderFinanceiro", "renderRotas",
-  "setView", "reunioesConcluidas1a1",
+  "setView", "reunioesConcluidas1a1", "casaBusca", "buscaField", "btnNovoMentorado",
 ];
 
 export function carregarApp() {

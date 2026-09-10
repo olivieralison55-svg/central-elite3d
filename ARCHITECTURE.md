@@ -62,6 +62,7 @@ seções marcadas por comentário:
 | `SESSÕES EM GRUPO` | `agruparGrupo`, `statusGrupo`, `resumoStatusGrupo` e o registro `GRUPO_REG` |
 | `CAMPO DE DATA` | `dateField`/`monthField` e o popover `dp*`, usados por todo campo de data |
 | `ORDENAÇÃO GENÉRICA` | `toggleSort`/`applySort`, reaproveitados por todas as tabelas |
+| `BUSCA POR MENTORADO` | `casaBusca`/`buscaField`/`setBusca` e `btnNovoMentorado`, repetidos nas cinco telas |
 | `RENDER ROUTER` | `setView` e `render`, que despacham para a view atual |
 | `DASHBOARD` … `ROTAS / MARCOS` | As cinco telas |
 | `FICHA DO MENTORADO` | Modal principal, em três modos: `completo`, `sessoes`, `financeiro` |
@@ -387,6 +388,35 @@ varredura que reprova qualquer handler de escrita aparecendo nas telas de
 `diretoria`, com controle negativo em `admin` para garantir que o detector não
 está passando vazio — então esquecer o `pode(...)` falha o teste, não a produção.
 Ainda assim, isso é interface: quem impede a escrita é o RLS.
+
+### A busca de mentorado é por tela, e o input precisa do id
+
+`filtro` guarda um termo por tela (`q` em Mentorados, `qDash`, `qSessoes`,
+`qFin`, `qRotas`). São separados de propósito: um termo compartilhado faria quem
+buscou um nome em Sessões abrir o Financeiro já recortado por ele, sem ter
+pedido. A comparação é `casaBusca(termo, ...campos)` — sem caixa, sem acento e
+por partes, a mesma em todas as telas.
+
+O campo sai de `buscaField(campo, placeholder)`, que dá ao input o id
+`busca_<campo>`. **O id não é decoração**: cada tecla dispara `setBusca`, que
+re-renderiza a tela inteira por `innerHTML` e recria o input; é pelo id que ele é
+reencontrado para devolver o foco e a posição do cursor. Um campo de busca novo
+deve usar esse helper — um `<input>` solto perde o teclado a cada letra.
+
+A busca recorta listas, nunca os contadores: cards, alertas do dashboard e o
+subtítulo de cada tela continuam somando a operação inteira. Onde a busca esvazia
+uma lista que existia, a tela diz quantos itens ficaram de fora em vez de mostrar
+o vazio padrão — o vazio faria parecer que o dado sumiu.
+
+Nos encontros em grupo o filtro é aplicado **depois** de `agruparGrupo`: filtrar
+linha a linha deixaria o encontro com um participante só, e a coluna
+*Participantes* passaria a mentir sobre quem esteve na sala.
+
+A lista de participantes do modal de grupo é a exceção que não re-renderiza:
+`filtrarParticipantes` esconde por atributo `hidden`, porque as marcações vivem
+só no DOM e um re-render perderia quem já tinha sido selecionado. Por isso existe
+a regra `[hidden]{display:none!important}` — o `display:flex` de `.chk` ganharia
+do atributo por especificidade.
 
 ### O campo de data guarda o valor num input hidden
 

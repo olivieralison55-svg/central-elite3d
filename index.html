@@ -226,6 +226,9 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
 /* ---------- lista de seleção múltipla ---------- */
 .chk-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:4px;max-height:238px;overflow-y:auto;padding:10px;background:rgba(254,254,254,.02);border:1px solid var(--border);border-radius:var(--radius-control)}
 .chk{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;font-size:12.5px;cursor:pointer}
+/* `display` de classe ganha de [hidden] por especificidade: sem isto a busca de
+   participantes esconderia o item e ele continuaria na tela. */
+[hidden]{display:none!important}
 .chk:hover{background:rgba(254,254,254,.05)}
 .chk input[type=checkbox]{width:16px;height:16px;min-height:0;padding:0;flex-shrink:0;accent-color:var(--primary);cursor:pointer}
 .chk span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -480,7 +483,10 @@ let CANAIS_DB = [], MC = []; // canais (por rota), mentorado_canais
 let FAT = []; // faturamento_mensal
 let ORFAS = []; // sessoes cujo evento sumiu do Google Calendar
 let view = "dash";
-let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:""};
+/* `q` e a busca da tela Mentorados; as outras telas tem a sua propria. O termo
+   fica separado por tela de proposito: quem filtrou um nome em Sessoes nao
+   espera abrir o Financeiro e encontrar a tela recortada pelo mesmo nome. */
+let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:""};
 /* Mes selecionado na matriz de sessoes por mentor ("YYYY-MM"), ou "" para o
    historico inteiro. `null` significa "ainda no padrao": quem resolve e o
    renderDash, que sabe quais meses tem sessao. */
@@ -927,6 +933,42 @@ function applySort(arr, tableKey, getters, defaultField, defaultDir){
   return sorted;
 }
 
+/* ================= BUSCA POR MENTORADO ================= */
+/* Toda tela que lista mentorado em tabela tem a mesma caixa de busca, com o
+   mesmo comportamento: sem acento, sem caixa e por partes -- "ana silva" acha
+   "Ana Paula da Silva", e "jose" acha "José". */
+function normBusca(v){
+  return (v==null?"":String(v)).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+function casaBusca(termo, ...campos){
+  const t = normBusca(termo).trim();
+  if(!t) return true;
+  const alvo = campos.map(normBusca).join(" ");
+  return t.split(/\s+/).every(p=>alvo.includes(p));
+}
+/* O id e fixo por campo porque o innerHTML recria o input a cada tecla: e por
+   ele que `setBusca` reencontra a caixa e devolve o foco e o cursor. Sem isso a
+   pessoa digita uma letra e perde o teclado. */
+function buscaField(campo, placeholder){
+  return `<input type="search" id="busca_${campo}" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}" value="${esc(filtro[campo]||"")}" oninput="setBusca('${campo}',this)">`;
+}
+window.setBusca = function(campo, el){
+  filtro[campo] = el.value;
+  const pos = el.selectionStart;
+  render();
+  const novo = document.getElementById("busca_"+campo);
+  if(!novo) return;
+  novo.focus({preventScroll:true});
+  try{ novo.setSelectionRange(pos, pos); }catch(e){}
+};
+/* Botao de criar mentorado: mesma regra de permissao nas cinco telas. Onde a
+   tela ja tem uma acao propria (Sessoes cria encontro em grupo), este vai como
+   secundario -- estar em todo lugar nao e o mesmo que ser a acao principal. */
+function btnNovoMentorado(secundario){
+  if(!pode("criarMentorado")) return "";
+  return `<button class="btn${secundario?" ghost":""}" onclick="openNovoMentorado()">+ Novo mentorado</button>`;
+}
+
 /* ================= RENDER ROUTER ================= */
 function setView(v){
   if(v!=="sessoes") foco = null; // foco e do alerta que trouxe a pessoa aqui
@@ -1102,16 +1144,22 @@ function renderDash(){
 
   // Cinto de segurança: "próximas" nunca mostra data passada, mesmo que algo
   // fique preso em "Agendada" no banco. Ordena por data + hora.
+  /* `alvo` e o texto que a busca desta tela varre. No encontro em grupo a
+     coluna mostra "N participante(s)", entao sem os nomes dos participantes no
+     alvo procurar por uma pessoa esconderia justamente o encontro dela. */
   const proximas = [
     ...S1.filter(s=>s.status==="Agendada" && s.data && s.data>=HOJE).map(s=>({
       grupo:false, data:s.data, hora:s.hora, etapa:s.etapa, mentor:s.mentor,
       quem:nome(s.mentorado_id), mid:s.mentorado_id,
+      alvo:`${nome(s.mentorado_id)} ${s.etapa||""} ${s.mentor||""}`,
     })),
     ...agruparGrupo(SG.filter(s=>s.status==="Agendada" && s.data && s.data>=HOJE)).map(e=>({
       grupo:true, data:e.data, hora:e.hora, etapa:e.etapa, mentor:e.mentor,
       quem:`${e.itens.length} participante(s)`, entrada:e,
+      alvo:`${e.itens.map(i=>nome(i.mentorado_id)).join(" ")} ${e.etapa||""} ${e.mentor||""}`,
     })),
-  ].sort((a,b)=>((a.data+(a.hora||"99"))<(b.data+(b.hora||"99")))?-1:1).slice(0,8);
+  ].filter(p=>casaBusca(filtro.qDash, p.alvo))
+   .sort((a,b)=>((a.data+(a.hora||"99"))<(b.data+(b.hora||"99")))?-1:1).slice(0,8);
 
   const verFin = pode("verFinanceiro");
 
@@ -1119,8 +1167,14 @@ function renderDash(){
   // Nada é inventado — mentorado sem registro simplesmente não aparece na seção.
   const comFaturamento = ativos
     .map(m=>({m, nv: nivelDe(faturamentoAcumulado(m.id))}))
-    .filter(x=>x.nv.total>0)
+    .filter(x=>x.nv.total>0 && casaBusca(filtro.qDash, x.m.nome))
     .sort((a,b)=>b.nv.total-a.nv.total);
+
+  /* As listas de mentorado desta tela respondem a busca; os contadores de cima
+     nao. Um alerta que mudasse de numero conforme o texto digitado deixaria de
+     ser o total da operacao, que e o que ele existe para dizer. */
+  const orfasVis = ORFAS.filter(o=>casaBusca(filtro.qDash, o.mentorado_nome, o.etapa, o.mentor));
+  const semSessao30Vis = semSessao30.filter(m=>casaBusca(filtro.qDash, m.nome));
 
   // Itens de atenção: financeiros só para admin; risco de estagnação vale para todos
   const attnItems = [
@@ -1134,7 +1188,12 @@ function renderDash(){
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Dashboard</h2><div class="sub">Visão geral da operação · ${ativos.length} mentorados ativos</div></div>
-  ${pode("criarMentorado")?'<button class="btn" onclick="openNovoMentorado()">+ Novo mentorado</button>':''}</div>
+  ${btnNovoMentorado()}</div>
+
+  <div class="filters">
+    ${buscaField("qDash","Buscar mentorado nas listas desta tela…")}
+    ${filtro.qDash?`<a style="align-self:center;cursor:pointer;font-size:12px" onclick="filtro.qDash='';renderDash()">limpar busca</a>`:`<span style="align-self:center;color:var(--dim);font-size:12px">filtra as listas de mentorados abaixo — os totais continuam da operação inteira</span>`}
+  </div>
 
   <div class="panel ${temAtencao?"attention":""}">
     <h3>${temAtencao?"⚠ Precisa de atenção agora":"✓ Tudo em ordem"}</h3>
@@ -1198,32 +1257,33 @@ function renderDash(){
       <h3>Próximas sessões agendadas</h3>
       <div style="overflow-x:auto">
       ${proximas.length ? `<table><thead><tr><th>Data</th><th>Mentorado</th><th>Etapa</th><th>Mentor</th></tr></thead><tbody>
-      ${proximas.map(p=>`<tr class="click" onclick="${p.grupo?`openGrupo(${regGrupo(p.entrada)})`:`openMentorado('${p.mid}','sessoes')`}"><td>${cellDataHora(p.data, p.hora)}</td><td>${p.grupo?`<span class="pill blue">grupo</span> `:""}${esc(p.quem)}</td><td>${esc(p.etapa)}</td><td>${esc(p.mentor||"—")}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Nenhuma sessão agendada. Agende pela ficha do mentorado.</div>`}
+      ${proximas.map(p=>`<tr class="click" onclick="${p.grupo?`openGrupo(${regGrupo(p.entrada)})`:`openMentorado('${p.mid}','sessoes')`}"><td>${cellDataHora(p.data, p.hora)}</td><td>${p.grupo?`<span class="pill blue">grupo</span> `:""}${esc(p.quem)}</td><td>${esc(p.etapa)}</td><td>${esc(p.mentor||"—")}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">${filtro.qDash?"Nenhuma sessão agendada para essa busca.":"Nenhuma sessão agendada. Agende pela ficha do mentorado."}</div>`}
       </div>
     </div>
   </div>
   ${ORFAS.length?`<div class="panel detail" id="orfas"><h3>Sessões sem evento no Google Agenda</h3>
   <div class="sub" style="color:var(--mut);font-size:12px;margin:-8px 0 14px">O evento foi apagado, renomeado ou saiu da janela de sincronização. Estes registros pararam de receber atualização e precisam de conferência manual.</div>
-  <div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Mentorado</th><th>Etapa</th><th>Mentor</th><th>Status</th></tr></thead><tbody>
-  ${ORFAS.slice().sort((a,b)=>(a.data||"")<(b.data||"")?-1:1).map(o=>`<tr class="click" onclick="openMentorado('${o.mentorado_id}','sessoes')">
+  ${orfasVis.length?`<div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Mentorado</th><th>Etapa</th><th>Mentor</th><th>Status</th></tr></thead><tbody>
+  ${orfasVis.slice().sort((a,b)=>(a.data||"")<(b.data||"")?-1:1).map(o=>`<tr class="click" onclick="openMentorado('${o.mentorado_id}','sessoes')">
     <td>${cellDataHora(o.data, o.hora)}</td><td>${esc(o.mentorado_nome)}</td><td>${esc(o.etapa)}</td>
     <td>${o.mentor?esc(o.mentor):'<span class="pill amber">sem mentor</span>'}</td><td>${pillSess(o.status)}</td>
-  </tr>`).join("")}</tbody></table></div></div>`:""}
-  ${semSessao30.length?`<div class="panel detail" id="risco"><h3>Mentorados sem sessão há +30 dias</h3><div style="overflow-x:auto"><table><thead><tr><th>Mentorado</th><th>Última sessão</th><th></th></tr></thead><tbody>
-  ${semSessao30.map(m=>{
+  </tr>`).join("")}</tbody></table></div>`:`<div class="empty">Nenhuma das ${ORFAS.length} sessões sem evento casa com a busca.</div>`}</div>`:""}
+  ${semSessao30.length?`<div class="panel detail" id="risco"><h3>Mentorados sem sessão há +30 dias</h3>
+  ${semSessao30Vis.length?`<div style="overflow-x:auto"><table><thead><tr><th>Mentorado</th><th>Última sessão</th><th></th></tr></thead><tbody>
+  ${semSessao30Vis.map(m=>{
     const last = ultimaConcluida(m.id);
     return `<tr class="click" onclick="openMentorado('${m.id}','sessoes')"><td>${esc(m.nome)}</td>`
       + (last
           ? `<td class="mono">${fmtD(last)}</td><td><span class="pill amber">Contatar</span></td>`
           : `<td class="mono">nunca · fechou ${fmtD(m.data_fechamento)}</td><td><span class="pill red">Nunca começou</span></td>`)
       + `</tr>`;
-  }).join("")}</tbody></table></div></div>`:""}`;
+  }).join("")}</tbody></table></div>`:`<div class="empty">Nenhum dos ${semSessao30.length} mentorados sem sessão casa com a busca.</div>`}</div>`:""}`;
 }
 
 /* ================= MENTORADOS ================= */
 function renderMentorados(){
   let list = M.slice();
-  if(filtro.q) list = list.filter(m=>m.nome.toLowerCase().includes(filtro.q.toLowerCase()));
+  if(filtro.q) list = list.filter(m=>casaBusca(filtro.q, m.nome));
   if(filtro.statusFin==="contrato") list = list.filter(m=>ehAtivo(m) && m.contrato_status!=="Assinado");
   if(filtro.statusFin==="ativos") list = list.filter(ehAtivo);
   if(filtro.statusFin==="pausados") list = list.filter(m=>situacaoDe(m)==="pausado");
@@ -1238,10 +1298,10 @@ function renderMentorados(){
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Mentorados</h2><div class="sub">${list.length} de ${M.length} registro(s) · dados financeiros ficam em Financeiro</div></div>
-  ${pode("criarMentorado")?'<button class="btn" onclick="openNovoMentorado()">+ Novo mentorado</button>':''}</div>
+  ${btnNovoMentorado()}</div>
   <div class="panel" style="padding:14px 16px">
   <div class="filters" style="margin-bottom:0">
-    <input type="search" placeholder="Buscar por nome…" value="${esc(filtro.q)}" oninput="filtro.q=this.value;renderMentorados()">
+    ${buscaField("q","Buscar mentorado por nome…")}
     <select onchange="filtro.statusFin=this.value;renderMentorados()">
       <option value="">Todos</option>
       <option value="ativos" ${filtro.statusFin==="ativos"?"selected":""}>Somente ativos</option>
@@ -1279,8 +1339,12 @@ function renderSessoes(){
   if(focoIds) list = list.filter(s=>focoIds.has(s.id));
   if(filtro.mentor==="__sem__") list = list.filter(s=>!s.mentor);
   else if(filtro.mentor) list = list.filter(s=>s.mentor===filtro.mentor);
-  const ind = list.filter(eh1a1);
+  /* A busca corta as linhas 1:1 aqui, mas os encontros em grupo so depois de
+     agrupados: filtrar linha a linha deixaria o encontro com um participante so
+     e a coluna "Participantes" mentiria sobre quem esteve na sala. */
+  const ind = list.filter(eh1a1).filter(s=>casaBusca(filtro.qSessoes, nome(s.mentorado_id), s.etapa, s.mentor));
   const grp = list.filter(ehGrupo);
+  const casaEncontro = e => casaBusca(filtro.qSessoes, e.itens.map(i=>nome(i.mentorado_id)).join(" "), e.mentor, e.etapa);
   /* Sob foco, secao que ficaria vazia nao aparece: um painel "0" nao informa
      nada e faz a tela parecer quebrada. */
   const mostraInd = filtro.tipoSessao !== "grupo" && (!foco || ind.length > 0);
@@ -1331,9 +1395,10 @@ function renderSessoes(){
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Sessões</h2><div class="sub">${todas1a1.filter(s=>s.status==="Concluída").length} sessões 1:1 concluídas · ${todas1a1.filter(s=>s.status==="Agendada").length} agendadas · ${totalEncontros} encontro(s) em grupo</div></div>
-  ${podeCriar?'<button class="btn" onclick="openSessaoGrupo()">+ Sessão em grupo</button>':''}</div>
+  <div class="rowflex">${podeCriar?'<button class="btn" onclick="openSessaoGrupo()">+ Sessão em grupo</button>':''}${btnNovoMentorado(podeCriar)}</div></div>
 
   <div class="filters">
+    ${buscaField("qSessoes","Buscar por mentorado, etapa ou mentor…")}
     <select onchange="filtro.tipoSessao=this.value;renderSessoes()">
       <option value="">Todos os tipos</option>
       <option value="individual" ${filtro.tipoSessao==="individual"?"selected":""}>Somente 1:1 com mentores</option>
@@ -1369,7 +1434,7 @@ function renderSessoes(){
   <div class="section-label">Sessões em grupo</div>
   ${ETAPAS_GRUPO.map((cat,i)=>{
     const tableKey = "grupo_"+i;
-    const enc = applySort(agruparGrupo(grp.filter(s=>s.etapa===cat)), tableKey, gettersGrupo, "data", "desc");
+    const enc = applySort(agruparGrupo(grp.filter(s=>s.etapa===cat)).filter(casaEncontro), tableKey, gettersGrupo, "data", "desc");
     return `
   <div class="panel"><h3>${esc(cat)} · ${enc.length} encontro(s)</h3>
   ${enc.length?`<div style="overflow-x:auto"><table><thead><tr>${th(tableKey,"data","Data")}${th(tableKey,"mentor","Mentor")}${th(tableKey,"participantes","Participantes","num")}<th>Status</th><th>Links</th></tr></thead><tbody>
@@ -1451,16 +1516,39 @@ window.openSessaoGrupo = function(){
   </div>
   <div class="sec"><h4>Participantes</h4>
   <div class="rowflex" style="margin-bottom:10px">
-    <button class="btn sm ghost" onclick="marcarTodosGrupo(true)">Selecionar todos (${ativos.length})</button>
+    <input type="search" id="g_busca" placeholder="Buscar participante…" aria-label="Buscar participante" style="flex:1;min-width:180px" oninput="filtrarParticipantes(this.value)">
+    <button class="btn sm ghost" id="g_btnTodos" onclick="marcarTodosGrupo(true)">Selecionar todos (${ativos.length})</button>
     <button class="btn sm ghost" onclick="marcarTodosGrupo(false)">Limpar seleção</button>
   </div>
-  ${ativos.length?`<div class="chk-list">${ativos.map(m=>`<label class="chk"><input type="checkbox" class="g-part" value="${m.id}"><span>${esc(m.nome)}</span></label>`).join("")}</div>`:`<div class="empty">Nenhum mentorado ativo.</div>`}
+  ${ativos.length?`<div class="chk-list" id="g_lista">${ativos.map(m=>`<label class="chk" data-nome="${esc(m.nome)}"><input type="checkbox" class="g-part" value="${m.id}"><span>${esc(m.nome)}</span></label>`).join("")}</div>
+  <div class="empty" id="g_vazio" hidden>Nenhum mentorado ativo com esse nome.</div>`:`<div class="empty">Nenhum mentorado ativo.</div>`}
   </div>
   <div class="rowflex"><button class="btn" onclick="criarSessaoGrupo()">Registrar encontro</button></div>`;
   $("#overlay").classList.add("open");
 }
+/* Busca da lista de participantes. Esconde por atributo em vez de re-renderizar
+   a lista: o modal guarda as marcacoes so no DOM, e um re-render perderia quem
+   ja tinha sido selecionado antes da busca. */
+window.filtrarParticipantes = function(q){
+  let visiveis = 0;
+  document.querySelectorAll("#g_lista .chk").forEach(l=>{
+    const casa = casaBusca(q, l.dataset.nome);
+    l.hidden = !casa;
+    if(casa) visiveis++;
+  });
+  const btn = document.getElementById("g_btnTodos");
+  if(btn) btn.textContent = q.trim() ? `Selecionar visíveis (${visiveis})` : `Selecionar todos (${visiveis})`;
+  const vazio = document.getElementById("g_vazio");
+  if(vazio) vazio.hidden = visiveis > 0;
+}
+/* Marcar so alcanca quem esta visivel -- selecionar todos durante uma busca
+   incluiria gente que a pessoa nem viu. Limpar, ao contrario, alcanca todos:
+   marcacao escondida sobrando entraria no encontro sem ninguem perceber. */
 window.marcarTodosGrupo = function(v){
-  document.querySelectorAll(".g-part").forEach(c=>{ c.checked = v; });
+  document.querySelectorAll(".g-part").forEach(c=>{
+    const l = c.closest(".chk");
+    if(!v || !l || !l.hidden) c.checked = v;
+  });
 }
 window.criarSessaoGrupo = async function(){
   const etapa = $("#g_etapa").value;
@@ -1485,7 +1573,13 @@ function renderFinanceiro(){
     return {m, ps, pagas: ps.filter(p=>p.status==="paga").length, vencidas: ps.filter(parcelaVencida)};
   });
   const totVenc = rows.reduce((a,r)=>a+r.vencidas.length,0);
-  let proxVenc = P.filter(p=>p.status!=="paga"&&p.vencimento&&p.vencimento>=HOJE&&ehAtivo(M.find(m=>m.id===p.mentorado_id)));
+  let proxVenc = P.filter(p=>p.status!=="paga"&&p.vencimento&&p.vencimento>=HOJE&&ehAtivo(M.find(m=>m.id===p.mentorado_id))
+    && casaBusca(filtro.qFin, nome(p.mentorado_id)));
+  /* Os cards continuam somando a operacao inteira; a busca recorta so as
+     tabelas. Cobranca vencida que sumisse do card ao digitar um nome viraria
+     uma cobranca esquecida. */
+  const rowsBusca = r => casaBusca(filtro.qFin, r.m.nome);
+  const vencidasVis = rows.filter(r=>r.vencidas.length && rowsBusca(r));
 
   rows = applySort(rows, "fin_situacao", {
     nome: r=>r.m.nome.toLowerCase(),
@@ -1500,7 +1594,11 @@ function renderFinanceiro(){
   }, "vence", "asc").slice(0,10);
 
   $("#app").innerHTML = `
-  <div class="topbar"><div><h2>Financeiro</h2><div class="sub">Contratos, entradas e parcelas</div></div></div>
+  <div class="topbar"><div><h2>Financeiro</h2><div class="sub">Contratos, entradas e parcelas</div></div>
+  ${btnNovoMentorado()}</div>
+
+  <div class="filters">${buscaField("qFin","Buscar mentorado por nome…")}</div>
+
   <div class="cards">
     <div class="card ${totVenc?"bad":""}"><div class="k">Parcelas vencidas</div><div class="v">${totVenc}</div><div class="d">requerem cobrança</div></div>
     <div class="card alert"><div class="k">Restante em aberto</div><div class="v">${ativos.filter(m=>m.restante_status==="Ainda não").length}</div><div class="d">+ ${ativos.filter(m=>m.restante_status==="Pago parcial").length} pagos parcialmente</div></div>
@@ -1508,22 +1606,23 @@ function renderFinanceiro(){
   </div>
   <div class="grid2">
   <div class="panel"><h3>Cobranças com parcela vencida</h3>
-  ${totVenc?`<table><thead><tr><th>Mentorado</th><th>Parcela</th><th>Venceu em</th></tr></thead><tbody>
-  ${rows.filter(r=>r.vencidas.length).map(r=>r.vencidas.map(p=>`<tr class="click" onclick="openMentorado('${r.m.id}','financeiro')"><td>${esc(r.m.nome)}</td><td class="mono">#${p.numero}</td><td><span class="val-neg">${fmtD(p.vencimento)}</span> <span class="pill red">Vencida</span></td></tr>`).join("")).join("")}</tbody></table>`:`<div class="empty">Nenhuma parcela vencida. 🎯</div>`}
+  ${vencidasVis.length?`<table><thead><tr><th>Mentorado</th><th>Parcela</th><th>Venceu em</th></tr></thead><tbody>
+  ${vencidasVis.map(r=>r.vencidas.map(p=>`<tr class="click" onclick="openMentorado('${r.m.id}','financeiro')"><td>${esc(r.m.nome)}</td><td class="mono">#${p.numero}</td><td><span class="val-neg">${fmtD(p.vencimento)}</span> <span class="pill red">Vencida</span></td></tr>`).join("")).join("")}</tbody></table>`:`<div class="empty">${totVenc?`Nenhuma das ${totVenc} parcelas vencidas casa com a busca.`:"Nenhuma parcela vencida. 🎯"}</div>`}
   </div>
   <div class="panel"><h3>Próximos vencimentos</h3>
   ${proxVenc.length?`<table><thead><tr>${th("fin_proxvenc","vence","Vence em")}${th("fin_proxvenc","mentorado","Mentorado")}<th>Parcela</th></tr></thead><tbody>
-  ${proxVenc.map(p=>`<tr class="click" onclick="openMentorado('${p.mentorado_id}','financeiro')"><td class="mono">${fmtD(p.vencimento)}</td><td>${esc(nome(p.mentorado_id))}</td><td class="mono">#${p.numero}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">Sem vencimentos futuros cadastrados.</div>`}
+  ${proxVenc.map(p=>`<tr class="click" onclick="openMentorado('${p.mentorado_id}','financeiro')"><td class="mono">${fmtD(p.vencimento)}</td><td>${esc(nome(p.mentorado_id))}</td><td class="mono">#${p.numero}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">${filtro.qFin?"Nenhum vencimento futuro para essa busca.":"Sem vencimentos futuros cadastrados."}</div>`}
   </div></div>
-  <div class="panel" style="overflow-x:auto"><h3>Situação por mentorado</h3>
+  <div class="panel" style="overflow-x:auto"><h3>Situação por mentorado${filtro.qFin?` · ${rows.filter(rowsBusca).length} de ${rows.length}`:""}</h3>
   <table><thead><tr>${th("fin_situacao","nome","Mentorado")}${th("fin_situacao","contrato","Contrato")}${th("fin_situacao","entrada","Entrada")}<th>Forma</th>${th("fin_situacao","restante","Restante")}<th>Forma</th>${th("fin_situacao","parcelas","Parcelas pagas")}</tr></thead><tbody>
-  ${rows.map(r=>`<tr class="click" onclick="openMentorado('${r.m.id}','financeiro')">
+  ${rows.filter(rowsBusca).map(r=>`<tr class="click" onclick="openMentorado('${r.m.id}','financeiro')">
     <td style="font-weight:600">${esc(r.m.nome)}</td>
     <td>${pillContrato(r.m.contrato_status)}</td>
     <td>${pillPgto(r.m.entrada_status)}</td><td style="color:var(--mut)">${esc(r.m.entrada_forma_pgto||"—")}</td>
     <td>${pillPgto(r.m.restante_status)}</td><td style="color:var(--mut)">${esc(r.m.restante_forma_pgto||"—")}</td>
     <td class="mono">${r.ps.length?`${r.pagas}/${r.ps.length}`:"—"}</td>
-  </tr>`).join("")}</tbody></table></div>`;
+  </tr>`).join("")}</tbody></table>
+  ${rows.filter(rowsBusca).length?"":`<div class="empty">Nenhum mentorado ativo encontrado para essa busca.</div>`}</div>`;
 }
 
 /* ================= ROTAS / MARCOS ================= */
@@ -1558,7 +1657,14 @@ function renderRotas(){
     dados: meses.map(mes => MM.filter(x=>x.marco_id===mo.id && x.status===concluidoStatus && x.data && x.data.slice(0,7)===mes).length)
   }));
   const ativos = M.filter(ehAtivo);
-  const sel = rotaMentoradoId || (ativos[0] && ativos[0].id);
+  /* A busca recorta a lista do seletor. Quando o mentorado aberto sai da busca,
+     a tela abre o primeiro que casa: deixar selecionado alguem que nao esta
+     mais na lista faria o seletor e o passo a passo falarem de pessoas
+     diferentes. */
+  const ativosBusca = ativos.filter(m=>casaBusca(filtro.qRotas, m.nome));
+  const sel = (rotaMentoradoId && ativosBusca.some(m=>m.id===rotaMentoradoId))
+    ? rotaMentoradoId
+    : (ativosBusca[0] ? ativosBusca[0].id : null);
   const marcosDoSel = sel ? marcos.map(mo=>({marco:mo, mm: MM.find(x=>x.mentorado_id===sel && x.marco_id===mo.id)})) : [];
 
   // Canais desta rota (sanfona quando há mais de um)
@@ -1583,7 +1689,10 @@ function renderRotas(){
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Rotas</h2><div class="sub">Marcos, canais e faturamento por rota</div></div>
-  <select onchange="rotaAtual=this.value;canalAtual=null;render()">${ROTAS.map(r=>`<option value="${r.slug}" ${r.slug===rota.slug?"selected":""}>${esc(r.nome)}</option>`).join("")}</select></div>
+  <div class="rowflex">
+    <select style="width:auto;min-width:180px" onchange="rotaAtual=this.value;canalAtual=null;render()">${ROTAS.map(r=>`<option value="${r.slug}" ${r.slug===rota.slug?"selected":""}>${esc(r.nome)}</option>`).join("")}</select>
+    ${btnNovoMentorado(true)}
+  </div></div>
 
   ${temMultiplosCanais?`
   <div class="panel" style="padding:14px 16px">
@@ -1601,8 +1710,12 @@ function renderRotas(){
 
   <div class="panel">
     <h3>Progresso por mentorado</h3>
-    <div class="filters"><select id="rotaSelMentorado" onchange="rotaMentoradoId=this.value;renderRotas()">${ativos.map(m=>`<option value="${m.id}" ${m.id===sel?"selected":""}>${esc(m.nome)}</option>`).join("")}</select></div>
-    ${temMultiplosCanais?`<div class="rowflex" style="margin-bottom:12px">
+    <div class="filters">
+      ${buscaField("qRotas","Buscar mentorado por nome…")}
+      <select id="rotaSelMentorado" onchange="rotaMentoradoId=this.value;renderRotas()">${ativosBusca.map(m=>`<option value="${m.id}" ${m.id===sel?"selected":""}>${esc(m.nome)}</option>`).join("")||'<option value="">— nenhum mentorado encontrado —</option>'}</select>
+      ${filtro.qRotas?`<span style="align-self:center;color:var(--dim);font-size:12px">${ativosBusca.length} de ${ativos.length} mentorado(s) ativo(s)</span>`:""}
+    </div>
+    ${temMultiplosCanais&&sel?`<div class="rowflex" style="margin-bottom:12px">
       <span class="section-label" style="margin:0">Canal de venda deste mentorado:</span>
       <select id="mcCanalSel">${canaisDaRota.map(c=>`<option value="${c.id}" ${(canalDoMentorado?canalDoMentorado.canal_id:canalObj?.id)===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select>
       ${pode("escreverRotas")?`<button class="btn sm ghost" onclick="salvarCanalMentorado('${sel}','${rota.id}')">Salvar</button>`:""}
@@ -1621,10 +1734,10 @@ function renderRotas(){
         </div>
         ${pode("escreverRotas")?`<button class="btn sm ghost" onclick="openMarco('${marco.id}','${sel}')">Marcar</button>`:""}
       </div>`;
-    }).join("")}</div>`:`<div class="empty">Nenhum mentorado ativo.</div>`}
+    }).join("")}</div>`:`<div class="empty">${filtro.qRotas&&!ativosBusca.length?"Nenhum mentorado ativo encontrado para essa busca.":"Nenhum mentorado ativo."}</div>`}
   </div>
 
-  ${canalObj?`
+  ${canalObj&&sel?`
   <div class="section-label">Faturamento · ${esc(canalObj.nome)}</div>
   <div class="cards quiet">
     <div class="card"><div class="k">Faturamento do mês</div><div class="v">${fmtBRL(totalMesAtual)}</div><div class="d">${variacao===null?"sem base de comparação":(variacao>=0?`+${variacao.toFixed(0)}% vs mês anterior`:`${variacao.toFixed(0)}% vs mês anterior`)}</div></div>
@@ -1660,7 +1773,7 @@ function renderRotas(){
       options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:chartScales({precision:0}) }
     });
   }
-  if(canalObj && window.Chart){
+  if(canalObj && sel && window.Chart){
     const ctx2 = document.getElementById("fatChart");
     if(ctx2._chart) ctx2._chart.destroy();
     ctx2._chart = new Chart(ctx2, {

@@ -61,6 +61,18 @@ atendem. Isso é uma limitação atual conhecida — veja *Limitações* no fim.
 
 ## As telas
 
+Duas coisas se repetem em todas elas:
+
+- **Caixa de busca por mentorado.** Toda tela que lista mentorado tem a sua, no
+  topo, e o texto digitado vale só naquela tela — buscar um nome em Sessões não
+  recorta o Financeiro. A comparação ignora maiúsculas e acentos e aceita partes
+  fora de ordem: *silva ana* acha "Ana Paula da Silva", *jose* acha "José".
+  A busca recorta **as listas**, nunca os cards e alertas do topo: um total que
+  encolhesse ao digitar deixaria de ser o total da operação.
+- **Botão + Novo mentorado.** Presente nas cinco telas, para quem tem permissão
+  de criar (administrador e diretoria). Nas telas que já têm uma ação própria —
+  Sessões, com o encontro em grupo — ele aparece como botão secundário.
+
 ### Dashboard
 
 É a tela inicial e responde "como está o programa hoje".
@@ -154,18 +166,27 @@ ajusta participante por participante ou se confirma o encontro todo de uma vez.
 Confirmar em lote exige informar quem atendeu, mesma regra da confirmação
 individual.
 
-No topo, dois filtros: por tipo (só 1:1, só grupo, ou ambos) e por mentor, este
-último com a opção *— sem mentor —* para achar sessões que ninguém assumiu.
+No topo, três controles: a busca (por mentorado, etapa ou mentor), o filtro por
+tipo (só 1:1, só grupo, ou ambos) e o filtro por mentor, este último com a opção
+*— sem mentor —* para achar sessões que ninguém assumiu. Nos blocos de grupo a
+busca é aplicada ao encontro inteiro, não à linha de cada participante: procurar
+por alguém traz o encontro dele com todos os participantes, porque a coluna
+*Participantes* precisa continuar dizendo quem esteve na sala.
 
 O administrador registra um encontro coletivo em **+ Sessão em grupo**: escolhe
-a categoria, data, hora, mentor e links, e marca quem participou.
+a categoria, data, hora, mentor e links, e marca quem participou. A lista de
+participantes tem busca própria — **Selecionar todos** passa a alcançar só quem
+está visível, enquanto **Limpar seleção** continua limpando todos, para não
+sobrar ninguém marcado fora da vista.
 
 ### Rotas
 
 O acompanhamento qualitativo, para além de "a sessão aconteceu".
 
-Escolha a rota no topo e o mentorado no seletor. A trilha de marcos aparece em
-sequência, com o marco atual destacado. O botão **Marcar** abre o registro do
+Escolha a rota no topo e o mentorado no seletor — a caixa ao lado dele recorta a
+lista quando são muitos, e se o mentorado aberto sai da busca a tela passa para o
+primeiro que casa, para o seletor e a trilha nunca falarem de pessoas diferentes.
+A trilha de marcos aparece em sequência, com o marco atual destacado. O botão **Marcar** abre o registro do
 marco, onde se anota status, data, progresso em %, critérios pendentes,
 bloqueios e a próxima ação.
 
@@ -182,6 +203,11 @@ aberto e quantos contratos foram assinados.
 Depois, **Cobranças com parcela vencida** e **Próximos vencimentos** (os 10
 mais próximos). No fim, a **Situação por mentorado**: contrato, entrada e forma,
 restante e forma, e parcelas pagas.
+
+A busca do topo recorta as três tabelas. Os indicadores continuam contando a
+operação inteira: quando a busca esconde uma cobrança vencida, a tabela diz
+quantas ficaram de fora em vez de aparecer vazia — cobrança que some ao digitar
+um nome vira cobrança esquecida.
 
 ### Ficha do mentorado
 
