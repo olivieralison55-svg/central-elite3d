@@ -14,8 +14,9 @@ const t = criarRunner();
 const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParcela",
   "openParcela", "salvarParcela", "delParcela", "openSessao", "salvarSessao", "delSessao",
   "openConfirmarSessao", "confirmarSessao", "openSessaoGrupo", "criarSessaoGrupo",
-  "confirmarGrupo", "openMarco", "salvarMarco", "salvarCanalMentorado", "salvarFaturamento",
-  "excluirFaturamento", "openNovoMentorado", "criarMentorado"];
+  "confirmarGrupo", "salvarMarco", "salvarCanalMentorado", "salvarFaturamento",
+  "excluirFaturamento", "openNovoMentorado", "criarMentorado",
+  "openExcluirMentorado", "excluirMentorado"];
 
 /* =======================================================================
  * Formatadores
@@ -809,6 +810,165 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     cAna.checked === false && cBruno.checked === false);
   globalThis.filtrarParticipantes("");
   t.ok("busca vazia devolve todo mundo", lAna.hidden === false && lBruno.hidden === false);
+}
+
+/* =======================================================================
+ * Exclusão de mentorado.
+ *
+ * As cinco filhas são ON DELETE CASCADE, então apagar a ficha apaga o histórico
+ * — inclusive sessões concluídas que entram no fechamento dos mentores. O que
+ * estes testes protegem é o caminho até o delete: quem vê o botão, o que o
+ * diálogo diz que vai sumir, e que sem o nome digitado nada é enviado ao banco.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const {mod} = app;
+
+  t.secao("Exclusão de mentorado (admin)");
+  globalThis.openMentorado("m1", "completo");
+  const ficha = app.modal();
+  t.ok("a ficha completa oferece excluir", ficha.includes("openExcluirMentorado('m1')"), ficha.slice(0, 200));
+  /* Cancelar é quase sempre o que a pessoa quer; a ficha precisa dizer isso
+     antes, não depois do banco apagar. */
+  t.ok("aponta cancelar como alternativa", ficha.includes("Cancelado</b> na situação acima"),
+    ficha.slice(ficha.indexOf("Excluir mentorado"), ficha.indexOf("Excluir mentorado") + 400));
+  t.ok("conta o que some junto", ficha.includes("4 sessões") && ficha.includes("1 parcela"),
+    ficha.slice(ficha.indexOf("Apaga a ficha"), ficha.indexOf("Apaga a ficha") + 300));
+  /* Recorte parcial não é lugar de apagar: quem abriu pelo alerta de sessões
+     está ali para conferir uma linha. */
+  globalThis.openMentorado("m1", "sessoes");
+  t.ok("o recorte de sessões não oferece excluir", !app.modal().includes("openExcluirMentorado"));
+
+  t.secao("Confirmação de exclusão");
+  globalThis.openExcluirMentorado("m1");
+  const dialogo = app.modal();
+  t.ok("nomeia o que vai embora", dialogo.includes("4 sessões") && dialogo.includes("1 parcela"),
+    dialogo.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 300));
+  t.ok("avisa que o fechamento dos mentores muda", dialogo.includes("saem da contagem dos mentores"),
+    dialogo.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 300));
+  t.ok("o botão nasce desabilitado", /id="del_botao" disabled/.test(dialogo), dialogo.slice(0, 200));
+  t.ok("pede o nome digitado", dialogo.includes('id="del_confirma"'));
+  t.ok("renderiza sem lixo", semLixo(dialogo), dialogo.slice(0, 300));
+
+  app.limparEscritas();
+  app.preencher("#del_confirma", "outra pessoa");
+  await globalThis.excluirMentorado("m1");
+  t.ok("nome errado não envia nada ao banco", app.escritas.length === 0,
+    JSON.stringify(app.escritas));
+  t.ok("nome errado explica o que falta", app.toast().includes("Digite o nome"), app.toast());
+
+  /* Sem acento e sem caixa passa: a confirmação prova intenção, não ortografia. */
+  app.preencher("#del_confirma", "  ana   clara ");
+  await globalThis.excluirMentorado("m1");
+  t.ok("nome certo manda o delete de mentorados",
+    app.escritas.some(e => e.tabela === "mentorados" && e.op === "delete"),
+    JSON.stringify(app.escritas));
+  /* O stub responde como o PostgREST responde quando o RLS filtra tudo: sem
+     erro e sem linhas. Dizer "excluído" aí seria mentira. */
+  t.ok("zero linhas apagadas vira aviso, não sucesso",
+    app.toast().includes("Nada foi excluído"), app.toast());
+}
+
+{
+  const app = preparar(carregarApp(), "diretoria");
+  t.secao("Exclusão de mentorado (diretoria)");
+  globalThis.openMentorado("m1", "completo");
+  t.ok("diretoria não vê o botão de excluir", !app.modal().includes("openExcluirMentorado"),
+    app.modal().slice(0, 200));
+}
+
+/* =======================================================================
+ * Marco expansível — o teste de passagem do Compilado das Rotas
+ *
+ * O painel substituiu o modal "Marcar". O que importa: o conteúdo do marco
+ * aparece junto do teste de passagem, o progresso sai do que está marcado (não
+ * de um campo digitado à parte), e o que é salvo é o TEXTO do critério.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const {mod, estado} = app;
+
+  t.secao("Trilha fechada");
+  estado.marcoAberto = null;
+  mod.renderRotas();
+  const fechada = app.tela();
+  t.ok("sem lixo", semLixo(fechada), fechada.slice(0, 300));
+  t.ok("cada marco é um botão que expande", (fechada.match(/onclick="toggleMarco\(/g) || []).length === 2);
+  t.ok("marco de placa se anuncia na linha", fechada.includes("PLACA"));
+  t.ok("contador de critérios na linha fechada", fechada.includes("2/4"), fechada.slice(0, 400));
+  t.ok("painel só aparece aberto", !fechada.includes("Teste de passagem"));
+
+  t.secao("Marco aberto");
+  estado.marcoAberto = "mk1";
+  mod.renderRotas();
+  const aberta = app.tela();
+  t.ok("sem lixo", semLixo(aberta), aberta.slice(0, 300));
+  t.ok("traz a restrição", aberta.includes("Cada feira começa do zero"));
+  t.ok("traz a alavanca", aberta.includes("Repetição"));
+  t.ok("traz a pergunta-chave", aberta.includes("Pergunta-chave"));
+  t.ok("lista os apoios", aberta.includes("Qualificar a feira com o organizador"));
+  t.ok("lista os indicadores", aberta.includes("Ticket médio"));
+  t.ok("nomeia os dois portões",
+    aberta.includes("Portão A · Apto a vender") && aberta.includes("Portão B · Primeira receita"));
+  t.ok("critério já batido vem marcado",
+    aberta.includes('value="Tenho produto validado" checked'), aberta.slice(aberta.indexOf("mk-crits"), aberta.indexOf("mk-crits") + 400));
+  t.ok("critério pendente vem desmarcado",
+    aberta.includes('value="Bati R$ 500 acumulados na rota" onchange'));
+  t.ok("texto do critério passa por esc()", escapado(aberta));
+  t.ok("progresso conta o que está marcado", aberta.includes(">2 de 4<"));
+  t.ok("o registro do mentor vem junto",
+    aberta.includes("Próxima ação") && aberta.includes("Fechar inscrição da próxima feira"));
+  t.ok("oferece salvar a evolução", aberta.includes("salvarMarco('mk1','m1')"));
+  /* Só um painel por vez: dois abertos duplicariam os ids mk_status/mk_data. */
+  t.ok("um painel de cada vez", (aberta.match(/id="mk_status"/g) || []).length === 1);
+
+  t.secao("Régua de valores da rota");
+  /* Fixture: R$ 10.000 + R$ 5.000 no canal da rota, unidade acumulado. */
+  t.ok("soma o acumulado da rota, não do mês", brl(aberta).includes("R$ 15.000,00"));
+  t.ok("meta batida não pede mais nada", aberta.includes("Meta atingida"));
+  estado.marcoAberto = "mk2";
+  mod.renderRotas();
+  const falta = app.tela();
+  t.ok("meta não batida mostra quanto falta",
+    falta.includes("Falta") && brl(falta).includes("R$ 5.000,00"), brl(falta).slice(falta.indexOf("mk-meta"), falta.indexOf("mk-meta") + 300));
+
+  t.secao("Salvar evolução");
+  app.limparEscritas();
+  app.responder(".mk-crit", [
+    {value: "Tenho produto validado",           checked: true},
+    {value: "Conheço meu CMV",                  checked: true},
+    {value: "Bati R$ 500 acumulados na rota",   checked: true},
+    {value: "Registrei o quarto critério",      checked: false},
+  ]);
+  app.preencher("#mk_status", "EM_ANDAMENTO");
+  app.preencher("#mk_data", "2026-09-16");
+  app.preencher("#mk_acao", "  Fechar a inscrição  ");
+  app.preencher("#mk_bloq", "Sem ponto de energia\n\n  Falta banner  ");
+  await globalThis.salvarMarco("mk1", "m1");
+  const gravado = app.escritas.find(e => e.tabela === "mentorado_marcos");
+  t.ok("manda o upsert para mentorado_marcos", !!gravado, JSON.stringify(app.escritas));
+  const d = gravado && gravado.dados;
+  t.ok("salva o TEXTO dos critérios marcados",
+    d && d.criterios_ok.length === 3 && d.criterios_ok.includes("Conheço meu CMV"), JSON.stringify(d));
+  t.ok("o pendente vira criterios_pendentes",
+    d && d.criterios_pendentes.length === 1 && d.criterios_pendentes[0] === "Registrei o quarto critério", JSON.stringify(d));
+  t.ok("progresso é derivado, não digitado", d && d.progresso === 75, d && String(d.progresso));
+  t.ok("próxima ação sai sem espaço sobrando", d && d.proxima_acao === "Fechar a inscrição", d && JSON.stringify(d.proxima_acao));
+  t.ok("bloqueios em linhas, sem linha vazia",
+    d && d.bloqueios.length === 2 && d.bloqueios[1] === "Falta banner", JSON.stringify(d && d.bloqueios));
+  t.ok("guarda status e data", d && d.status === "EM_ANDAMENTO" && d.data === "2026-09-16", JSON.stringify(d));
+}
+
+/* Quem não escreve em rotas lê a trilha inteira, mas não mexe nela. */
+{
+  const app = preparar(carregarApp(), "diretoria");
+  t.secao("Marco expansível (diretoria)");
+  app.mod.renderRotas();
+  const tela = app.tela();
+  t.ok("vê o conteúdo do marco", tela.includes("Teste de passagem") && tela.includes("Qualificar a feira com o organizador"));
+  t.ok("os critérios vêm travados", tela.includes('class="mk-crit"') && tela.includes(" disabled onchange"));
+  t.ok("sem salvar evolução", !tela.includes("Salvar evolução"));
+  t.ok("sem lixo", semLixo(tela), tela.slice(0, 300));
 }
 
 process.exit(t.fim() ? 1 : 0);

@@ -102,6 +102,9 @@ main{flex:1;padding:30px 34px 64px;max-width:1340px;min-width:0}
 .btn.ghost:hover{border-color:var(--border-primary);color:var(--primary);filter:none}
 .btn.sm{padding:7px 12px;font-size:12px;border-radius:8px;min-height:36px}
 .btn.danger{background:var(--danger-dim);color:var(--danger);border:1px solid var(--danger-line)}
+/* Botão travado precisa parecer travado: sem isto o "Excluir definitivamente"
+   fica com a mesma cara antes e depois do nome conferir. */
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none;transform:none}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:26px}
 .cards.quiet{margin-bottom:0}
 .cards.quiet .card{padding:16px 18px}
@@ -326,7 +329,7 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
 
 /* ---------- stepper de rotas ---------- */
 .stepper{padding-left:4px}
-.step{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:14px 0 14px 0}
+.step{position:relative;display:grid;grid-template-columns:auto 1fr;gap:0 16px;align-items:start;padding:14px 0 14px 0}
 .step::before{content:"";position:absolute;left:11px;top:32px;bottom:-14px;width:1px;background:var(--border)}
 .step.last::before{display:none}
 .step.done::before{background:var(--border-primary)}
@@ -334,12 +337,48 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
 .step.done .step-mark{border-color:var(--primary);background:var(--surface-active);color:var(--primary)}
 .step.atual .step-mark{border-color:var(--primary);color:var(--primary);box-shadow:var(--glow-primary);font-size:8px}
 .step.futuro{opacity:.55}
+.step.aberto{opacity:1}
 .step-body{min-width:0}
 .step-nome{font-size:13px;font-weight:600}
 .step.atual .step-nome{color:var(--primary)}
 .step-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:6px}
 .step-data{font-size:11px;color:var(--subtle-foreground)}
 @media(max-width:600px){.step{grid-template-columns:auto 1fr;row-gap:10px}.step>.btn{grid-column:2}}
+
+/* ---------- marco expansível ---------- */
+/* O cabeçalho inteiro é o gatilho: um alvo de clique de linha cheia erra menos
+   que uma seta de 12px, e o <button> mantém o teclado funcionando de graça. */
+.step-head{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;width:100%;
+  background:none;border:0;padding:0;margin:0;text-align:left;color:inherit;font:inherit;cursor:pointer;
+  border-radius:var(--radius-control);min-height:0}
+.step-head:hover .step-nome{color:var(--primary)}
+.step-head .arrow{color:var(--subtle-foreground);font-size:11px;flex-shrink:0;transition:transform var(--speed) ease}
+.step.aberto .step-head .arrow{transform:rotate(180deg)}
+.step-prog{display:flex;align-items:center;gap:9px;margin-top:8px;max-width:420px}
+.step-prog .niv-bar{flex:1}
+.step-prog b{font-size:11px;font-weight:700;color:var(--subtle-foreground);font-variant-numeric:tabular-nums}
+.step-panel{grid-column:2;margin-top:14px;padding:16px;border:1px solid var(--border);border-radius:var(--radius-control);
+  background:rgba(254,254,254,.02);display:flex;flex-direction:column;gap:16px}
+.step-panel h4{margin:0 0 7px;font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;
+  color:var(--subtle-foreground);font-weight:700}
+.step-panel p{margin:0;font-size:12.5px;line-height:1.55;color:var(--muted-foreground)}
+.step-panel ul{margin:0;padding-left:17px;font-size:12.5px;line-height:1.65;color:var(--muted-foreground)}
+.mk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.mk-chips{display:flex;flex-wrap:wrap;gap:6px}
+.mk-chip{font-size:11px;padding:4px 10px;border-radius:var(--radius-pill);border:1px solid var(--border);
+  background:rgba(254,254,254,.04);color:var(--muted-foreground)}
+.mk-meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:11.5px;color:var(--subtle-foreground)}
+.mk-meta b{color:var(--foreground);font-variant-numeric:tabular-nums}
+.mk-grupo{font-size:11.5px;font-weight:700;color:var(--foreground);margin:2px 0 6px}
+.mk-crits{display:flex;flex-direction:column;gap:2px;padding:8px;background:rgba(254,254,254,.02);
+  border:1px solid var(--border);border-radius:var(--radius-control)}
+.mk-crits .chk{align-items:flex-start}
+.mk-crits .chk span{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.45}
+.mk-crits .chk input[type=checkbox]{margin-top:1px}
+.mk-acoes{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pill-placa{font-size:9.5px;letter-spacing:.1em;font-weight:800;padding:2px 7px;border-radius:var(--radius-pill);
+  background:var(--warning-dim);color:var(--warning);border:1px solid rgba(232,161,60,.3);margin-left:8px;
+  vertical-align:middle}
 
 /* ---------- hierarquia de data / valores ---------- */
 .dh{display:inline-flex;flex-direction:column;line-height:1.25}
@@ -1629,14 +1668,109 @@ function renderFinanceiro(){
 let rotaMentoradoId = null;
 const MESES_PT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const RICO_STATUS = ["NAO_INICIADO","EM_ANDAMENTO","BLOQUEADO","AGUARDANDO_VALIDACAO","CONCLUIDO","NAO_APLICAVEL"];
+const RICO_LABEL = {CONCLUIDO:"Concluído",EM_ANDAMENTO:"Em andamento",BLOQUEADO:"Bloqueado",
+  AGUARDANDO_VALIDACAO:"Aguard. validação",NAO_APLICAVEL:"Não aplicável",NAO_INICIADO:"Não iniciado"};
 function pillMarco(status, modelo){
   if(modelo==="simples"){
     if(status==="passou") return `<span class="pill green">Passou</span>`;
     return `<span class="pill gray">Não passou</span>`;
   }
   const map={CONCLUIDO:"green",EM_ANDAMENTO:"blue",BLOQUEADO:"red",AGUARDANDO_VALIDACAO:"amber",NAO_APLICAVEL:"gray",NAO_INICIADO:"gray"};
-  const label={CONCLUIDO:"Concluído",EM_ANDAMENTO:"Em andamento",BLOQUEADO:"Bloqueado",AGUARDANDO_VALIDACAO:"Aguard. validação",NAO_APLICAVEL:"Não aplicável",NAO_INICIADO:"Não iniciado"};
-  return `<span class="pill ${map[status]||"gray"}">${esc(label[status]||status)}</span>`;
+  return `<span class="pill ${map[status]||"gray"}">${esc(RICO_LABEL[status]||status)}</span>`;
+}
+
+/* ---------- teste de passagem ----------
+   criterios é [{grupo, itens:[...]}] — uma lista de portões. Só o Marco 01 de
+   Marketplace tem dois; nos outros o grupo vem null e vira um bloco único.
+   O que fica salvo em mentorado_marcos.criterios_ok é o TEXTO do item, não o
+   índice: reescrever o catálogo não pode migrar a marcação de um critério para
+   outro sem ninguém perceber. */
+function portoesDe(marco){
+  const c = marco && marco.criterios;
+  if(!Array.isArray(c) || !c.length) return [];
+  return c.map(g => ({grupo: g && g.grupo || null, itens: Array.isArray(g && g.itens) ? g.itens : []}))
+          .filter(g => g.itens.length);
+}
+const criteriosDe = marco => portoesDe(marco).flatMap(g => g.itens);
+function progressoMarco(marco, mm){
+  const total = criteriosDe(marco).length;
+  if(!total) return {feitos:0, total:0, pct:null};
+  const ok = new Set((mm && mm.criterios_ok) || []);
+  const feitos = criteriosDe(marco).filter(c => ok.has(c)).length;
+  return {feitos, total, pct: Math.round(feitos/total*100)};
+}
+/* ---------- painel do marco ----------
+   O conteúdo do "Compilado das Rotas Elite 3D" fica embaixo do próprio marco,
+   e não num modal: o mentor lê a restrição, a alavanca e os apoios enquanto
+   marca o teste de passagem, sem trocar de tela no meio da conversa.
+   Um marco aberto por vez — os ids dos campos (mk_*) são únicos na página. */
+function painelMarco(marco, mm, rota, mentoradoId, fatRegua, porMes){
+  const editar = pode("escreverRotas");
+  const isSimples = rota.modelo === "simples";
+  const st = (mm && mm.status) || (isSimples ? "nao_passou" : "NAO_INICIADO");
+  const portoes = portoesDe(marco);
+  const feitos = new Set((mm && mm.criterios_ok) || []);
+  const total = criteriosDe(marco).length;
+  const jaFeitos = criteriosDe(marco).filter(c=>feitos.has(c)).length;
+  const meta = marco.meta_valor != null ? Number(marco.meta_valor) : null;
+  const falta = meta != null ? Math.max(0, meta - fatRegua) : null;
+
+  const bloco = (titulo, texto) => texto
+    ? `<div><h4>${titulo}</h4><p>${esc(texto)}</p></div>` : "";
+  const lista = (titulo, arr) => (arr && arr.length)
+    ? `<div><h4>${titulo}</h4><ul>${arr.map(a=>`<li>${esc(a)}</li>`).join("")}</ul></div>` : "";
+  const chips = (titulo, arr) => (arr && arr.length)
+    ? `<div><h4>${titulo}</h4><div class="mk-chips">${arr.map(a=>`<span class="mk-chip">${esc(a)}</span>`).join("")}</div></div>` : "";
+
+  const contexto = bloco("Restrição", marco.restricao) + bloco("Alavanca", marco.alavanca)
+    + bloco("Pergunta-chave", marco.pergunta_chave);
+
+  const criterios = portoes.length ? `<div>
+    <h4>Teste de passagem</h4>
+    <div class="mk-crits">${portoes.map(g=>
+      (g.grupo?`<div class="mk-grupo">${esc(g.grupo)}</div>`:"")
+      + g.itens.map(item=>`<label class="chk"><input type="checkbox" class="mk-crit" value="${esc(item)}"${feitos.has(item)?" checked":""}${editar?"":" disabled"} onchange="atualizarProgressoMarco()"><span>${esc(item)}</span></label>`).join("")
+    ).join("")}</div>
+    <div class="step-prog" style="max-width:none">
+      <div class="niv-bar" id="mk_barra"><i style="width:${total?Math.round(jaFeitos/total*100):0}%"></i></div>
+      <b id="mk_contador">${jaFeitos} de ${total}</b>
+    </div>
+  </div>` : "";
+
+  /* A régua de valores é da rota inteira, não do canal aberto. */
+  const regua = meta != null ? `<div class="mk-meta">
+    <span>${porMes?"Faturamento do mês":"Acumulado na rota"}: <b>${fmtBRL(fatRegua)}</b></span>
+    <span>Meta do marco: <b>${fmtBRL(meta)}</b></span>
+    <span>${falta>0?`Falta <b>${fmtBRL(falta)}</b>`:`<b>Meta atingida</b>`}</span>
+  </div>` : "";
+
+  const registro = `<div>
+    <h4>Registro do mentor</h4>
+    <div class="mk-grid">
+      <div class="f"><label>Status</label><select id="mk_status"${editar?"":" disabled"}>
+        ${(isSimples?["nao_passou","passou"]:RICO_STATUS).map(s=>`<option value="${s}"${st===s?" selected":""}>${esc(isSimples?(s==="passou"?"Passou":"Não passou"):RICO_LABEL[s])}</option>`).join("")}
+      </select></div>
+      <div class="f"><label>Data de conclusão</label>${dateField("mk_data", mm&&mm.data, {disabled:!editar})}</div>
+    </div>
+    ${isSimples?"":`<div class="mk-grid" style="margin-top:12px">
+      <div class="f"><label>Próxima ação</label><input id="mk_acao" value="${esc(mm&&mm.proxima_acao)}" placeholder="a ação concreta até a próxima sessão"${editar?"":" disabled"}></div>
+      <div class="f"><label>Bloqueios (um por linha)</label><textarea id="mk_bloq" rows="2"${editar?"":" disabled"}>${esc(((mm&&mm.bloqueios)||[]).join("\n"))}</textarea></div>
+    </div>`}
+    ${editar?`<div class="mk-acoes" style="margin-top:14px">
+      <button class="btn sm" onclick="salvarMarco('${marco.id}','${mentoradoId}')">Salvar evolução</button>
+      <span class="step-data">Os critérios pendentes e o progresso saem do teste de passagem.</span>
+    </div>`:""}
+  </div>`;
+
+  return `<div class="step-panel">
+    ${marco.subtitulo?`<p>${esc(marco.subtitulo)}</p>`:""}
+    ${regua}
+    ${contexto?`<div class="mk-grid">${contexto}</div>`:""}
+    ${lista("Apoios", marco.apoios)}
+    ${chips("Indicadores", marco.indicadores)}
+    ${criterios}
+    ${registro}
+  </div>`;
 }
 function ultimosMeses(n){
   const out=[]; const d=new Date();
@@ -1646,6 +1780,7 @@ function ultimosMeses(n){
 }
 let canalAtual = null; // id do canal selecionado dentro da rota
 let canaisAbertos = false; // estado da sanfona de canais
+let marcoAberto = null; // marco expandido na trilha — um de cada vez
 function renderRotas(){
   const rota = ROTAS.find(r=>r.slug===rotaAtual) || ROTAS[0];
   if(!rota){ $("#app").innerHTML = `<div class="empty">Nenhuma rota cadastrada.</div>`; return; }
@@ -1675,6 +1810,18 @@ function renderRotas(){
 
   // Canal de venda do mentorado selecionado (só faz sentido quando há mais de um canal na rota)
   const canalDoMentorado = sel ? MC.find(x=>x.mentorado_id===sel && x.rota_id===rota.id) : null;
+
+  /* Régua de valores do mentorado na rota inteira, não só no canal aberto.
+     A unidade muda por rota, por decisão de projeto: Marketplace mede o MÊS
+     (canal de fluxo contínuo — acumular esconderia anúncio morto), Feiras e B2B
+     medem o ACUMULADO (faturamento naturalmente irregular entre meses). */
+  const idsCanaisRota = new Set(canaisDaRota.map(c=>c.id));
+  const fatDoSelNaRota = sel ? FAT.filter(f=>f.mentorado_id===sel && idsCanaisRota.has(f.canal_id)) : [];
+  const mesCorrente = meses[meses.length-1];
+  const porMes = rota.unidade === "mes";
+  const fatRegua = porMes
+    ? fatDoSelNaRota.filter(f=>f.mes.slice(0,7)===mesCorrente).reduce((a,f)=>a+Number(f.valor),0)
+    : fatDoSelNaRota.reduce((a,f)=>a+Number(f.valor),0);
 
   // Faturamento do mentorado selecionado, neste canal
   const registrosFat = (sel && canalObj) ? FAT.filter(f=>f.mentorado_id===sel && f.canal_id===canalObj.id) : [];
@@ -1724,15 +1871,21 @@ function renderRotas(){
       const st = mm?mm.status:(rota.modelo==="simples"?"nao_passou":"NAO_INICIADO");
       const done = st==="passou" || st==="CONCLUIDO";
       const atual = !done && (st==="EM_ANDAMENTO" || st==="AGUARDANDO_VALIDACAO" || st==="BLOQUEADO");
-      const cls = done?"done":atual?"atual":"futuro";
+      const aberto = marcoAberto===marco.id;
+      const cls = `${done?"done":atual?"atual":"futuro"}${aberto?" aberto":""}`;
       const ultimo = i===marcosDoSel.length-1;
+      const pr = progressoMarco(marco, mm);
       return `<div class="step ${cls} ${ultimo?"last":""}">
         <div class="step-mark" aria-hidden="true">${done?"✓":atual?"●":""}</div>
-        <div class="step-body">
-          <div class="step-nome">${esc(marco.nome)}</div>
-          <div class="step-meta">${pillMarco(st, rota.modelo)}${mm&&mm.data?`<span class="step-data">${fmtD(mm.data)}</span>`:""}${mm&&mm.progresso!=null?`<span class="step-data">${mm.progresso}%</span>`:""}</div>
-        </div>
-        ${pode("escreverRotas")?`<button class="btn sm ghost" onclick="openMarco('${marco.id}','${sel}')">Marcar</button>`:""}
+        <button type="button" class="step-head" aria-expanded="${aberto?"true":"false"}" onclick="toggleMarco('${marco.id}')">
+          <div class="step-body">
+            <div class="step-nome">${esc(marco.nome)}${marco.placa?`<span class="pill-placa">PLACA</span>`:""}</div>
+            <div class="step-meta">${pillMarco(st, rota.modelo)}${mm&&mm.data?`<span class="step-data">${fmtD(mm.data)}</span>`:""}${marco.objetivo?`<span class="step-data">${esc(marco.objetivo)}</span>`:""}</div>
+            ${pr.total?`<div class="step-prog"><div class="niv-bar"><i style="width:${pr.pct}%"></i></div><b>${pr.feitos}/${pr.total}</b></div>`:""}
+          </div>
+          <span class="arrow" aria-hidden="true">▼</span>
+        </button>
+        ${aberto?painelMarco(marco, mm, rota, sel, fatRegua, porMes):""}
       </div>`;
     }).join("")}</div>`:`<div class="empty">${filtro.qRotas&&!ativosBusca.length?"Nenhum mentorado ativo encontrado para essa busca.":"Nenhum mentorado ativo."}</div>`}
   </div>
@@ -1813,29 +1966,21 @@ window.excluirFaturamento = async function(id){
   toast("Registro excluído"); await loadAll(); renderRotas();
 }
 
-window.openMarco = function(marcoId, mentoradoId){
-  const rota = ROTAS.find(r=>r.slug===rotaAtual);
-  const marco = MARCOS.find(x=>x.id===marcoId);
-  const mm = MM.find(x=>x.mentorado_id===mentoradoId && x.marco_id===marcoId) || {};
-  const box = $("#modalBox"); box.className="modal narrow";
-  const isSimples = rota.modelo==="simples";
-  box.innerHTML = `
-  <header><h3>${esc(marco.nome)} · ${esc(nome(mentoradoId))}</h3><button class="x" onclick="closeModal()">✕</button></header>
-  <div class="fgrid" style="grid-template-columns:1fr 1fr">
-    <div class="f"><label>Status</label><select id="mk_status">
-      ${(isSimples?["nao_passou","passou"]:RICO_STATUS).map(s=>`<option value="${s}" ${((mm.status)||(isSimples?"nao_passou":"NAO_INICIADO"))===s?"selected":""}>${isSimples?(s==="passou"?"Passou":"Não passou"):s}</option>`).join("")}
-    </select></div>
-    <div class="f"><label>Data</label>${dateField("mk_data", mm.data)}</div>
-  </div>
-  ${!isSimples?`
-  <div class="fgrid" style="grid-template-columns:1fr">
-    <div class="f"><label>Progresso (%)</label><input id="mk_prog" type="number" min="0" max="100" value="${mm.progresso??""}"></div>
-    <div class="f"><label>Critérios pendentes (um por linha)</label><textarea id="mk_crit" rows="3">${esc((mm.criterios_pendentes||[]).join("\n"))}</textarea></div>
-    <div class="f"><label>Bloqueios (um por linha)</label><textarea id="mk_bloq" rows="2">${esc((mm.bloqueios||[]).join("\n"))}</textarea></div>
-    <div class="f"><label>Próxima ação</label><input id="mk_acao" value="${esc(mm.proxima_acao)}"></div>
-  </div>`:''}
-  <button class="btn" onclick="salvarMarco('${marcoId}','${mentoradoId}')">Salvar</button>`;
-  $("#overlay").classList.add("open");
+/* Abrir um marco fecha o anterior: dois painéis abertos duplicariam os ids
+   mk_status / mk_data e o Salvar leria o campo do marco errado. */
+window.toggleMarco = function(marcoId){
+  marcoAberto = (marcoAberto === marcoId) ? null : marcoId;
+  renderRotas();
+}
+/* Contador e barra do teste de passagem, sem re-render: re-renderizar a cada
+   clique fecharia o calendário e jogaria fora o que ainda não foi salvo. */
+window.atualizarProgressoMarco = function(){
+  const cbs = [...document.querySelectorAll(".mk-crit")];
+  const ok = cbs.filter(c=>c.checked).length;
+  const cont = document.getElementById("mk_contador");
+  if(cont) cont.textContent = `${ok} de ${cbs.length}`;
+  const barra = document.querySelector("#mk_barra i");
+  if(barra) barra.style.width = (cbs.length ? Math.round(ok/cbs.length*100) : 0) + "%";
 }
 window.salvarMarco = async function(marcoId, mentoradoId){
   const rota = ROTAS.find(r=>r.slug===rotaAtual);
@@ -1846,14 +1991,18 @@ window.salvarMarco = async function(marcoId, mentoradoId){
     data: $("#mk_data").value || null,
   };
   if(!isSimples){
-    payload.progresso = $("#mk_prog").value ? +$("#mk_prog").value : null;
-    payload.criterios_pendentes = $("#mk_crit").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    /* Progresso e critérios pendentes são derivados do teste de passagem: não
+       existe campo manual para eles discordarem do que está marcado. */
+    const cbs = [...document.querySelectorAll(".mk-crit")];
+    payload.criterios_ok = cbs.filter(c=>c.checked).map(c=>c.value);
+    payload.criterios_pendentes = cbs.filter(c=>!c.checked).map(c=>c.value);
+    payload.progresso = cbs.length ? Math.round(payload.criterios_ok.length/cbs.length*100) : null;
     payload.bloqueios = $("#mk_bloq").value.split("\n").map(s=>s.trim()).filter(Boolean);
     payload.proxima_acao = $("#mk_acao").value.trim() || null;
   }
   const {error} = await db.from("mentorado_marcos").upsert(payload, {onConflict:"mentorado_id,marco_id"});
   if(error) return toast(error.message,true);
-  toast("Marco atualizado"); closeModal(); await loadAll(); rotaMentoradoId=mentoradoId; renderRotas();
+  toast("Evolução registrada"); await loadAll(); rotaMentoradoId=mentoradoId; marcoAberto=marcoId; renderRotas();
 }
 
 /* ================= FICHA DO MENTORADO ================= */
@@ -1874,6 +2023,7 @@ window.openMentorado = function(id, secao){
   const ps = parcelasDe(id);
   const ss = sessoes1a1De(id);        // trilha de 12 etapas
   const ssGrupo = sessoesGrupoDe(id); // plantão e implementação
+  const aExcluir = pode("excluir") ? resumoExclusao(id) : null;
 
   const mostra = {
     basico:     sec==="completo",
@@ -1976,7 +2126,16 @@ window.openMentorado = function(id, secao){
       ${(escreverS && s.status==="Aguardando confirmação")?`<button class="btn sm" onclick="openConfirmarSessao('${s.id}','${id}')">Confirmar</button>`:''}
       ${escreverS?`<button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>`:""}
     </div>
-  </div>`).join("")}</div>`:''}`:''}`;
+  </div>`).join("")}</div>`:''}`:''}
+
+  ${(sec==="completo" && pode("excluir"))?`
+  <div class="sec"><h4>Excluir mentorado</h4>
+  <div class="sub" style="color:var(--mut);font-size:12.5px;line-height:1.6;margin-bottom:12px">
+    Apaga a ficha e tudo que está pendurado nela${aExcluir.partes.length?`: ${esc(aExcluir.partes.join(", "))}`:""}. Não dá para desfazer.
+    Se a pessoa apenas saiu do programa, marque <b>Cancelado</b> na situação acima — assim o histórico fica de pé.
+  </div>
+  <button class="btn danger sm" onclick="openExcluirMentorado('${id}')">Excluir mentorado…</button>
+  </div>`:''}`;
   $("#overlay").classList.add("open");
 }
 window.closeModal = ()=>{ dpClose(); $("#overlay").classList.remove("open"); };
@@ -2156,6 +2315,71 @@ window.delSessao = async function(sid, mid){
   const {error} = await db.from("sessoes").delete().eq("id",sid);
   if(error) return toast(error.message,true);
   toast("Sessão excluída"); await loadAll(); openMentorado(mid);
+}
+
+/* ================= EXCLUIR MENTORADO ================= */
+/* As cinco filhas de `mentorados` sao ON DELETE CASCADE (sessoes, parcelas,
+   mentorado_marcos, mentorado_canais, faturamento_mensal): apagar a ficha leva
+   junto o historico inteiro, e nada disso aparece num confirm() do navegador.
+   Por isso a confirmacao e um modal proprio, que conta o que vai embora antes
+   de perguntar, e pede o nome digitado -- excluir mentorado nao pode ser um
+   clique de distancia de "Salvar alteracoes". */
+function resumoExclusao(id){
+  const ss = S.filter(s=>s.mentorado_id===id);
+  const partes = [];
+  const item = (n, sing, plur) => { if(n) partes.push(`${n} ${n===1?sing:plur}`); };
+  item(ss.length, "sessão", "sessões");
+  item(P.filter(p=>p.mentorado_id===id).length, "parcela", "parcelas");
+  item(MM.filter(x=>x.mentorado_id===id).length, "marco de rota", "marcos de rota");
+  item(FAT.filter(f=>f.mentorado_id===id).length, "registro de faturamento", "registros de faturamento");
+  return {partes, concluidas: ss.filter(s=>s.status==="Concluída").length};
+}
+/* Comparacao do nome digitado: sem caixa, sem acento e sem espaco sobrando. A
+   confirmacao existe para provar intencao, nao para cobrar ortografia. */
+const chaveNome = v => normBusca(v).replace(/\s+/g," ").trim();
+window.openExcluirMentorado = function(id){
+  const m = M.find(x=>x.id===id); if(!m) return;
+  const {partes, concluidas} = resumoExclusao(id);
+  const box = $("#modalBox"); box.className="modal narrow";
+  box.innerHTML = `
+  <header><h3>Excluir mentorado</h3><button class="x" onclick="openMentorado('${id}')">✕</button></header>
+  <div style="line-height:1.7;font-size:13px;margin-bottom:18px">
+    <b>${esc(m.nome)}</b> e ${partes.length?`o que está pendurado na ficha — ${esc(partes.join(", "))} — somem`:"a ficha some"} do sistema.
+    ${concluidas?`<br><span class="val-neg">${concluidas} ${concluidas===1?"sessão concluída sai":"sessões concluídas saem"} da contagem dos mentores</span>, então o fechamento do mês muda.`:""}
+    <br>Não há desfazer, e o histórico não volta.
+  </div>
+  <div class="f" style="margin-bottom:18px">
+    <label>Para confirmar, digite o nome do mentorado</label>
+    <input id="del_confirma" autocomplete="off" placeholder="${esc(m.nome)}" oninput="conferirNomeExclusao('${id}')">
+  </div>
+  <div class="rowflex">
+    <button class="btn danger" id="del_botao" disabled onclick="excluirMentorado('${id}')">Excluir definitivamente</button>
+    <button class="btn ghost" onclick="openMentorado('${id}')">Cancelar</button>
+  </div>`;
+  $("#overlay").classList.add("open");
+}
+window.conferirNomeExclusao = function(id){
+  const m = M.find(x=>x.id===id);
+  const campo = $("#del_confirma"), botao = $("#del_botao");
+  if(!m || !campo || !botao) return;
+  botao.disabled = chaveNome(campo.value) !== chaveNome(m.nome);
+}
+window.excluirMentorado = async function(id){
+  const m = M.find(x=>x.id===id); if(!m) return;
+  const campo = $("#del_confirma");
+  if(!campo || chaveNome(campo.value) !== chaveNome(m.nome))
+    return toast("Digite o nome do mentorado para confirmar", true);
+  const {data, error} = await db.from("mentorados").delete().eq("id",id).select("id");
+  if(error) return toast(error.message, true);
+  /* O RLS nao recusa, filtra: sem policy de DELETE a resposta volta sem erro e
+     com zero linhas. Dizer "excluído" nesse caso seria mentira -- a ficha
+     continuaria lá depois do loadAll. */
+  if(!data || !data.length)
+    return toast("Nada foi excluído — seu acesso não permite apagar mentorados", true);
+  closeModal();
+  toast("Mentorado excluído");
+  await loadAll();
+  render();
 }
 
 /* ================= NOVO MENTORADO ================= */

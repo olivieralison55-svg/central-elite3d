@@ -43,7 +43,7 @@ inferior esquerdo, embaixo do seu nome.
 | Criar mentorado | ✅ | ❌ | ❌ |
 | Editar dados do mentorado (nome, datas, links) | ✅ | ❌ | ❌ |
 | Registrar e editar sessões | ✅ | ❌ | ✅ |
-| Marcar progresso na trilha (Rotas) | ✅ | ❌ | ✅ |
+| Registrar evolução na trilha (Rotas) | ✅ | ❌ | ✅ |
 | Excluir sessão, parcela ou faturamento | ✅ | ❌ | ❌ |
 
 **Diretoria vê tudo e não altera nada.** É leitura em todas as telas, incluindo
@@ -186,9 +186,20 @@ O acompanhamento qualitativo, para além de "a sessão aconteceu".
 Escolha a rota no topo e o mentorado no seletor — a caixa ao lado dele recorta a
 lista quando são muitos, e se o mentorado aberto sai da busca a tela passa para o
 primeiro que casa, para o seletor e a trilha nunca falarem de pessoas diferentes.
-A trilha de marcos aparece em sequência, com o marco atual destacado. O botão **Marcar** abre o registro do
-marco, onde se anota status, data, progresso em %, critérios pendentes,
-bloqueios e a próxima ação.
+A trilha de marcos aparece em sequência, com o marco atual destacado. São os
+seis marcos da rota no *Compilado das Rotas Elite 3D* — R$ 500, 2.000, 10.000,
+20.000, 50.000 e 100.000, com placa a partir do terceiro. O que muda entre
+rotas é a unidade: **Marketplace mede o faturamento do mês; Feiras e Lives e
+B2B / Varejo medem o acumulado da rota.**
+
+Clique no marco para expandir. Dentro vêm a restrição, a alavanca, a
+pergunta-chave, os apoios e os indicadores daquele marco, o faturamento do
+mentorado na rota comparado com a meta, e o **teste de passagem**: a lista de
+critérios para marcar um a um — o Marco 01 de Marketplace tem dois portões, um
+de estrutura e um de receita. O progresso e os critérios pendentes saem do que
+está marcado, sem campo à parte. Abaixo da lista ficam status, data de
+conclusão, próxima ação e bloqueios, e o botão **Salvar evolução**. Um marco
+fica aberto por vez.
 
 Mais abaixo, na mesma tela: o **canal de venda** do mentorado e o
 **faturamento mensal** — total do mês, comparação com o mês anterior, gráfico
@@ -221,6 +232,15 @@ WhatsApp.
 
 A trilha 1:1 e os encontros em grupo do mentorado ficam em blocos separados. A
 contagem de *"N de 12 concluídas"* no topo da ficha considera só a trilha.
+
+No fim da ficha completa, só para administrador, fica **Excluir mentorado**.
+Apagar a ficha apaga junto tudo que está pendurado nela — sessões, parcelas,
+marcos de rota e registros de faturamento — e as sessões concluídas que saírem
+levam embora a contagem que o fechamento dos mentores usa. Por isso a confirmação
+lista o que vai sumir e pede o **nome do mentorado digitado**; não é um clique.
+Na maioria dos casos o que se quer é *Cancelado* na situação: o histórico fica de
+pé e a pessoa sai das listas de ativos. Exclua quando o registro nunca deveria ter
+existido — duplicata, teste, cadastro errado.
 
 ### Campos de data
 

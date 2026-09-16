@@ -120,10 +120,56 @@ aceitando `admin`, `diretoria` e `mentor`. Não há `cs`: o atendimento usa
 `rotas.modelo` é `simples` ou `rico`. O modelo simples usa
 `passou`/`nao_passou`; o rico usa `NAO_INICIADO`, `EM_ANDAMENTO`, `BLOQUEADO`,
 `AGUARDANDO_VALIDACAO`, `CONCLUIDO`, `NAO_APLICAVEL`, e habilita progresso em %,
-critérios pendentes, bloqueios e próxima ação.
+critérios pendentes, bloqueios e próxima ação. As três rotas em produção são
+`rico`; o caminho `simples` ficou no código para não quebrar rota criada à mão.
 
 `mentorado_marcos` é a única tabela do núcleo com `updated_at` e
 `atualizado_por`.
+
+#### A régua do Compilado das Rotas Elite 3D
+
+O catálogo de marcos é o documento *Compilado das Rotas Elite 3D*, aplicado pela
+migration `supabase/migrations/20260916_rotas_elite3d.sql`. Três rotas —
+Marketplace, Feiras e Lives, B2B / Varejo — com **seis marcos cada e os mesmos
+valores**: R$ 500, 2.000, 10.000, 20.000, 50.000 e 100.000. `marcos_definicao`
+carrega o conteúdo do marco (`subtitulo`, `restricao`, `alavanca`,
+`pergunta_chave`, `apoios[]`, `indicadores[]`, `criterios`, `meta_valor`,
+`placa`), e é ele que a trilha desenha.
+
+**A unidade muda por rota e isso não é detalhe.** `rotas.unidade` é `mes` no
+Marketplace e `acumulado` em Feiras e B2B. Marketplace é canal de fluxo contínuo
+com anúncio ativo: acumular meses esconderia queda de ranqueamento. Feiras e B2B
+são canais de evento e de recompra, com faturamento irregular por natureza.
+Consequência prática: **no Marketplace o mês é o critério de passagem e o
+acumulado é histórico; em Feiras e B2B é o oposto** — o mês é indicador de
+saúde, não portão. A placa entra a partir do Marco 03 nas três rotas e, no
+Marketplace, é conquista registrada e não status corrente: mês seguinte pior não
+revoga (`marcos_definicao.placa`).
+
+`marcos_definicao.criterios` é o teste de passagem, em jsonb:
+`[{"grupo": null|texto, "itens": [...]}]` — uma lista de portões. Só o Marco 01
+de Marketplace tem dois (*Portão A · Apto a vender* e *Portão B · Primeira
+receita*); nos demais o grupo vem `null` e vira um bloco único.
+
+`mentorado_marcos.criterios_ok` guarda o **texto** do critério marcado, não o
+índice. É de propósito: reescrever ou reordenar o catálogo não pode migrar em
+silêncio a marcação de "tenho embalagem" para "conheço meu CMV". `progresso` e
+`criterios_pendentes` são **derivados** do que está marcado — não há campo
+manual para eles discordarem da lista.
+
+Na tela de Rotas cada marco é um painel expansível (`toggleMarco`), um aberto
+por vez, porque os ids dos campos (`mk_status`, `mk_data`, `mk_acao`, `mk_bloq`)
+são únicos na página e o `salvarMarco` lê por id. O painel mostra o conteúdo do
+marco ao lado do teste de passagem e o faturamento do mentorado **na rota
+inteira** — não no canal aberto na sanfona — comparado com `meta_valor`, pela
+unidade da rota. Marcar um critério não re-renderiza: só atualiza contador e
+barra (`atualizarProgressoMarco`), senão o calendário fecharia e o que ainda não
+foi salvo iria embora.
+
+Quatro pendências ficaram abertas no documento de origem e aparecem como campo
+nulo, não como texto inventado: restrição e alavanca dos seis marcos de
+Marketplace (a rota usa PERGUNTA-CHAVE no lugar), e restrição e alavanca dos
+Marcos 01 e 03 de Feiras.
 
 ### Outras
 
@@ -388,6 +434,27 @@ varredura que reprova qualquer handler de escrita aparecendo nas telas de
 `diretoria`, com controle negativo em `admin` para garantir que o detector não
 está passando vazio — então esquecer o `pode(...)` falha o teste, não a produção.
 Ainda assim, isso é interface: quem impede a escrita é o RLS.
+
+### Excluir mentorado é cascata, e o RLS não recusa — filtra
+
+As cinco filhas de `mentorados` são `ON DELETE CASCADE`: `sessoes`, `parcelas`,
+`mentorado_marcos`, `mentorado_canais` e `faturamento_mensal`. Um `delete` na
+ficha apaga o histórico inteiro da pessoa, e as sessões concluídas que saem
+mudam o fechamento dos mentores daquele mês. Nada disso apareceria num
+`confirm()` do navegador, então a confirmação é um modal próprio
+(`openExcluirMentorado`): `resumoExclusao(id)` conta o que vai embora, o texto
+diz o efeito no fechamento, e o botão só destrava com o nome digitado
+(`conferirNomeExclusao`). A comparação passa por `chaveNome` — sem caixa, sem
+acento, sem espaço sobrando: o campo existe para provar intenção, não para
+cobrar ortografia.
+
+O `delete` vai com `.select("id")` de propósito. **O RLS do Postgres não recusa
+um delete sem permissão: ele filtra as linhas.** Sem policy aplicável a resposta
+volta sem erro e com zero linhas, e um `if(error)` sozinho declararia sucesso —
+a ficha reapareceria no `loadAll()` seguinte, sem explicação. Hoje `admin` tem
+`mentorados_admin_all` (`ALL`), então o caminho feliz funciona; a checagem de
+`data.length` é o que mantém a mensagem honesta se a policy mudar. Vale para
+qualquer `delete`/`update` novo que precise afirmar que escreveu.
 
 ### A busca de mentorado é por tela, e o input precisa do id
 

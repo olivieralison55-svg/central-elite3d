@@ -120,6 +120,7 @@ export function carregarApp() {
         set papel(v){ myRole = v; myProfile = {nome:"Teste", email:"teste@exemplo.com", role:v} },
         rotas(r, mk, mm, cn, mc, f){ ROTAS=r; MARCOS=mk; MM=mm; CANAIS_DB=cn; MC=mc; FAT=f;
           rotaAtual = r[0] && r[0].slug },
+        get marcoAberto(){ return marcoAberto }, set marcoAberto(v){ marcoAberto = v },
         get filtro(){ return filtro },
         get mesMatriz(){ return mesMatriz }, set mesMatriz(v){ mesMatriz = v },
         get GRUPO_REG(){ return GRUPO_REG },
@@ -172,10 +173,27 @@ export function fixtures() {
     {id:"g5", mentorado_id:"m2", etapa:"Sessão de Implementação Mensal", ordem:91, status:"Agendada", mentor:"Michelle", data:"2099-10-15", hora:"20:00:00"},
   ];
   const P = [{id:"p1", mentorado_id:"m1", numero:1, status:"aberta", vencimento:"2026-01-01", valor:500}];
+  /* Um marco com a gramática inteira do Compilado (restrição, alavanca, apoios,
+     indicadores, teste de passagem em dois portões) e outro sem nada além do
+     nome: o painel tem que aguentar os dois. O critério com XSS prova que o
+     texto do teste de passagem passa por esc() na label e no value. */
   const rotas = [
-    [{id:"r1", slug:"feiras", nome:"Rota das Feiras", modelo:"rico", ordem:1}],
-    [{id:"mk1", rota_id:"r1", nome:"Primeira feira", ordem:1}],
-    [{mentorado_id:"m1", marco_id:"mk1", status:"CONCLUIDO", data:"2026-05-01", progresso:100}],
+    [{id:"r1", slug:"feiras", nome:"Rota das Feiras", modelo:"rico", ordem:1, unidade:"acumulado"}],
+    [{id:"mk1", rota_id:"r1", nome:"Marco 01 — R$ 500 acumulados", objetivo:"A feira paga o dia", ordem:1,
+      subtitulo:"Escolher a feira certa e montar a operação mínima.",
+      restricao:"Cada feira começa do zero", alavanca:"Repetição", pergunta_chave:"O que falta?",
+      apoios:["Qualificar a feira com o organizador", "Mix mínimo viável"],
+      indicadores:["Ticket médio", "Conversão"],
+      meta_valor:500, placa:false,
+      criterios:[
+        {grupo:"Portão A · Apto a vender", itens:["Tenho produto validado", "Conheço meu CMV"]},
+        {grupo:"Portão B · Primeira receita", itens:["Bati R$ 500 acumulados na rota", "Registrei " + XSS]},
+      ]},
+     {id:"mk2", rota_id:"r1", nome:"Marco 04 — R$ 20.000 acumulados", ordem:4, meta_valor:20000, placa:true,
+      criterios:[{grupo:null, itens:["Tenho calendário fechado para os próximos 3 meses"]}]}],
+    [{mentorado_id:"m1", marco_id:"mk1", status:"EM_ANDAMENTO", data:"2026-05-01", progresso:50,
+      criterios_ok:["Tenho produto validado", "Conheço meu CMV"], bloqueios:["Sem ponto de energia"],
+      proxima_acao:"Fechar inscrição da próxima feira"}],
     [{id:"c1", rota_id:"r1", nome:"Presencial", ordem:1}],
     [{mentorado_id:"m1", rota_id:"r1", canal_id:"c1"}],
     [{id:"f1", mentorado_id:"m1", mes:"2026-07-01", canal_id:"c1", valor:10000},
@@ -194,6 +212,10 @@ export function preparar(app, papel = "admin") {
   app.estado.P = (papel === "admin" || papel === "diretoria") ? P : [];
   app.estado.ORFAS = [];
   app.estado.rotas(...rotas);
+  /* Trilha de rotas já com um marco expandido: é onde vivem o teste de
+     passagem e o botão de salvar, e a varredura de permissões só os enxerga
+     com o painel aberto. */
+  app.estado.marcoAberto = "mk1";
   return app;
 }
 
