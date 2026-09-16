@@ -878,6 +878,79 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 }
 
 /* =======================================================================
+ * E-mail do mentorado
+ *
+ * É a chave que o sync usa para casar o evento do Calendar com a ficha, e o
+ * único do banco é em lower(). Gravar com espaço ou caixa alta passaria no
+ * único e mesmo assim não casaria com o convidado do evento.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+
+  t.secao("E-mail na ficha");
+  globalThis.openMentorado("m1", "completo");
+  const ficha = app.modal();
+  t.ok("o campo existe", ficha.includes('id="e_email"'), ficha.slice(0, 200));
+  t.ok("traz o e-mail salvo", ficha.includes('value="ana.clara@exemplo.com"'));
+  t.ok("explica para que serve", ficha.includes("o nome no título do convite não importa"));
+  t.ok("sem lixo", semLixo(ficha), ficha.slice(0, 300));
+
+  globalThis.openMentorado("m2", "completo");
+  t.ok("ficha sem e-mail avisa que o sync ainda depende do título",
+    app.modal().includes("ainda depende do nome escrito no título"));
+
+  t.secao("Normalização ao salvar");
+  globalThis.openMentorado("m1", "completo");
+  app.limparEscritas();
+  app.preencher("#e_nome", "Ana Clara");
+  app.preencher("#e_email", "  Ana.Clara@Exemplo.COM  ");
+  await globalThis.salvarMentorado("m1");
+  const upd = app.escritas.find(e => e.tabela === "mentorados" && e.op === "update");
+  t.ok("grava em minúsculas e sem espaço",
+    upd && upd.dados.email === "ana.clara@exemplo.com", JSON.stringify(upd && upd.dados));
+
+  globalThis.openMentorado("m1", "completo");
+  app.limparEscritas();
+  app.preencher("#e_nome", "Ana Clara");
+  app.preencher("#e_email", "   ");
+  await globalThis.salvarMentorado("m1");
+  const limpo = app.escritas.find(e => e.tabela === "mentorados" && e.op === "update");
+  t.ok("campo esvaziado vira null, não string vazia",
+    limpo && limpo.dados.email === null, JSON.stringify(limpo && limpo.dados));
+
+  t.secao("E-mail no cadastro novo");
+  globalThis.openNovoMentorado();
+  const novo = app.modal();
+  t.ok("o campo existe", novo.includes('id="n_email"'), novo.slice(0, 200));
+  app.limparEscritas();
+  app.preencher("#n_nome", "  Bruno Novo  ");
+  app.preencher("#n_email", "BRUNO@Exemplo.com");
+  await globalThis.criarMentorado();
+  const ins = app.escritas.find(e => e.tabela === "mentorados" && e.op === "insert");
+  t.ok("cria já normalizado", ins && ins.dados.email === "bruno@exemplo.com", JSON.stringify(ins && ins.dados));
+
+  t.secao("Colisão de e-mail");
+  /* O único devolve a mensagem crua do Postgres; quem cadastra não entende. */
+  t.ok("a mensagem do único vira explicação",
+    app.mod.msgErroMentorado({message: 'duplicate key value violates unique constraint "mentorados_email_unico"'})
+      .includes("já está em outro mentorado"));
+  t.ok("erro de outra natureza passa inteiro",
+    app.mod.msgErroMentorado({message: "permission denied for table mentorados"})
+      === "permission denied for table mentorados");
+}
+
+/* Quem não edita mentorado vê o e-mail e não mexe nele. */
+{
+  const app = preparar(carregarApp(), "mentor");
+  t.secao("E-mail do mentorado (mentor)");
+  globalThis.openMentorado("m1", "completo");
+  const ficha = app.modal();
+  t.ok("vê o campo travado", ficha.includes('id="e_email"') && /id="e_email"[^>]*disabled/.test(ficha),
+    ficha.slice(ficha.indexOf('id="e_email"') - 60, ficha.indexOf('id="e_email"') + 200));
+  t.ok("sem salvar alterações", !ficha.includes("Salvar alterações"));
+}
+
+/* =======================================================================
  * Marco expansível — o teste de passagem do Compilado das Rotas
  *
  * O painel substituiu o modal "Marcar". O que importa: o conteúdo do marco

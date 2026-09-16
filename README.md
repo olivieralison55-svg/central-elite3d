@@ -134,6 +134,13 @@ encontros em grupo não contam como avanço da trilha.
 Quem está pausado ou cancelado aparece esmaecido, com uma etiqueta ao lado.
 Clique em qualquer coluna do cabeçalho para ordenar.
 
+Na ficha, logo abaixo do nome, fica o campo **E-mail no Google Agenda**. É o
+e-mail com que o mentorado entra como convidado nas reuniões — preenchê-lo faz o
+sync casar a sessão por ele, e aí o título do convite não precisa mais trazer o
+nome da pessoa. Um e-mail só pode estar em um mentorado: se já estiver em outro,
+o sistema avisa em vez de salvar, porque dois cadastros com o mesmo endereço
+fariam o sync descartar o evento em vez de escolher um.
+
 ### Sessões
 
 A agenda, dividida em dois grupos.
@@ -277,25 +284,37 @@ sem ver as duas lado a lado não há como decidir qual etapa está errada.
 ## O que é automático e o que é manual
 
 **Automático, a cada 15 minutos:** o sistema lê o Google Agenda e cria ou
-atualiza as sessões. Ele identifica a etapa pelo título do evento (precisa
-conter *Diagnóstico*, *Plano de Ação* ou *Checkup N*), o mentorado pelo nome no
-título, e o mentor pelo e-mail de quem foi convidado. Sessões cuja data já
-passou viram *Aguardando confirmação* sozinhas.
+atualiza as sessões. Sessões cuja data já passou viram *Aguardando confirmação*
+sozinhas.
+
+Para o evento ser reconhecido, ele precisa dizer **quem** e **qual etapa**:
+
+- **Quem** — pelo **e-mail do mentorado na lista de convidados**, batendo com o
+  campo *E-mail no Google Agenda* da ficha dele. É o caminho recomendado.
+  Enquanto a ficha estiver sem e-mail, o sistema cai no antigo: procurar o
+  **nome do mentorado escrito no título**.
+- **Qual etapa** — sempre pelo **título**, que precisa conter *Diagnóstico*,
+  *Plano de Ação* ou *Checkup N*. Isso vale com e-mail ou sem: nem o Google
+  Agenda nem o Meet sabem que aquela reunião é o Checkup 5.
+
+Ou seja: **preenchendo o e-mail na ficha, o título fica livre** — basta a
+palavra da etapa. `Checkup 3` funciona. Sem o e-mail, o título continua tendo
+que trazer o nome dele também.
 
 Duas coisas importantes decorrem disso:
 
-- **O título do evento no Google Agenda importa.** Se não der para identificar a
-  etapa e o mentorado, o evento é ignorado e a sessão não aparece aqui.
-- **Quem é convidado importa.** O mentor é identificado por e-mail. Convidar
-  apenas quem vai atender — se CS ou observadores entrarem como convidados, a
-  sessão pode ser creditada a quem só acompanhou.
+- **Se não der para identificar a etapa e o mentorado, o evento é ignorado** e a
+  sessão não aparece aqui — de propósito, para não atribuir a pessoa errada.
+- **Quem é convidado importa.** O mentor também é identificado por e-mail.
+  Convidar apenas quem vai atender — se CS ou observadores entrarem como
+  convidados, a sessão pode ser creditada a quem só acompanhou.
 
 **Manual, feito pela equipe:** cadastro do mentorado, contrato, entrada,
 restante, parcelas, situação (pausado/cancelado), links, marcos da trilha,
 canal de venda, faturamento mensal, a confirmação de quem atendeu cada sessão,
 e **todo encontro em grupo**. O sync só cria sessão quando identifica etapa *e*
-mentorado no título do evento, e as categorias coletivas não estão no
-reconhecedor — plantão e implementação nunca chegam por ele.
+mentorado, e as categorias coletivas não estão no reconhecedor de título —
+plantão e implementação nunca chegam por ele.
 
 ---
 

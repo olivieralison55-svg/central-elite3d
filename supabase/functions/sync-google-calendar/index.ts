@@ -67,9 +67,27 @@ function acharMentor(texto: string, attendees: { email?: string }[] = []): strin
   for (const mt of MENTORES) if (mt.alias.some((x) => s.includes(x))) return mt.nome;
   return null;
 }
-function acharMentorado(summary: string, mentorados: { id: string; nome: string }[]) {
+type Mentorado = { id: string; nome: string; email?: string | null };
+
+/* Casamento EXATO pelo e-mail do convidado, do mesmo jeito que o mentor ja e
+   identificado. E o caminho preferido: quando o mentorado tem e-mail na ficha,
+   o titulo do evento deixa de importar -- pode ser "Reuniao Checkup 3" sem o
+   nome dele. O unico parcial em lower(email) garante que nao ha dois donos
+   possiveis para o mesmo endereco. */
+function acharMentoradoPorEmail(attendees: { email?: string }[], porEmail: Map<string, Mentorado>) {
+  for (const a of attendees) {
+    const e = (a.email || "").trim().toLowerCase();
+    const m = e ? porEmail.get(e) : undefined;
+    if (m) return m;
+  }
+  return null;
+}
+/* Fallback por nome no titulo. Continua existindo porque a maioria das fichas
+   ainda nao tem e-mail: tirar isto agora pararia o sync dos mentorados
+   antigos. Some sozinho conforme os e-mails forem preenchidos. */
+function acharMentoradoPorNome(summary: string, mentorados: Mentorado[]) {
   const s = normaliza(summary);
-  let melhor: { id: string; nome: string } | null = null;
+  let melhor: Mentorado | null = null;
   let melhorScore = 0, empate = false;
   for (const m of mentorados) {
     const palavras = normaliza(m.nome).split(/\s+/).filter((w) => w.length >= 3);
@@ -112,8 +130,20 @@ Deno.serve(async (req) => {
   try {
     const debug = new URL(req.url).searchParams.get("debug") === "1";
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-    const { data: mentorados, error: merr } = await supabase.from("mentorados").select("id,nome").eq("cancelado", false);
+    const { data: mentorados, error: merr } = await supabase.from("mentorados").select("id,nome,email").eq("cancelado", false);
     if (merr) throw merr;
+    const lista: Mentorado[] = mentorados || [];
+    const porEmail = new Map<string, Mentorado>();
+    for (const m of lista) {
+      const e = (m.email || "").trim().toLowerCase();
+      if (e) porEmail.set(e, m);
+    }
+    /* E-mail primeiro, nome depois. Nesta ordem porque o e-mail e exato e o
+       nome e heuristica: inverter faria um titulo mal escrito ganhar de um
+       convidado identificado. */
+    const casarMentorado = (summary: string, attendees: { email?: string }[] = []) =>
+      acharMentoradoPorEmail(attendees, porEmail) || acharMentoradoPorNome(summary, lista);
+
     const accessToken = await getAccessToken();
     const events = await fetchEvents(accessToken);
 
@@ -122,7 +152,7 @@ Deno.serve(async (req) => {
       for (const ev of events) {
         if (ev.status === "cancelled") continue;
         const summary = ev.summary || "";
-        if (!parseEtapa(summary) || !acharMentorado(summary, mentorados || [])) continue;
+        if (!parseEtapa(summary) || !casarMentorado(summary, ev.attendees || [])) continue;
         if (acharMentor(summary + " " + (ev.description || ""), ev.attendees || [])) continue;
         amostra.push({ titulo: summary, attendees: (ev.attendees || []).map((a: { email?: string }) => a.email) });
         if (amostra.length >= 10) break;
@@ -135,14 +165,19 @@ Deno.serve(async (req) => {
     const agora = new Date();
     const agoraISO = agora.toISOString();
     let criadas = 0, atualizadas = 0, confirmacoesPendentes = 0, semMentor = 0, adotadas = 0;
+    // Quantos eventos vieram por cada caminho -- mostra a adocao do e-mail
+    // avancando sem precisar consultar o banco.
+    let porEmailCount = 0, porNomeCount = 0;
     const ignoradas: string[] = [];
 
     for (const ev of events) {
       if (ev.status === "cancelled") continue;
       const summary = ev.summary || "";
       const etapaInfo = parseEtapa(summary);
-      const mentorado = acharMentorado(summary, mentorados || []);
+      const porConvite = acharMentoradoPorEmail(ev.attendees || [], porEmail);
+      const mentorado = porConvite || acharMentoradoPorNome(summary, lista);
       if (!etapaInfo || !mentorado) { ignoradas.push(summary); continue; }
+      if (porConvite) porEmailCount++; else porNomeCount++;
       const startDT = ev.start?.dateTime || ev.start?.date;
       if (!startDT) { ignoradas.push(summary); continue; }
 
@@ -229,7 +264,7 @@ Deno.serve(async (req) => {
         }
       }
     }
-    return new Response(JSON.stringify({ ok: true, tz: TZ, criadas, atualizadas, adotadas, confirmacoesPendentes, semMentor, ignoradas_count: ignoradas.length }), {
+    return new Response(JSON.stringify({ ok: true, tz: TZ, criadas, atualizadas, adotadas, confirmacoesPendentes, semMentor, mentoradoPorEmail: porEmailCount, mentoradoPorNome: porNomeCount, fichasComEmail: porEmail.size, ignoradas_count: ignoradas.length }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (e) {

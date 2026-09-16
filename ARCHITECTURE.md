@@ -84,11 +84,20 @@ estado são `text`, não enums.
 
 ### Núcleo
 
-**`mentorados`** — a entidade acompanhada. `nome`, `data_fechamento`, `ciclo`,
-`situacao` (`ativo` | `pausado` | `cancelado`), `contrato_status`,
+**`mentorados`** — a entidade acompanhada. `nome`, `email`, `data_fechamento`,
+`ciclo`, `situacao` (`ativo` | `pausado` | `cancelado`), `contrato_status`,
 `entrada_status`, `entrada_forma_pgto`, `restante_status`,
 `restante_forma_pgto`, `link_drive`, `link_mapa_mental`, `link_whatsapp`,
 `cancelado` (booleano legado), `pausado_em`, `retorno_previsto`.
+
+`email` não é campo de contato: é a **chave de casamento do sync**. É o e-mail
+com que o mentorado entra como convidado no evento do Google, e é por ele que a
+sessão encontra a ficha. Índice **único parcial em `lower(email)`**
+(`mentorados_email_unico`), porque dois donos possíveis para o mesmo endereço
+fariam o sync descartar o evento em silêncio — o mesmo destino do empate por
+nome. Guardar sempre normalizado, minúsculo e sem espaço: qualquer outra grafia
+passa no único e mesmo assim não casa com o convite. Nulo é normal e esperado
+enquanto as fichas antigas não forem preenchidas.
 
 **`sessoes`** — `mentorado_id`, `etapa` (texto), `ordem`, `status`, `mentor`
 (**texto**), `data`, `hora`, `link_meet`, `link_gravacao`, `link_anotacoes`,
@@ -186,7 +195,11 @@ nome textual, sem FK.
 - **`mentorados_basic`** — `SECURITY DEFINER`. Expõe os campos não financeiros
   de `mentorados` e é o que o mentor lê, já que `mentorados` só tem policy de
   admin. **Contorna o RLS deliberadamente**; qualquer coluna adicionada aqui
-  passa a ser visível a todo mentor.
+  passa a ser visível a todo mentor — `email` entrou nessa conta, de propósito,
+  porque a ficha mostra o campo a todos os papéis. Ao adicionar coluna, use
+  `create or replace view` com o campo novo **no fim** da lista: é a única forma
+  aceita pelo Postgres, e é o que preserva os grants (o `revoke` de escrita
+  abaixo não pode ser refeito por engano).
 
   `authenticated` tem **só `SELECT`** nela, e isso é essencial. A view é
   auto-atualizável e o dono é `postgres`, num schema sem `FORCE ROW LEVEL
@@ -281,9 +294,24 @@ janela de −30 a +90 dias (máx. 250 eventos) → para cada evento tenta casar
 - **Etapa** vem do título: `Diagnóstico` → *Diagnóstico de Negócio*,
   `Plano de Ação` → *Plano de Ação*, `Checkup N` → *Checkup N*. A `ordem` é
   derivada disso.
-- **Mentorado** casa por palavras do nome (≥3 letras) presentes no título.
-  Empate ou nenhuma correspondência descarta o evento — deliberado, para não
-  atribuir errado em silêncio.
+- **Mentorado** casa em dois passos, nesta ordem. Primeiro pelo **e-mail do
+  convidado**, contra `mentorados.email` — exato, e é o caminho preferido:
+  quando a ficha tem e-mail, o título do evento não precisa mais trazer o nome
+  dele. Se nenhum convidado bate, cai no fallback por **palavras do nome
+  (≥3 letras) presentes no título**; empate ou nenhuma correspondência descarta
+  o evento, deliberado, para não atribuir errado em silêncio.
+
+  A ordem importa: e-mail é exato e nome é heurística, então inverter faria um
+  título mal escrito ganhar de um convidado identificado. O fallback por nome
+  continua existindo porque a maioria das fichas ainda não tem e-mail — tirá-lo
+  hoje pararia o sync dos mentorados antigos. Ele some sozinho conforme o campo
+  for preenchido, e a resposta da função traz `mentoradoPorEmail`,
+  `mentoradoPorNome` e `fichasComEmail` justamente para medir isso sem
+  consultar o banco.
+
+  **A etapa continua vindo do título** (`Diagnóstico`, `Plano de Ação`,
+  `Checkup N`), com e-mail ou sem. Nem o Calendar nem a API do Meet sabem que
+  aquela reunião é o Checkup 5 — quem sabe é o título ou a trilha.
 - **Mentor** vem do **e-mail do convidado**, pelo mapa `EMAIL_MENTOR`. Só entra
   quem atende; CS e observadores ficam fora de propósito, senão a sessão seria
   creditada a quem apenas acompanhou. Fallback: nome ou apelido no título ou na

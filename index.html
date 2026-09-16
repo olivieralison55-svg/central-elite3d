@@ -247,6 +247,7 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
 .modal header .x:hover{color:var(--foreground);background:rgba(254,254,254,.05)}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
 .f label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--subtle-foreground);font-weight:600;margin-bottom:6px}
+.f .hint{font-size:11px;color:var(--subtle-foreground);line-height:1.45;margin-top:6px}
 .sec{border-top:1px solid var(--border);margin-top:22px;padding-top:20px}
 .sec>h4{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--primary);font-weight:700;margin-bottom:14px}
 .parc-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
@@ -706,7 +707,22 @@ function pillSituacao(m){
 function esc(s){ return (s??"").toString()
   .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
   .replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
-function linkOr(v, label){ 
+/* E-mail do mentorado: o sync compara com o e-mail do convidado no evento do
+   Google, em minúsculas e sem espaço. Guardar em qualquer outro formato
+   passaria no único do banco e mesmo assim não casaria com o convite. */
+function normalizaEmail(v){
+  const e = (v||"").trim().toLowerCase();
+  return e || null;
+}
+/* O único em lower(email) devolve a mensagem crua do Postgres, que não explica
+   nada a quem está cadastrando. */
+function msgErroMentorado(error){
+  const m = (error && error.message) || "";
+  if(m.includes("mentorados_email_unico"))
+    return "Esse e-mail já está em outro mentorado. Dois cadastros com o mesmo e-mail fariam o sync descartar o evento em vez de escolher um.";
+  return m;
+}
+function linkOr(v, label){
   if(!v) return "";
   const url = /^https?:/i.test(v) ? v : null;
   return url ? `<a href="${esc(url)}" target="_blank">${label}</a>` : `<span style="color:var(--dim)" title="${esc(v)}">${label}*</span>`;
@@ -2051,6 +2067,14 @@ window.openMentorado = function(id, secao){
     <div class="f"><label>Data de fechamento</label>${dateField("e_fech", m.data_fechamento, {disabled:!editarM})}</div>
   </div>
   <div class="fgrid">
+    <div class="f" style="grid-column:1/-1"><label>E-mail no Google Agenda</label>
+      <input id="e_email" type="email" value="${esc(m.email)}" placeholder="o e-mail que ele usa no convite" ${editarM?"":"disabled"}>
+      <div class="hint">${m.email
+        ? "O sync casa o evento por este e-mail — o nome no título do convite não importa mais."
+        : "Sem isto, o sync ainda depende do nome escrito no título do evento."}</div>
+    </div>
+  </div>
+  <div class="fgrid">
     <div class="f"><label>Link Drive</label><input id="e_ldrive" value="${esc(m.link_drive)}" ${editarM?"":"disabled"}></div>
     <div class="f"><label>Link Mapa Mental</label><input id="e_lmapa" value="${esc(m.link_mapa_mental)}" ${editarM?"":"disabled"}></div>
     <div class="f"><label>Canal WhatsApp</label><input id="e_lwhats" value="${esc(m.link_whatsapp)}" ${editarM?"":"disabled"}></div>
@@ -2150,6 +2174,12 @@ window.salvarMentorado = async function(id){
     if(!nomeV.trim()) return toast("Informe o nome", true);
     upd.nome = nomeV.trim();
   }
+  /* E-mail é a chave que o sync usa para casar o evento do Calendar com a
+     ficha, e o unico do banco e em lower(). Gravar com espaco ou caixa alta
+     passaria no unico e nao casaria com o convidado do evento. */
+  const emailV = val("#e_email");
+  if(emailV !== undefined) upd.email = normalizaEmail(emailV);
+
   const mapa = {
     "#e_fech":"data_fechamento", "#e_contr":"contrato_status",
     "#e_ent":"entrada_status", "#e_entf":"entrada_forma_pgto",
@@ -2162,7 +2192,7 @@ window.salvarMentorado = async function(id){
   }
   if(!Object.keys(upd).length) return;
   const {error} = await db.from("mentorados").update(upd).eq("id",id);
-  if(error) return toast(error.message,true);
+  if(error) return toast(msgErroMentorado(error),true);
   toast("Mentorado atualizado"); closeModal(); loadAll();
 }
 window.togglePausaCampos = function(){
@@ -2389,6 +2419,10 @@ window.openNovoMentorado = function(){
   <header><h3>Novo mentorado</h3><button class="x" onclick="closeModal()">✕</button></header>
   <div class="fgrid" style="grid-template-columns:1fr 1fr">
     <div class="f" style="grid-column:1/-1"><label>Nome</label><input id="n_nome" placeholder="Nome completo ou razão social"></div>
+    <div class="f" style="grid-column:1/-1"><label>E-mail no Google Agenda</label>
+      <input id="n_email" type="email" placeholder="o e-mail que ele usa no convite">
+      <div class="hint">Preenchendo aqui, o sync casa a sessão por este e-mail e o título do convite não precisa trazer o nome dele.</div>
+    </div>
     <div class="f"><label>Data de fechamento</label>${dateField("n_fech", HOJE)}</div>
     <div class="f"><label>Entrada</label><select id="n_ent"><option>Pago</option><option>Pago parcial</option><option>Ainda não</option><option>Patrocinado</option></select></div>
     <div class="f"><label>Forma entrada</label><input id="n_entf" placeholder="pix, cartão…"></div>
@@ -2402,11 +2436,12 @@ window.criarMentorado = async function(){
   const nomeV = $("#n_nome").value.trim();
   if(!nomeV) return toast("Informe o nome",true);
   const {data,error} = await db.from("mentorados").insert({
-    nome:nomeV, data_fechamento: $("#n_fech").value||null,
+    nome:nomeV, email: normalizaEmail($("#n_email").value),
+    data_fechamento: $("#n_fech").value||null,
     entrada_status: $("#n_ent").value, entrada_forma_pgto: $("#n_entf").value||null,
     contrato_status: $("#n_contr").value, restante_status: $("#n_res").value, cancelado:false
   }).select().single();
-  if(error) return toast(error.message,true);
+  if(error) return toast(msgErroMentorado(error),true);
   toast("Mentorado criado"); await loadAll(); openMentorado(data.id,'completo');
 }
 

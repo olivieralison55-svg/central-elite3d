@@ -35,6 +35,7 @@ const EXPORTA = [
   "sessoes1a1De", "sessoesGrupoDe", "pode", "CAPACIDADES", "PAPEL_LABEL",
   "renderDash", "renderMentorados", "renderSessoes", "renderFinanceiro", "renderRotas",
   "setView", "reunioesConcluidas1a1", "casaBusca", "buscaField", "btnNovoMentorado",
+  "normalizaEmail", "msgErroMentorado",
 ];
 
 export function carregarApp() {
@@ -152,7 +153,9 @@ export function carregarApp() {
  * ------------------------------------------------------------------------- */
 export function fixtures() {
   const M = [
-    {id:"m1", nome:"Ana Clara",     situacao:"ativo",    data_fechamento:"2026-01-10", contrato_status:"Assinado",  entrada_status:"Pago", restante_status:"Pago"},
+    /* m1 com e-mail, m2 sem: os dois caminhos do sync convivem enquanto as
+       fichas antigas não forem preenchidas. */
+    {id:"m1", nome:"Ana Clara",     situacao:"ativo",    data_fechamento:"2026-01-10", contrato_status:"Assinado",  entrada_status:"Pago", restante_status:"Pago", email:"ana.clara@exemplo.com"},
     {id:"m2", nome:"Bruno Dias",    situacao:"ativo",    data_fechamento:"2026-03-02", contrato_status:"Ainda não", entrada_status:"Pago", restante_status:"Ainda não"},
     {id:"m3", nome:"Diego " + XSS,  situacao:"ativo",    data_fechamento:"2025-10-01", contrato_status:"Assinado",  entrada_status:"Pago", restante_status:"Pago"},
     {id:"m4", nome:"Carla " + XSS,  situacao:"pausado",  data_fechamento:"2025-11-20", contrato_status:"Assinado",  entrada_status:"Pago", restante_status:"Pago"},
