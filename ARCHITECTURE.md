@@ -357,6 +357,58 @@ são sempre registrados à mão, na tela de Sessões.
 Aceita `?debug=1`, que devolve uma amostra de eventos reconhecidos sem mentor
 identificado — útil para descobrir e-mail faltando no mapa.
 
+### `lia-webhook` — Edge Function, sob demanda
+
+A Lia é o gestor de pagamentos. O fluxo é de **mão única**: nada aqui escreve
+nela; a aplicação só reflete o que ela informa.
+
+**Esta é a única função publicada com `verify_jwt` FALSE**, e tem que ser: a
+Lia não faz login no Supabase e não manda JWT. Quem garante a procedência é o
+header `X-Lia-Signature` — HMAC-SHA1 do **corpo cru** assinado com a
+`LIA_API_KEY`. Por isso o handler lê `request.text()` antes de qualquer parse:
+reserializar o JSON muda espaços e invalida a assinatura. A comparação é de
+tempo constante. Sem `LIA_API_KEY` no ambiente a função **falha fechada** —
+rejeita tudo com 401.
+
+Tabelas: **`lia_cobrancas`** espelha as faturas (`bill`) e **`lia_eventos`**
+registra todo webhook. As duas têm RLS: cobranças seguem o recorte de
+`parcelas` (admin escreve, diretoria lê, mentor não vê), e `lia_eventos` é só
+admin — `payload` guarda o webhook cru, com contato do cliente.
+
+`lia_eventos.lia_delivery_id` é **único, e é isso que dá idempotência**: a Lia
+reenvia quando não recebe 200, e reprocessar duplicaria pagamento. A reserva é
+feita por `insert` — checar antes e inserir depois abriria janela de corrida. A
+mesma linha é **atualizada** com o desfecho no fim; inserir outra bateria no
+único e o log ficaria eternamente em `recebido`. Envio com assinatura inválida é
+registrado **sem** reservar o id, para um forjado não bloquear o log do
+legítimo.
+
+`lia_cobrancas.lia_updated_at` é o carimbo que veio da Lia e serve para
+descartar webhook atrasado: evento antigo não sobrescreve o novo.
+
+**De quem é a cobrança:** primeiro por `mentorados.lia_order_id`, depois por
+`mentorados.email` — por **igualdade**, nunca `ilike`, senão `_` e `%` num
+endereço virariam curinga. Casando por e-mail, grava o `order_id` para as
+próximas irem pelo caminho rápido. Dois mentorados com o mesmo e-mail é
+ambíguo: a cobrança fica órfã (`mentorado_id` nulo) em vez de ir para a pessoa
+errada, e é adotada quando o vínculo aparecer.
+
+**A Lia é a fonte das parcelas de quem tem cobrança lá.** `parcelas.lia_bill_id`
+diz quem manda na linha: preenchido, veio da Lia e a tela não deixa editar;
+nulo, foi uma pessoa. Ao refletir, as linhas manuais **daquele mentorado** são
+apagadas antes do upsert — o único é `(mentorado_id, numero)`, então uma linha
+manual no número 3 bloquearia a parcela 3 da Lia. Quem não tem cobrança na Lia
+não é tocado: não há de onde tirar dado para substituir. A foto anterior está em
+`parcelas_backup_20260917`.
+
+`entrada_status` e `restante_status` são derivados das faturas, **exceto**
+quando valem `Patrocinado` ou `Cancelou` — decisões de pessoa que a Lia não tem
+como saber. Forma de pagamento só preenche campo vazio, nunca sobrescreve.
+
+`parcelas_numero_check` foi de `1..12` para `1..60`: a trilha tinha 12 por
+desenho, mas a Lia parcela no que o cliente contratar, e um plano fora da faixa
+faria o webhook falhar em silêncio.
+
 ### `promover_sessoes_vencidas()` — função Postgres
 
 Job `promover-sessoes-vencidas-15min` (minutos 5, 20, 35, 50). Promove

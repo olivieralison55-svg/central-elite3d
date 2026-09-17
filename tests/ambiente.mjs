@@ -36,6 +36,7 @@ const EXPORTA = [
   "renderDash", "renderMentorados", "renderSessoes", "renderFinanceiro", "renderRotas",
   "setView", "reunioesConcluidas1a1", "casaBusca", "buscaField", "btnNovoMentorado",
   "normalizaEmail", "msgErroMentorado", "alvoBuscaData",
+  "prazoTexto", "diasAte", "parcelaDaLia", "proximaParcela",
 ];
 
 export function carregarApp() {
@@ -177,7 +178,17 @@ export function fixtures() {
     {id:"g4", mentorado_id:"m1", etapa:"Sessão de Implementação Mensal", ordem:91, status:"Agendada", mentor:"Michelle", data:"2099-10-15", hora:"20:00:00"},
     {id:"g5", mentorado_id:"m2", etapa:"Sessão de Implementação Mensal", ordem:91, status:"Agendada", mentor:"Michelle", data:"2099-10-15", hora:"20:00:00"},
   ];
-  const P = [{id:"p1", mentorado_id:"m1", numero:1, status:"aberta", vencimento:"2026-01-01", valor:500}];
+  /* p1 é manual e já venceu; p2 e p3 vieram da Lia (uma paga, uma a vencer) —
+     a ficha precisa distinguir as duas origens na mesma tela. As datas de p2/p3
+     são relativas a hoje para o prazo ("vence em N dias") ser testável sem o
+     teste envelhecer. */
+  const hoje = new Date();
+  const emDias = (n) => new Date(hoje.getTime() + n * 86400000).toLocaleDateString("sv-SE");
+  const P = [
+    {id:"p1", mentorado_id:"m1", numero:1, status:"aberta", vencimento:"2026-01-01", valor:500, lia_bill_id:null},
+    {id:"p2", mentorado_id:"m2", numero:1, status:"paga",   vencimento:emDias(-30),  valor:800, lia_bill_id:"bill_1"},
+    {id:"p3", mentorado_id:"m2", numero:2, status:"aberta", vencimento:emDias(3),    valor:800, lia_bill_id:"bill_2"},
+  ];
   /* Um marco com a gramática inteira do Compilado (restrição, alavanca, apoios,
      indicadores, teste de passagem em dois portões) e outro sem nada além do
      nome: o painel tem que aguentar os dois. O critério com XSS prova que o

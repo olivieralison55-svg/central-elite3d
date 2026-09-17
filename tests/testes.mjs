@@ -878,6 +878,51 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 }
 
 /* =======================================================================
+ * Parcelas vindas da Lia
+ *
+ * A Lia é a fonte das parcelas de quem tem cobrança lá. Duas coisas importam na
+ * tela: o prazo da próxima (a pergunta que se faz olhando a ficha) e o fato de
+ * a linha não ser editável — editar aqui seria perder a alteração no próximo
+ * webhook, calado.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const {mod} = app;
+
+  t.secao("Prazo da próxima parcela");
+  globalThis.openMentorado("m2", "financeiro");
+  const ficha = app.modal();
+  t.ok("o cabeçalho anuncia a próxima", ficha.includes("vence em 3 dias"),
+    ficha.slice(ficha.indexOf("Parcelas"), ficha.indexOf("Parcelas") + 260));
+  t.ok("conta quantas foram pagas", ficha.includes("1/2 pagas"));
+  t.ok("sem lixo", semLixo(ficha), ficha.slice(0, 300));
+
+  t.secao("Linha da Lia não é editável");
+  t.ok("avisa de onde vem", ficha.includes("vêm da Lia e se atualizam sozinhas"));
+  t.ok("sem lápis de editar", !ficha.includes("openParcela"));
+  t.ok("sem alternar paga/aberta", !ficha.includes("toggleParcela"));
+  t.ok("sem adicionar parcela", !ficha.includes("+ Adicionar parcela"));
+
+  t.secao("Parcela manual continua editável");
+  globalThis.openMentorado("m1", "financeiro");
+  const manual = app.modal();
+  t.ok("tem lápis", manual.includes("openParcela"));
+  t.ok("alterna paga/aberta", manual.includes("toggleParcela"));
+  t.ok("oferece adicionar", manual.includes("+ Adicionar parcela"));
+  t.ok("não mostra o aviso da Lia", !manual.includes("vêm da Lia"));
+
+  t.secao("Texto do prazo");
+  const hoje = new Date();
+  const dia = (n) => new Date(hoje.getTime() + n * 86400000).toLocaleDateString("sv-SE");
+  t.ok("hoje",        mod.prazoTexto(dia(0))  === "vence hoje",      mod.prazoTexto(dia(0)));
+  t.ok("amanhã",      mod.prazoTexto(dia(1))  === "vence amanhã",    mod.prazoTexto(dia(1)));
+  t.ok("em 3 dias",   mod.prazoTexto(dia(3))  === "vence em 3 dias", mod.prazoTexto(dia(3)));
+  t.ok("ontem",       mod.prazoTexto(dia(-1)) === "venceu ontem",    mod.prazoTexto(dia(-1)));
+  t.ok("há 5 dias",   mod.prazoTexto(dia(-5)) === "venceu há 5 dias", mod.prazoTexto(dia(-5)));
+  t.ok("sem data não inventa prazo", mod.prazoTexto(null) === "");
+}
+
+/* =======================================================================
  * Etapa deduzida pelo sync
  *
  * Quando o título do evento não diz a etapa, o sync escolhe pela trilha. Acerta

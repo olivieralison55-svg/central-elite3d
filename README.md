@@ -326,6 +326,29 @@ Duas coisas importantes decorrem disso:
   Convidar apenas quem vai atender — se CS ou observadores entrarem como
   convidados, a sessão pode ser creditada a quem só acompanhou.
 
+### Pagamentos vindos da Lia
+
+A Lia é o gestor de pagamentos. Quando um pagamento muda lá — parcela paga,
+vencida, cancelada — ela avisa a Central na hora, e a ficha do mentorado se
+atualiza sozinha. **Nada vai no sentido contrário:** cobrança se cria e se
+cancela na Lia, aqui ela só aparece.
+
+Na ficha, em **Parcelas**, isso vira o que interessa no dia a dia: quantas foram
+pagas, o valor de cada uma e **quanto falta para a próxima vencer** — *"#3 vence
+em 3 dias"*, no próprio título da seção.
+
+Quem tem cobrança na Lia tem as parcelas **vindas dela**, e elas não são
+editáveis aqui: editar à mão seria perder a alteração no webhook seguinte, sem
+aviso. A ficha diz isso na tela. Quem não tem cobrança na Lia segue com as
+parcelas preenchidas à mão, como sempre.
+
+O vínculo entre a cobrança e o mentorado é o **e-mail** — o mesmo campo que o
+Google Agenda usa. Cobrança de um e-mail que não está em ficha nenhuma fica
+guardada sem dono e é adotada assim que o cadastro aparecer; nada se perde.
+
+Duas coisas a Lia **não** decide: *Patrocinado* e *Cancelou*. São situações que
+alguém definiu e que não existem como cobrança, então ficam intocadas.
+
 **Manual, feito pela equipe:** cadastro do mentorado, contrato, entrada,
 restante, parcelas, situação (pausado/cancelado), links, marcos da trilha,
 canal de venda, faturamento mensal, a confirmação de quem atendeu cada sessão,

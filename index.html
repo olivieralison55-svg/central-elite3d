@@ -260,6 +260,10 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
 .parc-edit:hover{color:var(--primary)}
 .parc.paga{border-color:var(--border-primary);background:var(--surface-active)}
 .parc.paga b{color:var(--primary)}
+/* Vinda da Lia: nao e clicavel, entao nao pode parecer clicavel. */
+.parc.lia{cursor:default}
+.parc.lia:hover{border-color:var(--border)}
+.parc.lia.paga:hover{border-color:var(--border-primary)}
 .parc.vencida{border-color:var(--danger-line);background:var(--danger-dim)}
 .parc.vencida b{color:var(--danger)}
 .sess{background:rgba(254,254,254,.03);border:1px solid var(--border);border-radius:var(--radius-control);padding:14px 16px;margin-bottom:9px;display:grid;grid-template-columns:minmax(120px,1.1fr) auto auto minmax(120px,1fr) auto;gap:14px;align-items:center;transition:border-color var(--speed) ease}
@@ -701,6 +705,32 @@ function progBar(mid){
   }).join("")+`</div>`;
 }
 function parcelaVencida(p){ return p.status!=="paga" && p.vencimento && p.vencimento < HOJE; }
+/* Parcela que veio da Lia: ela manda, a tela não deixa editar à mão. Editar
+   aqui seria perder a alteração no próximo webhook, calado. */
+const parcelaDaLia = p => !!(p && p.lia_bill_id);
+/* Dias entre duas datas "YYYY-MM-DD", contados em dia de calendário: usar
+   diferença de milissegundos erraria por uma hora no fim do horário de verão. */
+function diasAte(data){
+  if(!data) return null;
+  const [a1,m1,d1] = HOJE.split("-").map(Number);
+  const [a2,m2,d2] = data.split("-").map(Number);
+  return Math.round((Date.UTC(a2,m2-1,d2) - Date.UTC(a1,m1-1,d1)) / 86400000);
+}
+function prazoTexto(data){
+  const d = diasAte(data);
+  if(d === null) return "";
+  if(d < -1)  return `venceu há ${-d} dias`;
+  if(d === -1) return "venceu ontem";
+  if(d === 0)  return "vence hoje";
+  if(d === 1)  return "vence amanhã";
+  return `vence em ${d} dias`;
+}
+/* A próxima em aberto, por vencimento. É a pergunta que se faz olhando a ficha:
+   quanto falta para a próxima cobrança. */
+function proximaParcela(ps){
+  return ps.filter(p=>p.status!=="paga" && p.vencimento)
+           .sort((a,b)=>a.vencimento < b.vencimento ? -1 : 1)[0] || null;
+}
 /* Situacao do mentorado: ativo | pausado | cancelado.
    Fallback para o booleano antigo caso algum registro venha sem situacao. */
 function situacaoDe(m){ return (m&&m.situacao) || (m&&m.cancelado ? "cancelado" : "ativo"); }
@@ -2128,16 +2158,23 @@ window.openMentorado = function(id, secao){
   </div>`:''}
 
   ${mostra.financeiro?`
-  <div class="sec"><h4>Parcelas ${ps.length?`· ${ps.filter(p=>p.status==="paga").length}/${ps.length} pagas`:""}</h4>
-  ${ps.length?`<div class="parc-grid">${ps.map(p=>`
-    <div class="parc ${p.status==="paga"?"paga":parcelaVencida(p)?"vencida":""}" title="Clique para alternar paga/aberta">
-      ${pode("editarFinanceiro")?`<span class="parc-edit" onclick="event.stopPropagation();openParcela('${p.id}','${id}')" title="Editar parcela">✎</span>`:""}
-      <div ${pode("editarFinanceiro")?`onclick="toggleParcela('${p.id}','${id}')"`:""}>
+  <div class="sec"><h4>Parcelas ${ps.length?`· ${ps.filter(p=>p.status==="paga").length}/${ps.length} pagas`:""}${(()=>{
+      const prox = proximaParcela(ps);
+      return prox ? ` · #${prox.numero} ${prazoTexto(prox.vencimento)}` : "";
+    })()}</h4>
+  ${ps.some(parcelaDaLia)?`<div class="sub" style="color:var(--mut);font-size:12px;margin:-8px 0 12px">Estas parcelas vêm da Lia e se atualizam sozinhas quando o pagamento muda lá. Por isso não são editáveis aqui.</div>`:""}
+  ${ps.length?`<div class="parc-grid">${ps.map(p=>{
+    const daLia = parcelaDaLia(p);
+    const editavel = pode("editarFinanceiro") && !daLia;
+    return `<div class="parc ${p.status==="paga"?"paga":parcelaVencida(p)?"vencida":""}${daLia?" lia":""}" title="${daLia?"Vem da Lia — muda lá, reflete aqui":"Clique para alternar paga/aberta"}">
+      ${editavel?`<span class="parc-edit" onclick="event.stopPropagation();openParcela('${p.id}','${id}')" title="Editar parcela">✎</span>`:""}
+      <div ${editavel?`onclick="toggleParcela('${p.id}','${id}')"`:""}>
         <b>#${p.numero}</b>${p.valor!=null?fmtBRL(Number(p.valor)):""}
         <div class="parc-sub">${p.status==="paga"?"paga ✓":p.vencimento?fmtDshort(p.vencimento):"aberta"}</div>
       </div>
-    </div>`).join("")}</div>`:`<div class="empty" style="padding:12px">Sem parcelas (pagamento à vista ou não cadastrado).</div>`}
-  ${pode("editarFinanceiro")?`<div class="rowflex mt8">
+    </div>`;
+  }).join("")}</div>`:`<div class="empty" style="padding:12px">Sem parcelas (pagamento à vista ou não cadastrado).</div>`}
+  ${pode("editarFinanceiro")&&!ps.some(parcelaDaLia)?`<div class="rowflex mt8">
     ${dateField("np_venc", "", {style:"width:160px", title:"Vencimento da nova parcela", placeholder:"Vencimento"})}
     <input id="np_valor" type="number" min="0" step="0.01" placeholder="Valor (R$)" style="width:140px">
     <button class="btn sm ghost" onclick="addParcela('${id}')">+ Adicionar parcela</button>
