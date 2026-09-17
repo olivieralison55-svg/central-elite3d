@@ -878,6 +878,68 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 }
 
 /* =======================================================================
+ * Busca por data em Sessões
+ *
+ * A caixa varria só mentorado, etapa e mentor — digitar a data da linha que
+ * estava na tela não devolvia nada. Data é o eixo principal dessa tela.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const {mod, estado} = app;
+
+  t.secao("Formatos aceitos");
+  /* s1: Ana Clara, Diagnóstico, 01/02/2026 às 10:00. */
+  const casos = [
+    ["como a tela mostra",        "01/02"],
+    ["com o ano",                 "01/02/2026"],
+    ["o mês inteiro",             "02/2026"],
+    ["como o banco guarda",       "2026-02-01"],
+    ["a hora",                    "10:00"],
+  ];
+  for (const [rotulo, termo] of casos) {
+    estado.filtro.qSessoes = termo;
+    mod.renderSessoes();
+    t.ok(rotulo + " (" + termo + ")", app.tela().includes("Ana Clara"),
+      app.tela().replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 200));
+  }
+
+  t.secao("A busca continua recortando");
+  estado.filtro.qSessoes = "01/02/2026";
+  mod.renderSessoes();
+  const so1 = app.tela();
+  t.ok("quem é de outra data fica de fora", !so1.includes("Bruno Dias"), so1.slice(0, 300));
+  t.ok("sem lixo", semLixo(so1), so1.slice(0, 300));
+
+  estado.filtro.qSessoes = "31/12/2099";
+  mod.renderSessoes();
+  t.ok("data sem sessão não inventa resultado", !app.tela().includes("Ana Clara"));
+
+  /* Continua valendo o que já funcionava: nome, etapa e mentor. */
+  estado.filtro.qSessoes = "evaldo";
+  mod.renderSessoes();
+  t.ok("busca por mentor não regrediu", app.tela().includes("Ana Clara"));
+
+  t.secao("Encontro em grupo também casa por data");
+  /* g1..g3: Plantão de Dúvida Semanal em 06/08/2026, 19:00. */
+  estado.filtro.qSessoes = "06/08/2026";
+  mod.renderSessoes();
+  t.ok("o plantão aparece pela data", app.tela().includes("Plantão de Dúvida Semanal"),
+    app.tela().replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 300));
+
+  t.secao("Sessão sem data");
+  /* s4: Checkup 1 do Bruno, data nula — não pode casar com busca de data
+     nenhuma, e muito menos derrubar a busca com erro. */
+  estado.filtro.qSessoes = "01/02";
+  mod.renderSessoes();
+  t.ok("linha sem data não entra por acaso", !app.tela().includes("Checkup 1"));
+  t.ok("alvo de data nula é vazio", mod.alvoBuscaData(null, null) === "");
+
+  estado.filtro.qSessoes = "";
+  t.ok("a caixa anuncia a data no placeholder",
+    (mod.renderSessoes(), app.tela()).includes("mentor ou data"));
+}
+
+/* =======================================================================
  * E-mail do mentorado
  *
  * É a chave que o sync usa para casar o evento do Calendar com a ficha, e o

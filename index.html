@@ -652,6 +652,15 @@ const $ = s => document.querySelector(s);
 function fmtBRL(v){ return (v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
 const fmtD = d => d ? d.split("-").reverse().join("/") : "—";
 const fmtDshort = d => d ? d.slice(8,10)+"/"+d.slice(5,7) : "—";
+/* Formas em que uma data pode ser digitada na busca. A tela mostra 17/09, mas
+   as pessoas também digitam 17/09/2026, 09/2026 para varrer o mês inteiro e,
+   vindo de outro sistema, 2026-09-17. Sem as quatro no alvo, procurar por data
+   só acertaria por acaso. A hora entra junto porque a coluna a exibe. */
+function alvoBuscaData(d, h){
+  if(!d) return "";
+  const [ano, mes, dia] = d.split("-");
+  return `${d} ${dia}/${mes}/${ano} ${dia}/${mes} ${mes}/${ano}${h?` ${h.slice(0,5)}`:""}`;
+}
 /* Data com hierarquia: dia/mês em destaque, hora abaixo em tom secundário. */
 function cellDataHora(d, h){
   if(!d) return `<span class="dh-vazio">sem data</span>`;
@@ -1397,9 +1406,9 @@ function renderSessoes(){
   /* A busca corta as linhas 1:1 aqui, mas os encontros em grupo so depois de
      agrupados: filtrar linha a linha deixaria o encontro com um participante so
      e a coluna "Participantes" mentiria sobre quem esteve na sala. */
-  const ind = list.filter(eh1a1).filter(s=>casaBusca(filtro.qSessoes, nome(s.mentorado_id), s.etapa, s.mentor));
+  const ind = list.filter(eh1a1).filter(s=>casaBusca(filtro.qSessoes, nome(s.mentorado_id), s.etapa, s.mentor, alvoBuscaData(s.data, s.hora)));
   const grp = list.filter(ehGrupo);
-  const casaEncontro = e => casaBusca(filtro.qSessoes, e.itens.map(i=>nome(i.mentorado_id)).join(" "), e.mentor, e.etapa);
+  const casaEncontro = e => casaBusca(filtro.qSessoes, e.itens.map(i=>nome(i.mentorado_id)).join(" "), e.mentor, e.etapa, alvoBuscaData(e.data, e.hora));
   /* Sob foco, secao que ficaria vazia nao aparece: um painel "0" nao informa
      nada e faz a tela parecer quebrada. */
   const mostraInd = filtro.tipoSessao !== "grupo" && (!foco || ind.length > 0);
@@ -1453,7 +1462,7 @@ function renderSessoes(){
   <div class="rowflex">${podeCriar?'<button class="btn" onclick="openSessaoGrupo()">+ Sessão em grupo</button>':''}${btnNovoMentorado(podeCriar)}</div></div>
 
   <div class="filters">
-    ${buscaField("qSessoes","Buscar por mentorado, etapa ou mentor…")}
+    ${buscaField("qSessoes","Buscar por mentorado, etapa, mentor ou data…")}
     <select onchange="filtro.tipoSessao=this.value;renderSessoes()">
       <option value="">Todos os tipos</option>
       <option value="individual" ${filtro.tipoSessao==="individual"?"selected":""}>Somente 1:1 com mentores</option>

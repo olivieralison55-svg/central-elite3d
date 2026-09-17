@@ -69,6 +69,12 @@ Duas coisas se repetem em todas elas:
   fora de ordem: *silva ana* acha "Ana Paula da Silva", *jose* acha "José".
   A busca recorta **as listas**, nunca os cards e alertas do topo: um total que
   encolhesse ao digitar deixaria de ser o total da operação.
+
+  Em **Sessões** a caixa também aceita **data e hora**, nos formatos que se
+  costuma digitar: `17/09` como a tela mostra, `17/09/2026` com o ano, `09/2026`
+  para varrer o mês inteiro, `2026-09-17` como o banco guarda, e `14:00` pela
+  hora. Vale para sessão 1:1 e para encontro em grupo. Nas outras telas a busca
+  continua sendo só por nome.
 - **Botão + Novo mentorado.** Presente nas cinco telas, para quem tem permissão
   de criar (administrador e diretoria). Nas telas que já têm uma ação própria —
   Sessões, com o encontro em grupo — ele aparece como botão secundário.
