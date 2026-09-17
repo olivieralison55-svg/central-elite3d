@@ -1150,6 +1150,10 @@ function renderDash(){
   const presencasGrupo = SG.filter(s=>s.status==="Concluída").length;
   const aguardConf = S.filter(s=>s.status==="Aguardando confirmação").length;
   const contratosPend = ativos.filter(m=>m.contrato_status!=="Assinado").length;
+  /* Fichas que a Lia criou a partir de um pagamento e que ninguém completou.
+     Nascem só com nome e e-mail: sem contrato, ciclo, mentor nem datas. Sem
+     este alerta elas se perderiam no meio das outras. */
+  const incompletos = M.filter(m=>m.cadastro_incompleto && situacaoDe(m)!=="cancelado");
   const vencidas = P.filter(p=>parcelaVencida(p) && ehAtivo(M.find(m=>m.id===p.mentorado_id)));
   /* Quem tem sessão agendada não está parado — sai da lista.
      Para os demais a régua é a última sessão concluída; quem NUNCA concluiu
@@ -1280,6 +1284,7 @@ function renderDash(){
   const attnItems = [
     verFin ? {label:"Contratos pendentes de assinatura", count:contratosPend, view:null} : null,
     verFin ? {label:"Parcelas vencidas em aberto", count:vencidas.length, view:"financeiro"} : null,
+    {label:"Mentorados criados pela Lia, sem cadastro completo", count:incompletos.length, view:"mentorados", filtro:"incompletos"},
     {label:"Mentorados sem sessão há +30 dias", count:semSessao30.length, view:null, anchor:"risco"},
     aguardConf ? {label:"Sessões aguardando confirmação", count:aguardConf, view:"sessoes"} : null,
     ORFAS.length ? {label:"Sessões sem evento no Google Agenda", count:ORFAS.length, anchor:"orfas"} : null,
@@ -1301,7 +1306,7 @@ function renderDash(){
       <div class="lbl"><span class="dot"></span>${i.label}</div>
       <div class="rowflex" style="gap:14px">
         <span class="cnt">${i.count}</span>
-        ${i.count && i.view?`<a onclick="setView('${i.view}')">ver</a>`:''}
+        ${i.count && i.view?`<a onclick="${i.filtro?`filtro.statusFin='${i.filtro}';`:""}setView('${i.view}')">ver</a>`:''}
         ${i.count && i.anchor?`<a onclick="document.getElementById('${i.anchor}')?.scrollIntoView({behavior:'smooth'})">ver</a>`:''}
       </div>
     </div>`).join("")}
@@ -1388,6 +1393,7 @@ function renderMentorados(){
   if(filtro.statusFin==="contrato") list = list.filter(m=>ehAtivo(m) && m.contrato_status!=="Assinado");
   if(filtro.statusFin==="ativos") list = list.filter(ehAtivo);
   if(filtro.statusFin==="pausados") list = list.filter(m=>situacaoDe(m)==="pausado");
+  if(filtro.statusFin==="incompletos") list = list.filter(m=>m.cadastro_incompleto);
 
   const verFin = pode("verFinanceiro");
   list = applySort(list, "mentorados", {
@@ -1407,6 +1413,7 @@ function renderMentorados(){
       <option value="">Todos</option>
       <option value="ativos" ${filtro.statusFin==="ativos"?"selected":""}>Somente ativos</option>
       <option value="pausados" ${filtro.statusFin==="pausados"?"selected":""}>Somente pausados</option>
+      <option value="incompletos" ${filtro.statusFin==="incompletos"?"selected":""}>Cadastro incompleto</option>
       ${verFin?`<option value="contrato" ${filtro.statusFin==="contrato"?"selected":""}>Contrato pendente</option>`:''}
     </select>
   </div>
@@ -1415,7 +1422,7 @@ function renderMentorados(){
   <table><thead><tr>${th("mentorados","nome","Mentorado")}${th("mentorados","fechamento","Fechamento")}${verFin?th("mentorados","contrato","Contrato"):''}${th("mentorados","sessoes","Sessões")}</tr></thead><tbody>
   ${list.map(m=>{
     return `<tr class="click" onclick="openMentorado('${m.id}','completo')" ${!ehAtivo(m)?'style="opacity:.55"':""}>
-      <td style="font-weight:600">${esc(m.nome)} ${pillSituacao(m)}</td>
+      <td style="font-weight:600">${esc(m.nome)} ${pillSituacao(m)}${m.cadastro_incompleto?` <span class="pill amber" title="Ficha criada por um pagamento na Lia. Falta contrato, ciclo, mentor e datas — abra e salve para completar.">cadastro incompleto</span>`:""}</td>
       <td class="mono">${fmtD(m.data_fechamento)}</td>
       ${verFin?`<td>${pillContrato(m.contrato_status)}</td>`:''}
       <td>${progBar(m.id)}</td>
@@ -2230,6 +2237,11 @@ window.salvarMentorado = async function(id){
   if(nomeV !== undefined){
     if(!nomeV.trim()) return toast("Informe o nome", true);
     upd.nome = nomeV.trim();
+    /* Salvar a ficha é o ato de alguém olhar o cadastro e responder por ele —
+       é o que tira a marca de incompleto que a Lia colocou ao criar. Só vale
+       quando o bloco básico está na tela; num recorte parcial não houve
+       revisão de cadastro nenhuma. */
+    upd.cadastro_incompleto = false;
   }
   /* E-mail é a chave que o sync usa para casar o evento do Calendar com a
      ficha, e o unico do banco e em lower(). Gravar com espaco ou caixa alta

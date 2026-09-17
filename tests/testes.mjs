@@ -878,6 +878,61 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 }
 
 /* =======================================================================
+ * Ficha criada pela Lia
+ *
+ * Quem paga na Lia sem ter ficha aqui ganha uma, com nome e e-mail e mais
+ * nada. Uma ficha pela metade no meio das outras 58 se perde — a marca e o
+ * alerta existem para ela ser cobrada.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const {mod, estado} = app;
+
+  t.secao("Alerta no dashboard");
+  mod.renderDash();
+  const dash = app.tela();
+  t.ok("conta as incompletas", dash.includes("Mentorados criados pela Lia, sem cadastro completo"),
+    dash.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 400));
+  t.ok("o link já leva filtrado", dash.includes("filtro.statusFin='incompletos'"));
+  t.ok("sem lixo", semLixo(dash), dash.slice(0, 300));
+
+  t.secao("Marca na lista");
+  estado.filtro.statusFin = "";
+  mod.renderMentorados();
+  const lista = app.tela();
+  t.ok("a linha vem marcada", lista.includes("cadastro incompleto"));
+  t.ok("explica o que falta", lista.includes("Falta contrato, ciclo, mentor e datas"));
+  t.ok("escapa o nome mesmo marcado", escapado(lista));
+
+  t.secao("Filtro de cadastro incompleto");
+  estado.filtro.statusFin = "incompletos";
+  mod.renderMentorados();
+  const so = app.tela();
+  t.ok("mostra só quem está incompleto", so.includes("Diego") && !so.includes("Ana Clara"),
+    so.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 300));
+  estado.filtro.statusFin = "";
+
+  t.secao("Salvar completa o cadastro");
+  /* Salvar a ficha é o ato de alguém responder pelo cadastro — é o que tira a
+     marca. Num recorte parcial não houve revisão nenhuma, então não zera. */
+  globalThis.openMentorado("m3", "completo");
+  app.limparEscritas();
+  app.preencher("#e_nome", "Diego Completo");
+  await globalThis.salvarMentorado("m3");
+  const salvo = app.escritas.find(e => e.tabela === "mentorados" && e.op === "update");
+  t.ok("zera a marca", salvo && salvo.dados.cadastro_incompleto === false, JSON.stringify(salvo && salvo.dados));
+
+  /* O que garante que o recorte financeiro não zere a marca é o campo de nome
+     não estar na tela: sem ele, `val("#e_nome")` volta undefined e o bloco
+     inteiro é pulado. Testo a ausência do campo, não o salvamento — o stub de
+     DOM guarda um elemento por seletor, então lá `#e_nome` "existe" mesmo num
+     recorte que não o desenha, e o salvamento não distinguiria os dois casos. */
+  globalThis.openMentorado("m3", "financeiro");
+  t.ok("recorte financeiro não traz o campo de nome",
+    !app.modal().includes('id="e_nome"'), app.modal().slice(0, 200));
+}
+
+/* =======================================================================
  * Parcelas vindas da Lia
  *
  * A Lia é a fonte das parcelas de quem tem cobrança lá. Duas coisas importam na

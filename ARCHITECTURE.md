@@ -391,7 +391,26 @@ descartar webhook atrasado: evento antigo não sobrescreve o novo.
 endereço virariam curinga. Casando por e-mail, grava o `order_id` para as
 próximas irem pelo caminho rápido. Dois mentorados com o mesmo e-mail é
 ambíguo: a cobrança fica órfã (`mentorado_id` nulo) em vez de ir para a pessoa
-errada, e é adotada quando o vínculo aparecer.
+errada.
+
+**Não achando ninguém, o webhook CRIA o mentorado** — `nome` (só o envelope de
+`order` traz `customer_name`; nos outros a ficha nasce nomeada pelo e-mail),
+`email`, `lia_order_id`, `situacao` ativa e `cadastro_incompleto = true`. O
+fluxo de venda é pagar primeiro e entrar na mentoria depois, então esse é o
+caminho comum, não a exceção.
+
+`mentorados.cadastro_incompleto` é a mesma mecânica de `sessoes.etapa_deduzida`:
+automação marca, pessoa desmarca. O dashboard conta as marcadas e o link já leva
+à tela de Mentorados com o filtro `incompletos` aplicado; `salvarMentorado`
+zera o campo, mas **só quando o bloco básico está na tela** — num recorte
+financeiro não houve revisão de cadastro nenhuma.
+
+Duas condições impedem a criação: **sem e-mail** (é a chave do vínculo; sem ela
+nem a próxima cobrança da mesma pessoa cairia na ficha) e **e-mail em dois
+cadastros** (ambíguo — resolver a duplicidade vem antes). Nos dois casos a
+cobrança fica órfã com o dado íntegro. Criação concorrente é resolvida pelo
+único em `lower(email)`: quem perde a corrida lê a linha do vencedor em vez de
+devolver órfão.
 
 **A Lia é a fonte das parcelas de quem tem cobrança lá.** `parcelas.lia_bill_id`
 diz quem manda na linha: preenchido, veio da Lia e a tela não deixa editar;

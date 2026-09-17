@@ -56,6 +56,7 @@ type LiaBilling = {
 type LiaOrder = {
   id?: string | number;
   email?: { address?: string | null } | null;
+  customer_name?: string | null;
   billings?: LiaBilling[];
 };
 type Envelope = {
@@ -117,18 +118,27 @@ async function assinaturaValida(corpoCru: string, recebida: string | null) {
    A mesma fatura chega solta (entity "bill"), dentro de bills[] (entity
    "billing") ou dois niveis abaixo (entity "order"). Um so caminho de leitura
    para os tres, senao cada entidade viraria um ramo com regra propria. */
-type Ctx = { orderId: string | null; billingId: string | null; email: string | null };
+type Ctx = {
+  orderId: string | null;
+  billingId: string | null;
+  email: string | null;
+  nome: string | null;
+};
 
 function coletarBills(d: Envelope["data"]): { bill: LiaBill; ctx: Ctx }[] {
   if (!d) return [];
   const out: { bill: LiaBill; ctx: Ctx }[] = [];
   const emailDoTopo = texto(d.email?.address) ?? texto(d.contact?.email);
+  // So o envelope de "order" traz o nome do cliente. Nos outros ele nao vem, e
+  // a ficha nasce nomeada pelo e-mail ate alguem corrigir.
+  const nomeDoTopo = texto(d.customer_name);
 
   const daBilling = (b: LiaBilling, orderId: string | null, email: string | null) => {
     const ctx: Ctx = {
       orderId: orderId ?? texto(b.order_id),
       billingId: texto(b.id),
       email: texto(b.contact?.email) ?? email,
+      nome: nomeDoTopo,
     };
     for (const bill of b.bills ?? []) {
       out.push({ bill, ctx: { ...ctx, email: texto(bill.contact?.email) ?? ctx.email } });
@@ -147,6 +157,7 @@ function coletarBills(d: Envelope["data"]): { bill: LiaBill; ctx: Ctx }[] {
         orderId: texto(d.order_id),
         billingId: texto(d.id) === texto((d as LiaBill).id) ? null : texto(d.id),
         email: texto((d as LiaBill).contact?.email) ?? emailDoTopo,
+        nome: nomeDoTopo,
       },
     });
   }
@@ -205,8 +216,41 @@ async function resolverMentorado(ctx: Ctx): Promise<string | null> {
       }
       return data[0].id;
     }
+    // Dois com o mesmo e-mail: ambiguo. Nao cria um terceiro nem escolhe -- a
+    // cobranca fica orfa e alguem resolve a duplicidade primeiro.
+    if (data && data.length > 1) return null;
   }
-  return null;
+  return await criarMentorado(ctx);
+}
+
+/* Quem paga na Lia sem ter ficha aqui ganha uma. A ficha nasce com o que o
+   pagamento informa -- nome e e-mail -- e o resto em branco, marcada com
+   cadastro_incompleto para o dashboard cobrar o preenchimento.
+
+   Sem e-mail nao cria: e-mail e a chave do vinculo, e uma ficha sem ele nao
+   receberia nem a proxima cobranca da mesma pessoa. Nesse caso a cobranca fica
+   orfa, com o dado todo guardado. */
+async function criarMentorado(ctx: Ctx): Promise<string | null> {
+  const email = ctx.email ? ctx.email.trim().toLowerCase() : null;
+  if (!email) return null;
+
+  const { data, error } = await db.from("mentorados").insert({
+    nome: ctx.nome ?? email,
+    email,
+    lia_order_id: ctx.orderId,
+    situacao: "ativo",
+    cancelado: false,
+    cadastro_incompleto: true,
+  }).select("id").single();
+
+  if (!error && data) return data.id;
+
+  /* Dois avisos da mesma venda podem chegar juntos e disputar a criacao. O
+     unico em lower(email) decide; o perdedor le a linha que o vencedor gravou
+     em vez de devolver orfao. */
+  const { data: achado } = await db.from("mentorados").select("id")
+    .eq("email", email).maybeSingle();
+  return achado?.id ?? null;
 }
 
 /* ---------------- gravacao do espelho ---------------- */

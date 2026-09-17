@@ -343,8 +343,19 @@ aviso. A ficha diz isso na tela. Quem não tem cobrança na Lia segue com as
 parcelas preenchidas à mão, como sempre.
 
 O vínculo entre a cobrança e o mentorado é o **e-mail** — o mesmo campo que o
-Google Agenda usa. Cobrança de um e-mail que não está em ficha nenhuma fica
-guardada sem dono e é adotada assim que o cadastro aparecer; nada se perde.
+Google Agenda usa.
+
+**Quem paga sem ter ficha aqui ganha uma.** A ficha nasce com o que o pagamento
+informa — nome e e-mail — e o resto em branco: contrato, ciclo, mentor, datas.
+Para ela não se perder no meio das outras, vem marcada como **cadastro
+incompleto**, aparece no alerta do dashboard e no filtro *Cadastro incompleto*
+da tela de Mentorados. Abrir a ficha e **salvar** tira a marca — é o ato de
+alguém completar e responder por ela.
+
+Duas exceções em que a ficha **não** é criada: cobrança sem e-mail (sem ele o
+vínculo não se sustenta, nem para a próxima cobrança da mesma pessoa) e e-mail
+que já está em dois cadastros. Nos dois casos a cobrança fica guardada sem dono,
+com o dado todo, até alguém resolver.
 
 Duas coisas a Lia **não** decide: *Patrocinado* e *Cancelou*. São situações que
 alguém definiu e que não existem como cobrança, então ficam intocadas.
