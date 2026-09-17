@@ -125,7 +125,7 @@ type Ctx = {
   nome: string | null;
 };
 
-function coletarBills(d: Envelope["data"]): { bill: LiaBill; ctx: Ctx }[] {
+function coletarBills(d: Envelope["data"], entity?: string): { bill: LiaBill; ctx: Ctx }[] {
   if (!d) return [];
   const out: { bill: LiaBill; ctx: Ctx }[] = [];
   const emailDoTopo = texto(d.email?.address) ?? texto(d.contact?.email);
@@ -149,8 +149,17 @@ function coletarBills(d: Envelope["data"]): { bill: LiaBill; ctx: Ctx }[] {
     for (const b of d.billings) daBilling(b, texto(d.id), emailDoTopo);
   } else if (d.bills?.length) {
     daBilling(d as LiaBilling, texto(d.order_id), emailDoTopo);
-  } else if (d.id !== undefined) {
-    // Fatura solta.
+  } else if (entity === "bill" && d.id !== undefined) {
+    /* Fatura solta -- e SO quando o envelope diz que e uma.
+       Sem esse `entity === "bill"`, o aviso de PEDIDO tratava a si mesmo como
+       fatura: ele chega com `billings: []` ainda vazio (as cobrancas nem
+       existem no momento do in_progress), caia neste ramo e virava uma
+       cobranca fantasma -- sem bill_type, sem vencimento -- que depois
+       aparecia como parcela a mais na ficha. Aconteceu em producao em
+       17/09/2026 com as duas primeiras vendas que passaram por aqui.
+       Pedido ou parcelamento sem faturas dentro nao produz fatura nenhuma: o
+       evento e registrado como "ignorado" e a proxima notificacao traz as
+       cobrancas de verdade. */
     out.push({
       bill: d as LiaBill,
       ctx: {
@@ -431,7 +440,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const bills = coletarBills(env.data);
+    const bills = coletarBills(env.data, env.entity);
     if (!bills.length) {
       await registrar("ignorado", `sem fatura no payload (entity ${env.entity ?? "?"})`);
       return new Response(JSON.stringify({ ok: true, status: "ignorado" }), {
