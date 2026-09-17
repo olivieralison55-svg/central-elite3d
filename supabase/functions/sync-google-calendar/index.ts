@@ -59,6 +59,19 @@ function parseEtapa(summary: string): { etapa: string; ordem: number } | null {
   return null;
 }
 
+/* Encontro coletivo NAO tem etapa da trilha 1:1 para deduzir. Sem este
+   reconhecedor, um plantao semanal -- cujo titulo nao casa com Diagnostico,
+   Plano de Acao nem Checkup N -- caia na deducao e virava um Checkup falso por
+   semana, marchando trilha acima. Aconteceu em producao em 17/09/2026: seis
+   Checkups (5 a 10) criados para um mentorado a partir do plantao recorrente
+   das 19h, um deles na mesma data e hora de um plantao com 39 participantes.
+   O sync nunca cria sessao em grupo -- este e o guarda dessa invariante. */
+function ehEventoDeGrupo(summary: string) {
+  const s = normaliza(summary);
+  return s.includes("plantao") || s.includes("duvida")
+    || s.includes("implementacao") || s.includes("mentoria coletiva");
+}
+
 /* A trilha 1:1, na ordem. Mesma lista do front (ETAPAS / ETAPA_ORD) -- as duas
    precisam concordar, senao o sync inventa uma etapa que a tela nao sabe
    desenhar. */
@@ -117,6 +130,19 @@ function acharMentoradoPorEmail(attendees: { email?: string }[], porEmail: Map<s
     if (m) return m;
   }
   return null;
+}
+/* Quantos mentorados diferentes estao convidados. Mais de um nao e 1:1 -- e
+   encontro coletivo, qualquer que seja o titulo. Sinal estrutural, nao
+   textual: vale para o plantao que alguem renomeou e para a "call de duvidas"
+   improvisada. So enxerga quem ja tem e-mail na ficha, entao fica mais forte
+   conforme o cadastro for preenchido. */
+function quantosMentorados(attendees: { email?: string }[], porEmail: Map<string, Mentorado>) {
+  const ids = new Set<string>();
+  for (const a of attendees) {
+    const m = porEmail.get((a.email || "").trim().toLowerCase());
+    if (m) ids.add(m.id);
+  }
+  return ids.size;
 }
 /* Fallback por nome no titulo. Continua existindo porque a maioria das fichas
    ainda nao tem e-mail: tirar isto agora pararia o sync dos mentorados
@@ -229,9 +255,18 @@ Deno.serve(async (req) => {
          sobre palpite, e "Reuniao sobre a Ana Clara" viraria um Checkup. */
       let etapaInfo = parseEtapa(summary);
       let deduzida = false;
+      /* Dois guardas antes de deduzir, os dois contra o mesmo estrago: virar
+         encontro coletivo em Checkup falso. O titular ("plantao", "duvida",
+         "implementacao") pega o evento nomeado; a contagem de mentorados pega o
+         que foi renomeado. Reconhecido como grupo, o evento e ignorado -- o
+         sync nunca criou e continua nao criando sessao em grupo. */
       if (!etapaInfo && porConvite) {
-        etapaInfo = deduzirEtapa(mentorado.id, ocupadas);
-        deduzida = !!etapaInfo;
+        const coletivo = ehEventoDeGrupo(summary)
+          || quantosMentorados(ev.attendees || [], porEmail) > 1;
+        if (!coletivo) {
+          etapaInfo = deduzirEtapa(mentorado.id, ocupadas);
+          deduzida = !!etapaInfo;
+        }
       }
       if (!etapaInfo) { ignoradas.push(summary); continue; }
       /* Reserva a etapa nesta rodada, venha de onde vier: dois eventos de
