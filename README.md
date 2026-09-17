@@ -170,6 +170,7 @@ correção:
 | **ignorada · mesma reunião** | Mesmo mentorado, data, hora e mentor de outra linha já contada. Ficou fora para não contar em dobro — corrija a etapa errada ou apague a linha sobrando. |
 | **sem data** | Concluída sem data não entra em nenhum mês do fechamento. |
 | **sem mentor** | Aguardando confirmação sem mentor na linha: quando for concluída, não será creditada a ninguém. |
+| **etapa deduzida** | O título do evento não dizia a etapa e o sync escolheu pela trilha. Abra a sessão e **salve** — confirmando ou corrigindo — para a marca sair. |
 
 **Sessões em grupo** são os encontros coletivos, num painel por categoria:
 **Plantão de Dúvida Semanal** e **Sessão de Implementação Mensal**. Aqui cada
@@ -179,7 +180,7 @@ ajusta participante por participante ou se confirma o encontro todo de uma vez.
 Confirmar em lote exige informar quem atendeu, mesma regra da confirmação
 individual.
 
-No topo, três controles: a busca (por mentorado, etapa ou mentor), o filtro por
+No topo, três controles: a busca (por mentorado, etapa, mentor ou data), o filtro por
 tipo (só 1:1, só grupo, ou ambos) e o filtro por mentor, este último com a opção
 *— sem mentor —* para achar sessões que ninguém assumiu. Nos blocos de grupo a
 busca é aplicada ao encontro inteiro, não à linha de cada participante: procurar
@@ -299,18 +300,28 @@ Para o evento ser reconhecido, ele precisa dizer **quem** e **qual etapa**:
   campo *E-mail no Google Agenda* da ficha dele. É o caminho recomendado.
   Enquanto a ficha estiver sem e-mail, o sistema cai no antigo: procurar o
   **nome do mentorado escrito no título**.
-- **Qual etapa** — sempre pelo **título**, que precisa conter *Diagnóstico*,
-  *Plano de Ação* ou *Checkup N*. Isso vale com e-mail ou sem: nem o Google
-  Agenda nem o Meet sabem que aquela reunião é o Checkup 5.
+- **Qual etapa** — pelo **título**, quando ele contém *Diagnóstico*, *Plano de
+  Ação* ou *Checkup N*. Quando não contém, e **só** quando o mentorado veio pelo
+  e-mail do convidado, o sistema **deduz**: usa a primeira etapa da trilha ainda
+  livre para aquela pessoa — a primeira que não está concluída nem já presa a
+  outro evento da agenda.
 
-Ou seja: **preenchendo o e-mail na ficha, o título fica livre** — basta a
-palavra da etapa. `Checkup 3` funciona. Sem o e-mail, o título continua tendo
-que trazer o nome dele também.
+Ou seja: **com o e-mail preenchido na ficha, o título fica livre de verdade.**
+`teste`, `Mentoria` ou um título vazio de sentido viram sessão do mesmo jeito.
+Sem o e-mail, o título continua tendo que trazer o nome da pessoa **e** a etapa.
+
+**A dedução é um palpite, e a aplicação trata como tal.** Ela acerta quando a
+trilha anda na ordem e erra quando vocês pulam ou repetem etapa. Como a etapa
+alimenta a matriz que fecha o mês dos mentores, a sessão nasce com a etiqueta
+**etapa deduzida**, aparece no alerta do dashboard e só perde a marca quando
+alguém abre a sessão e salva — confirmando ou corrigindo. Se o título disser a
+etapa, nada disso acontece: título vence dedução, sempre.
 
 Duas coisas importantes decorrem disso:
 
-- **Se não der para identificar a etapa e o mentorado, o evento é ignorado** e a
-  sessão não aparece aqui — de propósito, para não atribuir a pessoa errada.
+- **Se não der para identificar o mentorado, o evento é ignorado** e a sessão
+  não aparece aqui — de propósito, para não atribuir a pessoa errada. É o que
+  mantém compromisso pessoal e reunião interna fora da trilha.
 - **Quem é convidado importa.** O mentor também é identificado por e-mail.
   Convidar apenas quem vai atender — se CS ou observadores entrarem como
   convidados, a sessão pode ser creditada a quem só acompanhou.

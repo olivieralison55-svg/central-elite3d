@@ -58,6 +58,42 @@ function parseEtapa(summary: string): { etapa: string; ordem: number } | null {
   if (m) return { etapa: `Checkup ${m[1]}`, ordem: 2 + parseInt(m[1]) };
   return null;
 }
+
+/* A trilha 1:1, na ordem. Mesma lista do front (ETAPAS / ETAPA_ORD) -- as duas
+   precisam concordar, senao o sync inventa uma etapa que a tela nao sabe
+   desenhar. */
+const TRILHA: { etapa: string; ordem: number }[] = [
+  { etapa: "Diagnóstico de Negócio", ordem: 1 },
+  { etapa: "Plano de Ação", ordem: 2 },
+  ...Array.from({ length: 10 }, (_, i) => ({ etapa: `Checkup ${i + 1}`, ordem: 3 + i })),
+];
+
+/* Deducao da etapa, para quando o titulo nao diz.
+   Devolve a primeira etapa da trilha ainda LIVRE para este mentorado. Ocupada
+   e: ja concluida, ou ja presa a um evento do Calendar, ou ja deduzida nesta
+   mesma rodada.
+
+   As tres condicoes tem o mesmo motivo. Sem elas, dois eventos de titulo livre
+   do mesmo mentorado deduziriam a mesma etapa e virariam duas sessoes iguais --
+   a duplicata que o passo 2 da adocao existe justamente para evitar.
+
+   Evento que ja tem sessao nunca chega aqui: o ramo `existente` trata antes e
+   nem toca na etapa.
+
+   Trilha inteira ocupada devolve null. Melhor ignorar o evento do que inventar
+   um 13o Checkup para quem ja terminou os 12. */
+function deduzirEtapa(mentoradoId: string, ocupadas: Map<string, Set<string>>) {
+  const tomadas = ocupadas.get(mentoradoId);
+  for (const t of TRILHA) {
+    if (!tomadas || !tomadas.has(t.etapa)) return t;
+  }
+  return null;
+}
+function ocupar(mentoradoId: string, etapa: string, ocupadas: Map<string, Set<string>>) {
+  let s = ocupadas.get(mentoradoId);
+  if (!s) { s = new Set(); ocupadas.set(mentoradoId, s); }
+  s.add(etapa);
+}
 function acharMentor(texto: string, attendees: { email?: string }[] = []): string | null {
   for (const a of attendees) {
     const mt = EMAIL_MENTOR[(a.email || "").trim().toLowerCase()];
@@ -144,6 +180,16 @@ Deno.serve(async (req) => {
     const casarMentorado = (summary: string, attendees: { email?: string }[] = []) =>
       acharMentoradoPorEmail(attendees, porEmail) || acharMentoradoPorNome(summary, lista);
 
+    /* Etapas ja ocupadas por mentorado, para a deducao nao repetir. Uma consulta
+       so, antes do laco: dentro dele seria uma ida ao banco por evento. Restrito
+       a trilha 1:1 (ordem < 90) -- encontro em grupo nao tem etapa a deduzir. */
+    const { data: ocupadasRows } = await supabase.from("sessoes")
+      .select("mentorado_id,etapa,status,google_event_id").lt("ordem", 90);
+    const ocupadas = new Map<string, Set<string>>();
+    for (const r of ocupadasRows || []) {
+      if (r.status === "Concluída" || r.google_event_id) ocupar(r.mentorado_id, r.etapa, ocupadas);
+    }
+
     const accessToken = await getAccessToken();
     const events = await fetchEvents(accessToken);
 
@@ -167,16 +213,31 @@ Deno.serve(async (req) => {
     let criadas = 0, atualizadas = 0, confirmacoesPendentes = 0, semMentor = 0, adotadas = 0;
     // Quantos eventos vieram por cada caminho -- mostra a adocao do e-mail
     // avancando sem precisar consultar o banco.
-    let porEmailCount = 0, porNomeCount = 0;
+    let porEmailCount = 0, porNomeCount = 0, etapasDeduzidas = 0;
     const ignoradas: string[] = [];
 
     for (const ev of events) {
       if (ev.status === "cancelled") continue;
       const summary = ev.summary || "";
-      const etapaInfo = parseEtapa(summary);
       const porConvite = acharMentoradoPorEmail(ev.attendees || [], porEmail);
       const mentorado = porConvite || acharMentoradoPorNome(summary, lista);
-      if (!etapaInfo || !mentorado) { ignoradas.push(summary); continue; }
+      if (!mentorado) { ignoradas.push(summary); continue; }
+
+      /* Etapa: titulo primeiro. Se o titulo nao diz, deduz pela trilha -- mas
+         SO quando o mentorado veio do e-mail do convidado. O casamento por nome
+         e heuristica sobre o titulo; deduzir em cima dele empilharia palpite
+         sobre palpite, e "Reuniao sobre a Ana Clara" viraria um Checkup. */
+      let etapaInfo = parseEtapa(summary);
+      let deduzida = false;
+      if (!etapaInfo && porConvite) {
+        etapaInfo = deduzirEtapa(mentorado.id, ocupadas);
+        deduzida = !!etapaInfo;
+      }
+      if (!etapaInfo) { ignoradas.push(summary); continue; }
+      /* Reserva a etapa nesta rodada, venha de onde vier: dois eventos de
+         titulo livre do mesmo mentorado nao podem cair na mesma. */
+      ocupar(mentorado.id, etapaInfo.etapa, ocupadas);
+      if (deduzida) etapasDeduzidas++;
       if (porConvite) porEmailCount++; else porNomeCount++;
       const startDT = ev.start?.dateTime || ev.start?.date;
       if (!startDT) { ignoradas.push(summary); continue; }
@@ -241,8 +302,15 @@ Deno.serve(async (req) => {
             data: data_, hora: hora_, link_meet, google_event_id: ev.id, synced_at: agoraISO,
           };
           /* Preserva a etapa quando a linha veio do passo 2: ela foi escolhida
-             por uma pessoa olhando a trilha, nao herdada do titulo do convite. */
-          if (!manterEtapa) { upd.etapa = etapaInfo.etapa; upd.ordem = etapaInfo.ordem; }
+             por uma pessoa olhando a trilha, nao herdada do titulo do convite.
+             O marcador acompanha a etapa -- so mexe nele quem mexe nela, senao
+             um passo 2 apagaria a marca de uma deducao anterior sem ninguem ter
+             olhado a etapa de fato. */
+          if (!manterEtapa) {
+            upd.etapa = etapaInfo.etapa;
+            upd.ordem = etapaInfo.ordem;
+            upd.etapa_deduzida = deduzida;
+          }
           /* mentor pode voltar nulo quando o e-mail do atendente nao esta no
              EMAIL_MENTOR. Gravar esse nulo apagaria o mentor que ja estava na
              linha e mandaria a sessao para "sem mentor identificado" calada --
@@ -257,6 +325,7 @@ Deno.serve(async (req) => {
         } else {
           await supabase.from("sessoes").insert({
             mentorado_id: mentorado.id, etapa: etapaInfo.etapa, ordem: etapaInfo.ordem,
+            etapa_deduzida: deduzida,
             status: statusInicial, mentor, data: data_, hora: hora_, link_meet,
             google_event_id: ev.id, synced_at: agoraISO,
           });
@@ -264,7 +333,7 @@ Deno.serve(async (req) => {
         }
       }
     }
-    return new Response(JSON.stringify({ ok: true, tz: TZ, criadas, atualizadas, adotadas, confirmacoesPendentes, semMentor, mentoradoPorEmail: porEmailCount, mentoradoPorNome: porNomeCount, fichasComEmail: porEmail.size, ignoradas_count: ignoradas.length }), {
+    return new Response(JSON.stringify({ ok: true, tz: TZ, criadas, atualizadas, adotadas, confirmacoesPendentes, semMentor, mentoradoPorEmail: porEmailCount, mentoradoPorNome: porNomeCount, fichasComEmail: porEmail.size, etapasDeduzidas, ignoradas_count: ignoradas.length }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (e) {

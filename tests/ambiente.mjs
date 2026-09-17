@@ -163,7 +163,9 @@ export function fixtures() {
   const S = [
     // trilha 1:1
     {id:"s1", mentorado_id:"m1", etapa:"Diagnóstico de Negócio", ordem:1, status:"Concluída",              mentor:"Evaldo", data:"2026-02-01", hora:"10:00:00"},
-    {id:"s2", mentorado_id:"m1", etapa:"Plano de Ação",           ordem:2, status:"Agendada",               mentor:"Evaldo", data:"2099-09-01", hora:"14:00:00"},
+    /* s2 com a etapa escolhida pelo sync: o título do evento não dizia qual
+       era, e ninguém salvou a sessão para confirmar. */
+    {id:"s2", mentorado_id:"m1", etapa:"Plano de Ação",           ordem:2, status:"Agendada",               mentor:"Evaldo", data:"2099-09-01", hora:"14:00:00", etapa_deduzida:true},
     {id:"s3", mentorado_id:"m2", etapa:"Diagnóstico de Negócio",  ordem:1, status:"Aguardando confirmação", mentor:null,     data:"2026-04-01", hora:"09:00:00"},
     {id:"s4", mentorado_id:"m2", etapa:"Checkup 1",               ordem:3, status:"Bloqueada",              mentor:"Luan",   data:null,         hora:null},
     {id:"s5", mentorado_id:"m4", etapa:"Plano de Ação",           ordem:2, status:"Concluída",              mentor:"Israel", data:"2025-12-05", hora:"11:00:00"},

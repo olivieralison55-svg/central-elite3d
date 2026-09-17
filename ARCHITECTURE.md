@@ -101,7 +101,11 @@ enquanto as fichas antigas não forem preenchidas.
 
 **`sessoes`** — `mentorado_id`, `etapa` (texto), `ordem`, `status`, `mentor`
 (**texto**), `data`, `hora`, `link_meet`, `link_gravacao`, `link_anotacoes`,
-`google_event_id` (único), `synced_at`.
+`google_event_id` (único), `synced_at`, `etapa_deduzida`.
+
+`etapa_deduzida` marca que a etapa não veio do título do evento nem de uma
+pessoa: o sync a escolheu pela trilha. Ver *Automação* — a marca é o que impede
+um palpite de passar por certeza dentro da matriz de fechamento.
 
 `status` tem `CHECK` restringindo a: `Não iniciada`, `Agendada`,
 `Aguardando confirmação`, `Concluída`, `Bloqueada`.
@@ -309,9 +313,33 @@ janela de −30 a +90 dias (máx. 250 eventos) → para cada evento tenta casar
   `mentoradoPorNome` e `fichasComEmail` justamente para medir isso sem
   consultar o banco.
 
-  **A etapa continua vindo do título** (`Diagnóstico`, `Plano de Ação`,
-  `Checkup N`), com e-mail ou sem. Nem o Calendar nem a API do Meet sabem que
-  aquela reunião é o Checkup 5 — quem sabe é o título ou a trilha.
+- **Etapa** vem do título (`Diagnóstico`, `Plano de Ação`, `Checkup N`). Nem o
+  Calendar nem a API do Meet sabem que a reunião é o Checkup 5 — quem sabe é o
+  título ou a trilha. Quando o título não diz, o sync **deduz pela trilha**:
+  `deduzirEtapa` devolve a primeira das 12 etapas ainda **livre** para aquele
+  mentorado, onde ocupada é *concluída*, *já presa a um evento do Calendar* ou
+  *já deduzida nesta mesma rodada*. As três condições existem pelo mesmo motivo:
+  sem elas, dois eventos de título livre do mesmo mentorado cairiam na mesma
+  etapa e virariam duas sessões iguais — a duplicata que o passo 2 da adoção
+  existe para evitar. Trilha inteira ocupada devolve `null` e o evento é
+  ignorado, em vez de inventar um 13º Checkup.
+
+  **A dedução só roda quando o mentorado veio do e-mail do convidado.** Casar
+  por nome já é heurística sobre o título; deduzir em cima disso empilharia
+  palpite sobre palpite, e "Reunião sobre a Ana Clara" viraria um Checkup.
+
+  A linha nasce com `sessoes.etapa_deduzida = true` e o front a marca com a
+  etiqueta *etapa deduzida*, além de um alerta no dashboard
+  (`focarSessoes('etapaDeduzida')`). O campo zera quando alguém **salva a
+  sessão pelo formulário** — é o ato de olhar a etapa e responder por ela.
+  Confirmar a sessão não zera: confirmar é sobre o mentor e a presença, não
+  sobre qual etapa era. Título sempre vence dedução, e o passo 2 da adoção
+  (`manterEtapa`) não toca no marcador, senão apagaria a marca de uma dedução
+  anterior sem ninguém ter olhado a etapa.
+
+  A lista `TRILHA` da função e `ETAPAS`/`ETAPA_ORD` do front **precisam
+  concordar** — se divergirem, o sync grava uma etapa que a tela não sabe
+  desenhar.
 - **Mentor** vem do **e-mail do convidado**, pelo mapa `EMAIL_MENTOR`. Só entra
   quem atende; CS e observadores ficam fora de propósito, senão a sessão seria
   creditada a quem apenas acompanhou. Fallback: nome ou apelido no título ou na

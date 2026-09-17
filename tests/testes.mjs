@@ -878,6 +878,49 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 }
 
 /* =======================================================================
+ * Etapa deduzida pelo sync
+ *
+ * Quando o título do evento não diz a etapa, o sync escolhe pela trilha. Acerta
+ * na maioria e erra quando a ordem é pulada — e a etapa alimenta a matriz que
+ * fecha o mês dos mentores. Palpite não confirmado não pode passar por certeza.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const {mod} = app;
+
+  t.secao("Marca na tela de Sessões");
+  mod.renderSessoes();
+  const sess = app.tela();
+  t.ok("a linha vem marcada", sess.includes("etapa deduzida"), sess.slice(0, 300));
+  t.ok("explica o que fazer",
+    sess.includes("o sync deduziu pela trilha") && sess.includes("salve para confirmar"));
+  t.ok("sem lixo", semLixo(sess), sess.slice(0, 300));
+
+  t.secao("Alerta no dashboard");
+  mod.renderDash();
+  const dash = app.tela();
+  t.ok("conta as pendentes", dash.includes("1 sessão(ões) com etapa escolhida pelo sync"),
+    dash.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 400));
+  t.ok("leva direto nas linhas", dash.includes("focarSessoes('etapaDeduzida')"));
+
+  t.secao("Salvar confirma a etapa");
+  /* Salvar pelo formulário é o ato de alguém olhar a etapa e responder por ela:
+     é o que tira a marca, confirmando ou corrigindo. */
+  app.limparEscritas();
+  app.preencher("#s_etapa", "Checkup 5");
+  app.preencher("#s_status", "Concluída");
+  app.preencher("#s_mentor", "Luan");
+  app.preencher("#s_data", "2026-09-17");
+  await globalThis.salvarSessao("s2", "m1");
+  const gravada = app.escritas.find(e => e.tabela === "sessoes" && e.op === "update");
+  t.ok("zera a marca ao salvar", gravada && gravada.dados.etapa_deduzida === false,
+    JSON.stringify(gravada && gravada.dados));
+  t.ok("e grava a etapa escolhida pela pessoa",
+    gravada && gravada.dados.etapa === "Checkup 5" && gravada.dados.ordem === 7,
+    JSON.stringify(gravada && gravada.dados));
+}
+
+/* =======================================================================
  * Busca por data em Sessões
  *
  * A caixa varria só mentorado, etapa e mentor — digitar a data da linha que

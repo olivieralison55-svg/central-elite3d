@@ -539,7 +539,7 @@ let foco = null;
    Passar id por handler inline seria furo de escape -- `esc()` nao protege
    dentro de onclick, porque `&#39;` volta a ser `'` no parse de JS. O handler
    recebe so o nome do alerta. */
-const FOCO_ALERTA = {dobradas:[], semData:[], semMentor:[]};
+const FOCO_ALERTA = {dobradas:[], semData:[], semMentor:[], etapaDeduzida:[]};
 let rotaAtual = null; // slug da rota selecionada na tela Rotas
 let myRole = null, myProfile = null;
 
@@ -1062,6 +1062,8 @@ window.focarSessoes = function(chave){
       dica:"Sessão concluída sem data não entra em mês nenhum, então fica fora de todo fechamento mensal. Preencha a data pela ficha do mentorado."},
     semMentor: {titulo:"Aguardando confirmação sem mentor definido",
       dica:"Sem mentor na linha, a sessão não é creditada a ninguém quando for concluída — cai em <i>Sem mentor identificado</i>. Defina o mentor pela ficha do mentorado."},
+    etapaDeduzida: {titulo:"Etapa escolhida pelo sync, ainda sem confirmação",
+      dica:"O título do evento no Google Agenda não dizia a etapa, então o sync usou a primeira da trilha ainda livre para esse mentorado. Costuma acertar e erra quando a ordem é pulada ou repetida — e a etapa alimenta a matriz que fecha o mês dos mentores. Abra a sessão pela ficha do mentorado e <b>salve</b>: confirmando ou corrigindo, a marca sai."},
   };
   const a = ALERTAS[chave];
   if(!a) return;
@@ -1205,6 +1207,10 @@ function renderDash(){
   FOCO_ALERTA.dobradas  = dobradasMes.flatMap(d=>d.itens.map(s=>s.id));
   FOCO_ALERTA.semData   = reunioes1a1.filter(s=>!s.data).map(s=>s.id);
   FOCO_ALERTA.semMentor = S.filter(s=>!s.mentor&&s.status==="Aguardando confirmação").map(s=>s.id);
+  /* Etapa deduzida vale enquanto ninguém tiver salvado a sessão — inclusive nas
+     já concluídas, porque é ali que a etapa errada entra na matriz do mentor. */
+  const etapaDeduzida = S.filter(s=>s.etapa_deduzida);
+  FOCO_ALERTA.etapaDeduzida = etapaDeduzida.map(s=>s.id);
 
   // Cinto de segurança: "próximas" nunca mostra data passada, mesmo que algo
   // fique preso em "Agendada" no banco. Ordena por data + hora.
@@ -1316,6 +1322,7 @@ function renderDash(){
       ${dobradasMes.length?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${dobradasMes.length} reunião(ões) gravada(s) em duas etapas — contei uma vez cada</div><a onclick="focarSessoes('dobradas')">conferir</a></div>`:''}
       ${semDataFora?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${semDataFora} sessão(ões) concluída(s) sem data — fora de qualquer mês</div><a onclick="focarSessoes('semData')">conferir</a></div>`:''}
       ${aguardSemMentor?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${aguardSemMentor} sessão(ões) aguardando confirmação sem mentor definido</div><a onclick="focarSessoes('semMentor')">ver</a></div>`:''}
+      ${etapaDeduzida.length?`<div class="attn-item" style="border:none;padding-top:14px"><div class="lbl"><span class="dot"></span>${etapaDeduzida.length} sessão(ões) com etapa escolhida pelo sync, sem confirmação</div><a onclick="focarSessoes('etapaDeduzida')">conferir</a></div>`:''}
     </div>
     <div class="panel detail">
       <h3>Próximas sessões agendadas</h3>
@@ -1426,6 +1433,10 @@ function renderSessoes(){
       : ' <span class="pill amber" title="Mesma reunião (mesmo mentorado, data, hora e mentor) de outra linha já contada — esta ficou fora para não contar em dobro">ignorada · mesma reunião</span>';
     if(s.status==="Concluída" && !s.data) return ' <span class="pill amber" title="Concluída sem data não entra em nenhum mês do fechamento">sem data</span>';
     if(s.status==="Aguardando confirmação" && !s.mentor) return ' <span class="pill amber" title="Sem mentor na linha, a sessão não será creditada a ninguém">sem mentor</span>';
+    /* O título do evento não dizia a etapa e o sync escolheu pela trilha. Fica
+       marcado até alguém salvar a sessão — a etapa alimenta a matriz que fecha
+       o mês dos mentores, e palpite não confirmado não pode passar por certeza. */
+    if(s.etapa_deduzida) return ' <span class="pill blue" title="O título do evento não dizia a etapa; o sync deduziu pela trilha. Abra a sessão e salve para confirmar ou corrigir.">etapa deduzida</span>';
     return "";
   };
 
@@ -2311,6 +2322,10 @@ window.salvarSessao = async function(sid, mid){
   const etapa = $("#s_etapa").value;
   const payload = {
     mentorado_id: mid, etapa, ordem: ETAPA_ORD[etapa]||99,
+    /* Salvar pelo formulário é o ato de alguém olhar a etapa e responder por
+       ela — seja confirmando a que o sync deduziu, seja trocando. A partir daí
+       a linha deixa de ser palpite e a etiqueta sai. */
+    etapa_deduzida: false,
     status: $("#s_status").value, mentor: $("#s_mentor").value||null,
     data: $("#s_data").value||null, hora: $("#s_hora").value||null,
     link_meet: $("#s_meet").value||null, link_gravacao: $("#s_grav").value||null, link_anotacoes: $("#s_anot").value||null,
