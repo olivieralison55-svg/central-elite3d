@@ -249,31 +249,6 @@ Deno.serve(async (req) => {
       const mentorado = porConvite || acharMentoradoPorNome(summary, lista);
       if (!mentorado) { ignoradas.push(summary); continue; }
 
-      /* Etapa: titulo primeiro. Se o titulo nao diz, deduz pela trilha -- mas
-         SO quando o mentorado veio do e-mail do convidado. O casamento por nome
-         e heuristica sobre o titulo; deduzir em cima dele empilharia palpite
-         sobre palpite, e "Reuniao sobre a Ana Clara" viraria um Checkup. */
-      let etapaInfo = parseEtapa(summary);
-      let deduzida = false;
-      /* Dois guardas antes de deduzir, os dois contra o mesmo estrago: virar
-         encontro coletivo em Checkup falso. O titular ("plantao", "duvida",
-         "implementacao") pega o evento nomeado; a contagem de mentorados pega o
-         que foi renomeado. Reconhecido como grupo, o evento e ignorado -- o
-         sync nunca criou e continua nao criando sessao em grupo. */
-      if (!etapaInfo && porConvite) {
-        const coletivo = ehEventoDeGrupo(summary)
-          || quantosMentorados(ev.attendees || [], porEmail) > 1;
-        if (!coletivo) {
-          etapaInfo = deduzirEtapa(mentorado.id, ocupadas);
-          deduzida = !!etapaInfo;
-        }
-      }
-      if (!etapaInfo) { ignoradas.push(summary); continue; }
-      /* Reserva a etapa nesta rodada, venha de onde vier: dois eventos de
-         titulo livre do mesmo mentorado nao podem cair na mesma. */
-      ocupar(mentorado.id, etapaInfo.etapa, ocupadas);
-      if (deduzida) etapasDeduzidas++;
-      if (porConvite) porEmailCount++; else porNomeCount++;
       const startDT = ev.start?.dateTime || ev.start?.date;
       if (!startDT) { ignoradas.push(summary); continue; }
 
@@ -286,13 +261,24 @@ Deno.serve(async (req) => {
       const fimDT = ev.end?.dateTime || ev.end?.date || startDT;
       const jaPassou = new Date(fimDT) < agora;
       const mentor = acharMentor(summary + " " + (ev.description || ""), ev.attendees || []);
-      if (!mentor) semMentor++;
       const link_meet = ev.hangoutLink || ev.location || null;
 
+      /* A sessao deste evento e procurada ANTES de resolver a etapa, e nao
+         depois.
+         Evento que ja tem sessao nao precisa de etapa nenhuma: este ramo nunca
+         a toca. Resolver antes fazia a deducao rodar a toa e, pior, RESERVAR a
+         etapa deduzida como ocupada na rodada. Um segundo evento de titulo
+         livre do mesmo mentorado achava aquela casa tomada e pulava uma --
+         Checkup 6 onde devia ser 5, calado, no dado que alimenta a matriz de
+         fechamento dos mentores.
+         A etapa da sessao existente ja entra em `ocupadas` na carga inicial,
+         pelo google_event_id: nada se perde adiando. */
       const { data: existente } = await supabase.from("sessoes")
         .select("id,status,mentor").eq("google_event_id", ev.id).maybeSingle();
 
       if (existente) {
+        if (!mentor) semMentor++;
+        if (porConvite) porEmailCount++; else porNomeCount++;
         const upd: Record<string, unknown> = { data: data_, hora: hora_, link_meet, synced_at: agoraISO };
         if (mentor) upd.mentor = mentor;
         if (jaPassou && existente.status === "Agendada") {
@@ -301,6 +287,34 @@ Deno.serve(async (req) => {
         await supabase.from("sessoes").update(upd).eq("id", existente.id);
         atualizadas++;
       } else {
+        /* Etapa: titulo primeiro. Se o titulo nao diz, deduz pela trilha -- mas
+           SO quando o mentorado veio do e-mail do convidado. O casamento por
+           nome e heuristica sobre o titulo; deduzir em cima dele empilharia
+           palpite sobre palpite, e "Reuniao sobre a Ana Clara" viraria um
+           Checkup. */
+        let etapaInfo = parseEtapa(summary);
+        let deduzida = false;
+        /* Dois guardas antes de deduzir, os dois contra o mesmo estrago: virar
+           encontro coletivo em Checkup falso. O titular ("plantao", "duvida",
+           "implementacao") pega o evento nomeado; a contagem de mentorados pega
+           o que foi renomeado. Reconhecido como grupo, o evento e ignorado -- o
+           sync nunca criou e continua nao criando sessao em grupo. */
+        if (!etapaInfo && porConvite) {
+          const coletivo = ehEventoDeGrupo(summary)
+            || quantosMentorados(ev.attendees || [], porEmail) > 1;
+          if (!coletivo) {
+            etapaInfo = deduzirEtapa(mentorado.id, ocupadas);
+            deduzida = !!etapaInfo;
+          }
+        }
+        if (!etapaInfo) { ignoradas.push(summary); continue; }
+        /* Reserva a etapa nesta rodada, venha de onde vier: dois eventos de
+           titulo livre do mesmo mentorado nao podem cair na mesma. */
+        ocupar(mentorado.id, etapaInfo.etapa, ocupadas);
+        if (deduzida) etapasDeduzidas++;
+        if (!mentor) semMentor++;
+        if (porConvite) porEmailCount++; else porNomeCount++;
+
         const statusInicial = jaPassou ? "Aguardando confirmação" : "Agendada";
         /* Linha registrada na mao, ainda sem evento do Calendar. Restrito a
            trilha 1:1 (ordem < 90): encontro em grupo e uma linha por
