@@ -37,7 +37,7 @@ const EXPORTA = [
   "setView", "reunioesConcluidas1a1", "casaBusca", "buscaField", "btnNovoMentorado",
   "normalizaEmail", "msgErroMentorado", "alvoBuscaData",
   "prazoTexto", "diasAte", "parcelaDaLia", "proximaParcela",
-  "cobrancasOrfas", "motivoOrfa",
+  "cobrancasOrfas", "motivoOrfa", "cobrancasDescartadas",
 ];
 
 export function carregarApp() {
@@ -239,6 +239,8 @@ export function preparar(app, papel = "admin") {
     {lia_bill_id:"orf1", mentorado_id:null, status:"paid",    amount_cents:150000, due_date:"2026-09-20", contact_email:"bruno@exemplo.com"},
     {lia_bill_id:"orf2", mentorado_id:null, status:"overdue", amount_cents:90000,  due_date:"2026-08-10", contact_email:null},
     {lia_bill_id:"ok1",  mentorado_id:"m1", status:"paid",    amount_cents:600,    due_date:"2026-09-18", contact_email:"ana.clara@exemplo.com"},
+    /* Compra de teste ja descartada: nao conta como orfa nem aparece em ficha. */
+    {lia_bill_id:"desc1", mentorado_id:null, status:"paid", amount_cents:100, due_date:"2026-09-01", contact_email:"teste@exemplo.com", ignorada:true},
   ];
   app.estado.rotas(...rotas);
   /* Trilha de rotas já com um marco expandido: é onde vivem o teste de

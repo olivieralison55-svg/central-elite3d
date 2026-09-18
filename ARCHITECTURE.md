@@ -436,6 +436,14 @@ tem mentorado para casar, e sumir por causa de um texto digitado seria esconder
 dinheiro. `vincularCobranca` só aparece quando existe exatamente um cadastro
 com aquele e-mail: com zero não há a quem, com dois escolher seria adivinhar.
 
+`lia_cobrancas.ignorada` é o descarte — tipicamente compra de teste, que chega
+idêntica a venda real. **Marca em vez de apagar:** apagada, a linha voltaria no
+próximo webhook da mesma fatura e o alerta com ela. Marcada, sai do alerta, do
+painel e de `lia_refletir_financeiro`, e o webhook segue atualizando a linha sem
+desmarcá-la — `salvarCobranca` não escreve nesse campo. Reversível pelo painel
+de descartadas. Descartar uma cobrança **já vinculada** dispara o reflexo, para
+a parcela dela sair da ficha.
+
 **A Lia é a fonte das parcelas de quem tem cobrança lá.** `parcelas.lia_bill_id`
 diz quem manda na linha: preenchido, veio da Lia e a tela não deixa editar;
 nulo, foi uma pessoa. Ao refletir, as linhas manuais **daquele mentorado** são

@@ -368,6 +368,8 @@ refeitas.
 Esse painel **não é afetado pela busca da tela**: uma cobrança sem dono não tem
 nome para casar, e sumir por causa de um texto digitado seria esconder dinheiro.
 
+**Compra de teste tem um botão próprio: descartar.** A equipe testa compra no painel da Lia, e esses webhooks chegam iguais aos de venda real. Descartada, a cobrança sai do alerta, do painel e do financeiro — mas continua guardada, num painel logo abaixo, com um botão para **restaurar** se você mudar de ideia. Descartar é melhor que apagar: apagada, a linha voltaria no próximo aviso da Lia sobre a mesma fatura.
+
 Há ainda um caminho automático: ao **salvar a ficha** de um mentorado, o sistema
 procura cobranças sem dono com aquele e-mail e assume as que encontrar. Então
 corrigir um e-mail errado costuma resolver sozinho, e o aviso de salvamento diz

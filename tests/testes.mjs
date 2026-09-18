@@ -5,7 +5,7 @@
  * 1:1 e sessão em grupo, e o formato de data e de moeda.
  * Sai com código 1 se algo falhar.
  */
-import {carregarApp, preparar, criarRunner, escapado, semLixo, brl, XSS} from "./ambiente.mjs";
+import {carregarApp, preparar, criarRunner, escapado, semLixo, brl, XSS, fixtures} from "./ambiente.mjs";
 
 const t = criarRunner();
 
@@ -15,7 +15,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   "openParcela", "salvarParcela", "delParcela", "openSessao", "salvarSessao", "delSessao",
   "openConfirmarSessao", "confirmarSessao", "openSessaoGrupo", "criarSessaoGrupo",
   "confirmarGrupo", "salvarMarco", "salvarCanalMentorado", "salvarFaturamento",
-  "vincularCobranca",
+  "vincularCobranca", "descartarCobranca", "restaurarCobranca",
   "excluirFaturamento", "openNovoMentorado", "criarMentorado",
   "openExcluirMentorado", "excluirMentorado"];
 
@@ -925,6 +925,39 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("órfã continua visível durante a busca", app.tela().includes("orf1"));
   estado.filtro.qFin = "";
 
+  t.secao("Descartar compra de teste");
+  /* A equipe testa compra na Lia e esses webhooks chegam iguais aos de venda
+     real. Sem descarte, o alerta ficaria ligado para sempre; e apagar a linha
+     não resolveria — o próximo webhook da mesma fatura a recriaria. */
+  t.ok("toda órfã oferece descartar", (fin.match(/descartarCobranca\(/g) || []).length === 2,
+    String((fin.match(/descartarCobranca\(/g) || []).length));
+  t.ok("a descartada não conta como órfã", !mod.cobrancasOrfas().some(c => c.lia_bill_id === "desc1"));
+  t.ok("mas continua listada à parte", fin.includes("Cobranças descartadas · 1"));
+  t.ok("e oferece restaurar", fin.includes("restaurarCobranca('desc1')"));
+  t.ok("descartada fica no painel de baixo, não entre as sem dono",
+    fin.indexOf("teste@exemplo.com") > fin.indexOf("Cobranças descartadas"));
+
+  /* ------------------------------------------------------------------
+     Daqui para baixo só ações de escrita, e elas vão por último de
+     propósito: toda uma delas termina em `loadAll()`, que no ambiente de
+     teste responde vazio e ZERA M, P e COBRANCAS. Qualquer asserção de
+     tela depois disso mediria uma tela em branco, não o comportamento.
+     ------------------------------------------------------------------ */
+  t.secao("Descartar e restaurar gravam");
+  app.limparEscritas();
+  await globalThis.descartarCobranca("orf2");
+  const marcou = app.escritas.find(e => e.tabela === "lia_cobrancas");
+  t.ok("marca em vez de apagar", marcou && marcou.op === "update" && marcou.dados.ignorada === true,
+    JSON.stringify(marcou));
+  t.ok("órfã sem dono não mexe em financeiro de ninguém",
+    !app.escritas.some(e => e.tabela === "rpc:lia_refletir_financeiro"),
+    JSON.stringify(app.escritas.map(e => e.tabela)));
+
+  app.limparEscritas();
+  await globalThis.restaurarCobranca("desc1");
+  const restaurou = app.escritas.find(e => e.tabela === "lia_cobrancas");
+  t.ok("restaurar desmarca", restaurou && restaurou.dados.ignorada === false, JSON.stringify(restaurou));
+
   t.secao("Vincular");
   app.limparEscritas();
   await globalThis.vincularCobranca("orf1", "m2");
@@ -935,6 +968,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     JSON.stringify(app.escritas.map(e => e.tabela)));
 
   t.secao("Adoção ao salvar a ficha");
+  app.estado.M = fixtures().M;   // loadAll zerou; a ficha precisa existir de novo
   globalThis.openMentorado("m2", "completo");
   app.limparEscritas();
   app.preencher("#e_nome", "Bruno Dias");

@@ -720,7 +720,11 @@ const parcelaDaLia = p => !!(p && p.lia_bill_id);
 /* Cobrança que chegou da Lia e não achou dono. Ela existe inteira no banco, mas
    como toda a tela mostra dinheiro a partir da ficha de alguém, sem dono ela
    não aparece em lugar nenhum — dinheiro recebido, invisível. Daí o alerta. */
-const cobrancasOrfas = () => COBRANCAS.filter(c=>!c.mentorado_id && c.status!=="canceled");
+const cobrancasOrfas = () => COBRANCAS.filter(c=>!c.mentorado_id && c.status!=="canceled" && !c.ignorada);
+/* Compra de teste na Lia chega igual a venda real. Descartada, a cobrança sai
+   do alerta e do financeiro, mas continua no banco — o webhook segue
+   atualizando a linha sem ressuscitá-la, e o descarte é reversível. */
+const cobrancasDescartadas = () => COBRANCAS.filter(c=>c.ignorada);
 /* Por que não casou. Derivado na hora em vez de guardado: o motivo muda quando
    o cadastro muda, e um motivo gravado envelheceria sozinho. */
 function motivoOrfa(c){
@@ -1742,6 +1746,7 @@ function renderFinanceiro(){
      mentorado para casar, então ficam sempre inteiras — esconder uma delas por
      causa de um texto digitado seria esconder dinheiro. */
   const orfasLia = cobrancasOrfas();
+  const descartadas = cobrancasDescartadas();
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Financeiro</h2><div class="sub">Contratos, entradas e parcelas</div></div>
@@ -1789,11 +1794,22 @@ function renderFinanceiro(){
       <td class="num mono">${fmtBRL((c.amount_cents||0)/100)}</td>
       <td>${pillCobranca(c.status)}</td>
       <td style="color:var(--mut);font-size:12px">${esc(motivoOrfa(c))}</td>
-      <td>${alvo.length===1&&pode("editarFinanceiro")
-        ? `<button class="btn sm ghost" onclick="vincularCobranca('${esc(c.lia_bill_id)}','${alvo[0].id}')">vincular a ${esc(alvo[0].nome)}</button>`
-        : ""}</td>
+      <td class="rowflex" style="gap:6px;justify-content:flex-end">${pode("editarFinanceiro")?`
+        ${alvo.length===1?`<button class="btn sm ghost" onclick="vincularCobranca('${esc(c.lia_bill_id)}','${alvo[0].id}')">vincular a ${esc(alvo[0].nome)}</button>`:""}
+        <button class="btn sm ghost" onclick="descartarCobranca('${esc(c.lia_bill_id)}')" title="Compra de teste ou cobrança que não deve contar. Sai daqui e do financeiro, mas continua guardada — dá para restaurar.">descartar</button>`:""}</td>
     </tr>`;
-  }).join("")}</tbody></table></div></div>`:""}`;
+  }).join("")}</tbody></table></div></div>`:""}
+
+  ${descartadas.length?`<div class="panel detail"><h3>Cobranças descartadas · ${descartadas.length}</h3>
+  <div class="sub" style="color:var(--mut);font-size:12px;margin:-8px 0 14px">Marcadas como fora da conta — em geral compra de teste. Continuam guardadas e não entram em ficha nenhuma.</div>
+  <div style="overflow-x:auto"><table><thead><tr><th>Vencimento</th><th>E-mail na cobrança</th><th class="num">Valor</th><th>Status</th><th></th></tr></thead><tbody>
+  ${descartadas.map(c=>`<tr>
+    <td>${c.due_date?fmtD(c.due_date):"—"}</td>
+    <td style="color:var(--mut)">${esc(c.contact_email||"—")}</td>
+    <td class="num mono">${fmtBRL((c.amount_cents||0)/100)}</td>
+    <td>${pillCobranca(c.status)}</td>
+    <td>${pode("editarFinanceiro")?`<button class="btn sm ghost" onclick="restaurarCobranca('${esc(c.lia_bill_id)}')">restaurar</button>`:""}</td>
+  </tr>`).join("")}</tbody></table></div></div>`:""}`;
 }
 
 /* ================= ROTAS / MARCOS ================= */
@@ -2346,6 +2362,25 @@ window.vincularCobranca = async function(billId, mentoradoId){
   if(e2) return toast(e2.message, true);
   toast(`Cobrança vinculada a ${nome(mentoradoId)}`);
   await loadAll();
+}
+/* Descartar em vez de apagar. Apagar a linha não resolveria: o próximo webhook
+   da mesma fatura a recriaria, e o alerta voltaria sozinho. Marcada, ela some
+   da conta e do financeiro, mas continua guardada — e volta com um clique. */
+window.descartarCobranca = async function(billId){
+  const {error} = await db.from("lia_cobrancas").update({ignorada:true}).eq("lia_bill_id", billId);
+  if(error) return toast(error.message, true);
+  /* Se a cobrança estava vinculada, o financeiro daquele mentorado muda: a
+     parcela dela tem que sair da ficha. */
+  const c = COBRANCAS.find(x=>x.lia_bill_id===billId);
+  if(c && c.mentorado_id) await db.rpc("lia_refletir_financeiro", {p_mentorado: c.mentorado_id});
+  toast("Cobrança descartada"); await loadAll();
+}
+window.restaurarCobranca = async function(billId){
+  const {error} = await db.from("lia_cobrancas").update({ignorada:false}).eq("lia_bill_id", billId);
+  if(error) return toast(error.message, true);
+  const c = COBRANCAS.find(x=>x.lia_bill_id===billId);
+  if(c && c.mentorado_id) await db.rpc("lia_refletir_financeiro", {p_mentorado: c.mentorado_id});
+  toast("Cobrança restaurada"); await loadAll();
 }
 window.togglePausaCampos = function(){
   const mostrar = $("#e_situacao").value === "pausado";
