@@ -328,9 +328,12 @@ async function refletirFinanceiro(mentoradoId: string) {
   }
   if (!m.restante_forma_pgto && parcelasLia.length) {
     const met = metodoDe(parcelasLia);
-    patch.restante_forma_pgto = parcelasLia.length > 1
-      ? "Parcelado"
-      : (met ? FORMA_PAGAMENTO[met] ?? "Outro" : "Outro");
+    /* Sem metodo conhecido, nao escreve nada. Escrever "Outro" aqui seria pior
+       que deixar vazio: o campo so e preenchido quando esta vazio, entao o
+       "Outro" de um aviso que chegou antes do pagamento travaria o valor certo
+       para sempre. Foi o que aconteceu com a primeira venda em 17/09/2026. */
+    if (parcelasLia.length > 1) patch.restante_forma_pgto = "Parcelado";
+    else if (met) patch.restante_forma_pgto = FORMA_PAGAMENTO[met] ?? "Outro";
   }
 
   if (Object.keys(patch).length) {
