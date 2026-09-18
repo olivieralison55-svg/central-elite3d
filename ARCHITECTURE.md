@@ -412,6 +412,30 @@ cobrança fica órfã com o dado íntegro. Criação concorrente é resolvida pe
 único em `lower(email)`: quem perde a corrida lê a linha do vencedor em vez de
 devolver órfão.
 
+**A regra de refletir vive no banco, não no TypeScript.**
+`lia_refletir_financeiro(uuid)` é a implementação única — entrada, restante,
+formas de pagamento e as linhas de `parcelas`. O webhook a chama por RPC com
+`service_role`; a aplicação a chama quando alguém vincula uma cobrança órfã.
+Ela nasceu em TS e foi movida quando a aplicação passou a precisar dela:
+manter uma cópia de cada lado as faria divergir na primeira vez que alguém
+mexesse numa só. `SECURITY INVOKER` de propósito — pela aplicação o RLS vale, e
+só admin escreve em `parcelas` e `mentorados`.
+
+`lia_adotar_orfas(uuid)` assume as órfãs cujo e-mail bate com o do mentorado e
+chama a anterior. `salvarMentorado` a dispara quando o e-mail esteve na tela:
+preencher ou corrigir o endereço puxa o que estava parado, sem quem salva
+precisar saber que havia algo parado.
+
+**Cobrança órfã é a única falha silenciosa da integração.** Ela existe inteira
+em `lia_cobrancas`, mas toda a tela mostra dinheiro a partir da ficha de
+alguém — sem `mentorado_id` ela não aparece em lugar nenhum. Por isso o alerta
+no dashboard e o painel `#cobrancas-orfas` no Financeiro, com o motivo derivado
+na hora (`motivoOrfa`): guardar o motivo o faria envelhecer, já que ele muda
+quando o cadastro muda. O painel **não responde à busca da tela** — órfã não
+tem mentorado para casar, e sumir por causa de um texto digitado seria esconder
+dinheiro. `vincularCobranca` só aparece quando existe exatamente um cadastro
+com aquele e-mail: com zero não há a quem, com dois escolher seria adivinhar.
+
 **A Lia é a fonte das parcelas de quem tem cobrança lá.** `parcelas.lia_bill_id`
 diz quem manda na linha: preenchido, veio da Lia e a tela não deixa editar;
 nulo, foi uma pessoa. Ao refletir, as linhas manuais **daquele mentorado** são

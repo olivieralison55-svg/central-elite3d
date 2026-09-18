@@ -37,6 +37,7 @@ const EXPORTA = [
   "setView", "reunioesConcluidas1a1", "casaBusca", "buscaField", "btnNovoMentorado",
   "normalizaEmail", "msgErroMentorado", "alvoBuscaData",
   "prazoTexto", "diasAte", "parcelaDaLia", "proximaParcela",
+  "cobrancasOrfas", "motivoOrfa",
 ];
 
 export function carregarApp() {
@@ -97,6 +98,10 @@ export function carregarApp() {
       onAuthStateChange(){}, signOut: async () => {},
     },
     from: tabelaFalsa,
+    /* O app chama funcoes do banco por rpc (lia_refletir_financeiro,
+       lia_adotar_orfas). Sem este stub a chamada estouraria e o teste mediria a
+       falta do stub, nao o comportamento. */
+    rpc: (nome, args) => { escritas.push({tabela: "rpc:" + nome, op: "rpc", dados: args}); return Promise.resolve({data: 0, error: null}); },
   })};
   globalThis.addEventListener = () => {};
   globalThis.window = globalThis;
@@ -119,6 +124,7 @@ export function carregarApp() {
         get P(){ return P }, set P(v){ P = v },
         get S(){ return S }, set S(v){ S = v },
         set ORFAS(v){ ORFAS = v },
+        get COBRANCAS(){ return COBRANCAS }, set COBRANCAS(v){ COBRANCAS = v },
         set papel(v){ myRole = v; myProfile = {nome:"Teste", email:"teste@exemplo.com", role:v} },
         rotas(r, mk, mm, cn, mc, f){ ROTAS=r; MARCOS=mk; MM=mm; CANAIS_DB=cn; MC=mc; FAT=f;
           rotaAtual = r[0] && r[0].slug },
@@ -157,7 +163,7 @@ export function fixtures() {
     /* m1 com e-mail, m2 sem: os dois caminhos do sync convivem enquanto as
        fichas antigas não forem preenchidas. */
     {id:"m1", nome:"Ana Clara",     situacao:"ativo",    data_fechamento:"2026-01-10", contrato_status:"Assinado",  entrada_status:"Pago", restante_status:"Pago", email:"ana.clara@exemplo.com"},
-    {id:"m2", nome:"Bruno Dias",    situacao:"ativo",    data_fechamento:"2026-03-02", contrato_status:"Ainda não", entrada_status:"Pago", restante_status:"Ainda não"},
+    {id:"m2", nome:"Bruno Dias",    situacao:"ativo",    data_fechamento:"2026-03-02", contrato_status:"Ainda não", entrada_status:"Pago", restante_status:"Ainda não", email:"bruno@exemplo.com"},
     {id:"m3", nome:"Diego " + XSS,  situacao:"ativo",    data_fechamento:"2025-10-01", contrato_status:"Assinado",  entrada_status:"Pago", restante_status:"Pago", cadastro_incompleto:true},
     {id:"m4", nome:"Carla " + XSS,  situacao:"pausado",  data_fechamento:"2025-11-20", contrato_status:"Assinado",  entrada_status:"Pago", restante_status:"Pago"},
   ];
@@ -227,6 +233,13 @@ export function preparar(app, papel = "admin") {
   /* quem não vê financeiro não carrega parcelas — é o que o loadAll faz */
   app.estado.P = (papel === "admin" || papel === "diretoria") ? P : [];
   app.estado.ORFAS = [];
+  /* Duas cobrancas orfas, uma resolvivel e uma nao: o e-mail da primeira casa
+     com m2 (um cadastro so), a segunda veio sem e-mail e nao tem a quem casar. */
+  app.estado.COBRANCAS = [
+    {lia_bill_id:"orf1", mentorado_id:null, status:"paid",    amount_cents:150000, due_date:"2026-09-20", contact_email:"bruno@exemplo.com"},
+    {lia_bill_id:"orf2", mentorado_id:null, status:"overdue", amount_cents:90000,  due_date:"2026-08-10", contact_email:null},
+    {lia_bill_id:"ok1",  mentorado_id:"m1", status:"paid",    amount_cents:600,    due_date:"2026-09-18", contact_email:"ana.clara@exemplo.com"},
+  ];
   app.estado.rotas(...rotas);
   /* Trilha de rotas já com um marco expandido: é onde vivem o teste de
      passagem e o botão de salvar, e a varredura de permissões só os enxerga

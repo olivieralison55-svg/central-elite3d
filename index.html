@@ -526,6 +526,7 @@ let ROTAS = [], MARCOS = [], MM = []; // rotas, marcos_definicao, mentorado_marc
 let CANAIS_DB = [], MC = []; // canais (por rota), mentorado_canais
 let FAT = []; // faturamento_mensal
 let ORFAS = []; // sessoes cujo evento sumiu do Google Calendar
+let COBRANCAS = []; // lia_cobrancas -- so carregada para quem ve financeiro
 let view = "dash";
 /* `q` e a busca da tela Mentorados; as outras telas tem a sua propria. O termo
    fica separado por tela de proposito: quem filtrou um nome em Sessoes nao
@@ -624,9 +625,15 @@ async function loadAll(){
   const parcelaQuery = pode("verFinanceiro")
     ? db.from("parcelas").select("*").order("numero")
     : Promise.resolve({data:[], error:null});
-  const [m,p,s,r,md,mm,fat,cn,mc,orf] = await Promise.all([
+  /* Cobrancas da Lia so para quem ve financeiro. O RLS ja barra o mentor, mas
+     pedir o que nao se pode ler gastaria viagem e devolveria lista vazia. */
+  const cobrancaQuery = pode("verFinanceiro")
+    ? db.from("lia_cobrancas").select("*").order("due_date")
+    : Promise.resolve({data:[], error:null});
+  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf] = await Promise.all([
     mentorQuery,
     parcelaQuery,
+    cobrancaQuery,
     paginado(()=>db.from("sessoes").select("*").order("ordem")),
     db.from("rotas").select("*").order("ordem"),
     db.from("marcos_definicao").select("*").order("ordem"),
@@ -640,6 +647,7 @@ async function loadAll(){
   M = m.data; P = p.data; S = s.data;
   ROTAS = r.data||[]; MARCOS = md.data||[]; MM = mm.data||[];
   FAT = fat.data||[]; CANAIS_DB = cn.data||[]; MC = mc.data||[]; ORFAS = orf.data||[];
+  COBRANCAS = cob.data||[];
   if(!rotaAtual && ROTAS.length) rotaAtual = ROTAS[0].slug;
   render();
 }
@@ -708,6 +716,25 @@ function parcelaVencida(p){ return p.status!=="paga" && p.vencimento && p.vencim
 /* Parcela que veio da Lia: ela manda, a tela não deixa editar à mão. Editar
    aqui seria perder a alteração no próximo webhook, calado. */
 const parcelaDaLia = p => !!(p && p.lia_bill_id);
+
+/* Cobrança que chegou da Lia e não achou dono. Ela existe inteira no banco, mas
+   como toda a tela mostra dinheiro a partir da ficha de alguém, sem dono ela
+   não aparece em lugar nenhum — dinheiro recebido, invisível. Daí o alerta. */
+const cobrancasOrfas = () => COBRANCAS.filter(c=>!c.mentorado_id && c.status!=="canceled");
+/* Por que não casou. Derivado na hora em vez de guardado: o motivo muda quando
+   o cadastro muda, e um motivo gravado envelheceria sozinho. */
+function motivoOrfa(c){
+  if(!c.contact_email) return "a cobrança veio sem e-mail";
+  const quantos = M.filter(m=>(m.email||"").toLowerCase()===c.contact_email.toLowerCase()).length;
+  if(quantos > 1) return "esse e-mail está em mais de um cadastro";
+  if(quantos === 1) return "o cadastro existe — clique em vincular";
+  return "nenhum cadastro com esse e-mail";
+}
+const COBRANCA_LABEL = {paid:"Paga", pending:"Em aberto", overdue:"Atrasada", canceled:"Cancelada"};
+function pillCobranca(status){
+  const map = {paid:"green", pending:"blue", overdue:"red", canceled:"gray"};
+  return `<span class="pill ${map[status]||"gray"}">${esc(COBRANCA_LABEL[status]||status)}</span>`;
+}
 /* Dias entre duas datas "YYYY-MM-DD", contados em dia de calendário: usar
    diferença de milissegundos erraria por uma hora no fim do horário de verão. */
 function diasAte(data){
@@ -1288,6 +1315,12 @@ function renderDash(){
     {label:"Mentorados sem sessão há +30 dias", count:semSessao30.length, view:null, anchor:"risco"},
     aguardConf ? {label:"Sessões aguardando confirmação", count:aguardConf, view:"sessoes"} : null,
     ORFAS.length ? {label:"Sessões sem evento no Google Agenda", count:ORFAS.length, anchor:"orfas"} : null,
+    /* Só para quem vê financeiro: é dinheiro recebido que a aplicação ainda não
+       sabe de quem é. É o único alerta em que a falha é silenciosa — sem ele,
+       ninguém descobre a não ser comparando com o painel da Lia na mão. */
+    verFin && cobrancasOrfas().length
+      ? {label:"Cobranças da Lia sem mentorado identificado", count:cobrancasOrfas().length, view:"financeiro"}
+      : null,
   ].filter(Boolean);
   const temAtencao = attnItems.some(i=>i.count>0);
 
@@ -1705,6 +1738,11 @@ function renderFinanceiro(){
     mentorado: p=>nome(p.mentorado_id).toLowerCase(),
   }, "vence", "asc").slice(0,10);
 
+  /* A busca desta tela recorta a lista de mentorados; as órfãs não têm
+     mentorado para casar, então ficam sempre inteiras — esconder uma delas por
+     causa de um texto digitado seria esconder dinheiro. */
+  const orfasLia = cobrancasOrfas();
+
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Financeiro</h2><div class="sub">Contratos, entradas e parcelas</div></div>
   ${btnNovoMentorado()}</div>
@@ -1734,7 +1772,28 @@ function renderFinanceiro(){
     <td>${pillPgto(r.m.restante_status)}</td><td style="color:var(--mut)">${esc(r.m.restante_forma_pgto||"—")}</td>
     <td class="mono">${r.ps.length?`${r.pagas}/${r.ps.length}`:"—"}</td>
   </tr>`).join("")}</tbody></table>
-  ${rows.filter(rowsBusca).length?"":`<div class="empty">Nenhum mentorado ativo encontrado para essa busca.</div>`}</div>`;
+  ${rows.filter(rowsBusca).length?"":`<div class="empty">Nenhum mentorado ativo encontrado para essa busca.</div>`}</div>
+
+  ${orfasLia.length?`<div class="panel detail" id="cobrancas-orfas"><h3>Cobranças da Lia sem mentorado identificado</h3>
+  <div class="sub" style="color:var(--mut);font-size:12px;margin:-8px 0 14px">A cobrança chegou e está guardada por inteiro, mas não achou de quem é — então não aparece em ficha nenhuma. Resolvido o motivo, clique em <b>vincular</b>.</div>
+  <div style="overflow-x:auto"><table><thead><tr><th>Vencimento</th><th>E-mail na cobrança</th><th class="num">Valor</th><th>Status</th><th>Por que não casou</th><th></th></tr></thead><tbody>
+  ${orfasLia.map(c=>{
+    /* Vincula só quando existe exatamente um cadastro com aquele e-mail. Com
+       zero não há a quem, com dois escolher seria adivinhar. */
+    const alvo = c.contact_email
+      ? M.filter(m=>(m.email||"").toLowerCase()===c.contact_email.toLowerCase())
+      : [];
+    return `<tr>
+      <td>${c.due_date?fmtD(c.due_date):"—"}</td>
+      <td style="color:var(--mut)">${esc(c.contact_email||"—")}</td>
+      <td class="num mono">${fmtBRL((c.amount_cents||0)/100)}</td>
+      <td>${pillCobranca(c.status)}</td>
+      <td style="color:var(--mut);font-size:12px">${esc(motivoOrfa(c))}</td>
+      <td>${alvo.length===1&&pode("editarFinanceiro")
+        ? `<button class="btn sm ghost" onclick="vincularCobranca('${esc(c.lia_bill_id)}','${alvo[0].id}')">vincular a ${esc(alvo[0].nome)}</button>`
+        : ""}</td>
+    </tr>`;
+  }).join("")}</tbody></table></div></div>`:""}`;
 }
 
 /* ================= ROTAS / MARCOS ================= */
@@ -2262,7 +2321,31 @@ window.salvarMentorado = async function(id){
   if(!Object.keys(upd).length) return;
   const {error} = await db.from("mentorados").update(upd).eq("id",id);
   if(error) return toast(msgErroMentorado(error),true);
-  toast("Mentorado atualizado"); closeModal(); loadAll();
+
+  /* Preencher ou corrigir o e-mail pode destravar cobrança que chegou antes do
+     cadastro. Quem salva não sabe que havia algo parado, então a adoção é
+     automática — e avisa, porque o financeiro da ficha muda junto. */
+  let adotadas = 0;
+  if(upd.email !== undefined){
+    const {data} = await db.rpc("lia_adotar_orfas", {p_mentorado: id});
+    adotadas = data || 0;
+  }
+  toast(adotadas
+    ? `Mentorado atualizado · ${adotadas} cobrança(s) da Lia vinculada(s)`
+    : "Mentorado atualizado");
+  closeModal(); loadAll();
+}
+/* Vincula à mão uma cobrança órfã. O reflexo no financeiro vem da mesma função
+   do banco que o webhook usa — duas implementações da mesma regra divergiriam
+   na primeira vez que alguém mexesse numa só. */
+window.vincularCobranca = async function(billId, mentoradoId){
+  const {error} = await db.from("lia_cobrancas")
+    .update({mentorado_id: mentoradoId}).eq("lia_bill_id", billId);
+  if(error) return toast(error.message, true);
+  const {error: e2} = await db.rpc("lia_refletir_financeiro", {p_mentorado: mentoradoId});
+  if(e2) return toast(e2.message, true);
+  toast(`Cobrança vinculada a ${nome(mentoradoId)}`);
+  await loadAll();
 }
 window.togglePausaCampos = function(){
   const mostrar = $("#e_situacao").value === "pausado";

@@ -15,6 +15,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   "openParcela", "salvarParcela", "delParcela", "openSessao", "salvarSessao", "delSessao",
   "openConfirmarSessao", "confirmarSessao", "openSessaoGrupo", "criarSessaoGrupo",
   "confirmarGrupo", "salvarMarco", "salvarCanalMentorado", "salvarFaturamento",
+  "vincularCobranca",
   "excluirFaturamento", "openNovoMentorado", "criarMentorado",
   "openExcluirMentorado", "excluirMentorado"];
 
@@ -878,6 +879,81 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 }
 
 /* =======================================================================
+ * Cobrança órfã — dinheiro que chegou sem dono
+ *
+ * É a única falha silenciosa da integração: a cobrança existe inteira no banco,
+ * mas como toda a tela mostra dinheiro a partir da ficha de alguém, sem dono
+ * ela não aparece em lugar nenhum. O alerta e o painel existem para isso.
+ * ===================================================================== */
+{
+  const app = preparar(carregarApp(), "admin");
+  const {mod, estado} = app;
+
+  t.secao("Alerta no dashboard");
+  mod.renderDash();
+  const dash = app.tela();
+  t.ok("conta só as órfãs", dash.includes("Cobranças da Lia sem mentorado identificado"),
+    dash.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 500));
+  t.ok("a vinculada não entra na conta", mod.cobrancasOrfas().length === 2,
+    String(mod.cobrancasOrfas().length));
+
+  t.secao("Painel no Financeiro");
+  mod.renderFinanceiro();
+  const fin = app.tela();
+  /* O painel não imprime o id da cobrança — as linhas se distinguem pelo valor
+     e pelo status, que é o que quem olha precisa ver. */
+  t.ok("lista as duas", brl(fin).includes("R$ 1.500,00") && brl(fin).includes("R$ 900,00"),
+    fin.slice(fin.indexOf("cobrancas-orfas"), fin.indexOf("cobrancas-orfas") + 700));
+  t.ok("distingue paga de atrasada", fin.includes(">Paga<") && fin.includes(">Atrasada<"));
+  t.ok("explica o motivo de cada uma",
+    fin.includes("o cadastro existe") && fin.includes("veio sem e-mail"));
+  t.ok("oferece vincular quando há um só cadastro", fin.includes("vincularCobranca('orf1','m2')"));
+  t.ok("não oferece vincular sem e-mail", !fin.includes("vincularCobranca('orf2'"));
+  t.ok("sem lixo", semLixo(fin), fin.slice(0, 300));
+
+  t.secao("Motivo de cada caso");
+  t.ok("sem e-mail", mod.motivoOrfa({contact_email: null}) === "a cobrança veio sem e-mail");
+  t.ok("um cadastro", mod.motivoOrfa({contact_email: "bruno@exemplo.com"}).includes("o cadastro existe"));
+  t.ok("nenhum cadastro",
+    mod.motivoOrfa({contact_email: "ninguem@exemplo.com"}) === "nenhum cadastro com esse e-mail");
+
+  t.secao("A busca não esconde dinheiro");
+  /* A busca recorta a lista de mentorados; órfã não tem mentorado para casar,
+     então some da tela por acidente se entrar no filtro. */
+  estado.filtro.qFin = "zzz";
+  mod.renderFinanceiro();
+  t.ok("órfã continua visível durante a busca", app.tela().includes("orf1"));
+  estado.filtro.qFin = "";
+
+  t.secao("Vincular");
+  app.limparEscritas();
+  await globalThis.vincularCobranca("orf1", "m2");
+  const upd = app.escritas.find(e => e.tabela === "lia_cobrancas");
+  t.ok("grava o dono na cobrança", upd && upd.dados.mentorado_id === "m2", JSON.stringify(upd));
+  const rpc = app.escritas.find(e => e.tabela === "rpc:lia_refletir_financeiro");
+  t.ok("e refaz o financeiro pela função do banco", rpc && rpc.dados.p_mentorado === "m2",
+    JSON.stringify(app.escritas.map(e => e.tabela)));
+
+  t.secao("Adoção ao salvar a ficha");
+  globalThis.openMentorado("m2", "completo");
+  app.limparEscritas();
+  app.preencher("#e_nome", "Bruno Dias");
+  app.preencher("#e_email", "bruno@exemplo.com");
+  await globalThis.salvarMentorado("m2");
+  const adocao = app.escritas.find(e => e.tabela === "rpc:lia_adotar_orfas");
+  t.ok("salvar procura órfãs daquele e-mail", adocao && adocao.dados.p_mentorado === "m2",
+    JSON.stringify(app.escritas.map(e => e.tabela)));
+}
+
+/* Quem não vê financeiro não vê cobrança nenhuma. */
+{
+  const app = preparar(carregarApp(), "mentor");
+  t.secao("Cobranças órfãs (mentor)");
+  app.mod.renderDash();
+  t.ok("nem o alerta aparece", !app.tela().includes("Cobranças da Lia sem mentorado"));
+}
+
+/* =======================================================================
  * Ficha criada pela Lia
  *
  * Quem paga na Lia sem ter ficha aqui ganha uma, com nome e e-mail e mais
@@ -1100,7 +1176,9 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("explica para que serve", ficha.includes("o nome no título do convite não importa"));
   t.ok("sem lixo", semLixo(ficha), ficha.slice(0, 300));
 
-  globalThis.openMentorado("m2", "completo");
+  /* m4 é quem segue sem e-mail nas fixtures — m2 ganhou o dele para a cobrança
+     órfã ter com quem casar. */
+  globalThis.openMentorado("m4", "completo");
   t.ok("ficha sem e-mail avisa que o sync ainda depende do título",
     app.modal().includes("ainda depende do nome escrito no título"));
 

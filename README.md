@@ -354,8 +354,24 @@ alguém completar e responder por ela.
 
 Duas exceções em que a ficha **não** é criada: cobrança sem e-mail (sem ele o
 vínculo não se sustenta, nem para a próxima cobrança da mesma pessoa) e e-mail
-que já está em dois cadastros. Nos dois casos a cobrança fica guardada sem dono,
-com o dado todo, até alguém resolver.
+que já está em dois cadastros. Nos dois casos a cobrança fica guardada **sem
+dono** — e isso não passa despercebido.
+
+**Cobrança sem dono aparece em dois lugares.** No dashboard, como
+*"Cobranças da Lia sem mentorado identificado"*. E no fim da tela de
+**Financeiro**, num painel que mostra vencimento, e-mail, valor, status e **por
+que não casou** — sem e-mail, e-mail em dois cadastros, ou nenhum cadastro com
+aquele endereço. Quando existe exatamente um cadastro com o e-mail, aparece o
+botão **vincular**, e num clique a cobrança entra na ficha com as parcelas
+refeitas.
+
+Esse painel **não é afetado pela busca da tela**: uma cobrança sem dono não tem
+nome para casar, e sumir por causa de um texto digitado seria esconder dinheiro.
+
+Há ainda um caminho automático: ao **salvar a ficha** de um mentorado, o sistema
+procura cobranças sem dono com aquele e-mail e assume as que encontrar. Então
+corrigir um e-mail errado costuma resolver sozinho, e o aviso de salvamento diz
+quantas cobranças entraram.
 
 Duas coisas a Lia **não** decide: *Patrocinado* e *Cancelou*. São situações que
 alguém definiu e que não existem como cobrança, então ficam intocadas.

@@ -66,29 +66,6 @@ type Envelope = {
   data?: LiaBill & LiaBilling & LiaOrder;
 };
 
-/* Uma linha de lia_cobrancas, do jeito que este arquivo a le de volta. Nao e o
-   schema inteiro -- so o que o reflexo no financeiro consulta. */
-type Cobranca = {
-  lia_bill_id: string;
-  bill_type: string | null;
-  status: string;
-  numero_parcela: number | null;
-  amount_cents: number;
-  payment_method: string | null;
-  due_date: string | null;
-};
-
-/* De-para do metodo da Lia para o texto que a ficha ja usa. */
-const FORMA_PAGAMENTO: Record<string, string> = {
-  pix: "Pix",
-  boleto: "Boleto",
-  credit_card: "Cartão de crédito",
-};
-
-/* Status que uma PESSOA decidiu e a Lia nao tem como saber. Nunca sobrescreve:
-   patrocinado nao gera cobranca, e cancelado e decisao de contrato. */
-const STATUS_INTOCAVEIS = new Set(["Patrocinado", "Cancelou"]);
-
 const texto = (v: unknown) =>
   v === null || v === undefined || v === "" ? null : String(v);
 
@@ -284,94 +261,14 @@ async function salvarCobranca(dados: Record<string, unknown>, mentoradoId: strin
    A Lia vira a fonte das parcelas de quem tem cobranca la. As linhas manuais
    desse mentorado saem; quem nao tem cobranca na Lia nao e tocado, porque nao
    ha de onde tirar dado para substituir. */
+/* ---------------- reflexo no financeiro ----------------
+   A regra vive no banco, em lia_refletir_financeiro(uuid). Ela e chamada tanto
+   daqui (service_role) quanto pela aplicacao, quando alguem adota uma cobranca
+   orfa. Manter uma copia em TypeScript aqui faria as duas divergirem no dia em
+   que alguem mexesse numa so. */
 async function refletirFinanceiro(mentoradoId: string) {
-  const [{ data: m }, { data: cobrancas }] = await Promise.all([
-    db.from("mentorados").select("*").eq("id", mentoradoId).maybeSingle(),
-    db.from("lia_cobrancas").select("*").eq("mentorado_id", mentoradoId)
-      .order("due_date", { ascending: true }),
-  ]);
-  if (!m) return;
-
-  const validas = ((cobrancas ?? []) as Cobranca[]).filter((c) => c.status !== "canceled");
-  if (!validas.length) return;
-
-  const pago = (c: Cobranca) => c.status === "paid";
-  const entrada = validas.filter((c) => c.bill_type === "down_payment");
-  const parcelasLia = validas.filter((c) => c.bill_type !== "down_payment");
-
-  /* ----- entrada e restante no cabecalho da ficha ----- */
-  const patch: Record<string, unknown> = {};
-  const statusDe = (lista: Cobranca[]) => {
-    const n = lista.filter(pago).length;
-    return n === 0 ? "Ainda não" : n === lista.length ? "Pago" : "Pago parcial";
-  };
-
-  if (entrada.length && !STATUS_INTOCAVEIS.has(m.entrada_status)) {
-    patch.entrada_status = statusDe(entrada);
-  }
-  if (!STATUS_INTOCAVEIS.has(m.restante_status)) {
-    patch.restante_status = parcelasLia.length
-      ? statusDe(parcelasLia)
-      // A vista: a propria entrada quita tudo.
-      : (validas.every(pago) ? "Pago" : "Ainda não");
-  }
-
-  // Forma de pagamento so preenche o que esta vazio: escolha de pessoa nao e
-  // sobrescrita por inferencia.
-  const metodoDe = (lista: Cobranca[]) =>
-    lista.find((c) => pago(c) && c.payment_method)?.payment_method ??
-    lista.find((c) => c.payment_method)?.payment_method ?? null;
-
-  if (!m.entrada_forma_pgto) {
-    const met = metodoDe(entrada.length ? entrada : validas);
-    if (met) patch.entrada_forma_pgto = FORMA_PAGAMENTO[met] ?? "Outro";
-  }
-  if (!m.restante_forma_pgto && parcelasLia.length) {
-    const met = metodoDe(parcelasLia);
-    /* Sem metodo conhecido, nao escreve nada. Escrever "Outro" aqui seria pior
-       que deixar vazio: o campo so e preenchido quando esta vazio, entao o
-       "Outro" de um aviso que chegou antes do pagamento travaria o valor certo
-       para sempre. Foi o que aconteceu com a primeira venda em 17/09/2026. */
-    if (parcelasLia.length > 1) patch.restante_forma_pgto = "Parcelado";
-    else if (met) patch.restante_forma_pgto = FORMA_PAGAMENTO[met] ?? "Outro";
-  }
-
-  if (Object.keys(patch).length) {
-    await db.from("mentorados").update(patch).eq("id", mentoradoId);
-  }
-
-  /* ----- parcelas ----- */
-  if (!parcelasLia.length) return;
-
-  /* Ordem importa: apagar primeiro. O unico e (mentorado_id, numero), entao uma
-     linha manual no numero 3 bloquearia a parcela 3 vinda da Lia. */
-  await db.from("parcelas").delete().eq("mentorado_id", mentoradoId).is("lia_bill_id", null);
-
-  // Cobranca cancelada some da ficha: a parcela dela deixa de existir.
-  const canceladas = ((cobrancas ?? []) as Cobranca[]).filter((c) => c.status === "canceled");
-  for (const c of canceladas) {
-    await db.from("parcelas").delete().eq("lia_bill_id", c.lia_bill_id);
-  }
-
-  /* numero_parcela nem sempre vem no payload. O fallback e a posicao por
-     vencimento, que e a ordem em que a pessoa vai pagar -- e a mesma ordem que
-     a ficha desenha. */
-  const ordenadas = [...parcelasLia].sort((a, b) =>
-    String(a.due_date ?? "9999").localeCompare(String(b.due_date ?? "9999")));
-
-  for (let i = 0; i < ordenadas.length; i++) {
-    const c = ordenadas[i];
-    const numero = c.numero_parcela ?? (i + 1);
-    if (numero < 1 || numero > 60) continue; // fora do CHECK: ignora em vez de estourar
-    await db.from("parcelas").upsert({
-      mentorado_id: mentoradoId,
-      numero,
-      status: pago(c) ? "paga" : "aberta",
-      vencimento: c.due_date,
-      valor: (c.amount_cents ?? 0) / 100,
-      lia_bill_id: c.lia_bill_id,
-    }, { onConflict: "mentorado_id,numero" });
-  }
+  const { error } = await db.rpc("lia_refletir_financeiro", { p_mentorado: mentoradoId });
+  if (error) throw error;
 }
 
 /* ---------------- handler ---------------- */
