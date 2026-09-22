@@ -241,6 +241,67 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     app.tela().includes('id="e_nome"') && app.tela().includes('id="e_situacao"'));
   t.ok("cadastro escapa o nome", semLixo(app.tela()), app.tela().slice(0, 300));
 
+  t.secao("Ficha: aba STLSeller");
+  globalThis.openMentorado("m1", "stlseller");
+  const stl = app.tela();
+  t.ok("endereço da aba STLSeller", app.endereco() === "#/mentorado/m1/stlseller", app.endereco());
+  t.ok("aba oferecida no menu da ficha", stl.includes(">STLSeller</button>"));
+  t.ok("diz de onde vêm os dados", stl.includes("Dados do STLSeller") && stl.includes("Somente leitura"));
+  t.ok("sem lixo", semLixo(stl), stl.slice(0, 300));
+  t.ok("título do marketplace escapado", escapado(stl), stl.slice(stl.indexOf("Vaso"), stl.indexOf("Vaso") + 120));
+  t.ok("permalink javascript: não vira href", !stl.includes('href="javascript'));
+  t.ok("permalink https vira link", stl.includes('href="https://exemplo.com/p/1"'));
+  t.ok("faturamento em real", brl(stl).includes("R$ 1.234,50"));
+  t.ok("líquido não informado vira traço, não R$ 0,00", !brl(stl).includes("R$ 0,00"),
+    stl.slice(stl.indexOf("Pedidos por marketplace"), stl.indexOf("Pedidos por marketplace") + 600));
+  t.ok("status real rotulado", stl.includes("pill green") && stl.includes(">Pago<"));
+  t.ok("produtos ordenados por faturamento", stl.indexOf("Chaveiro") < stl.indexOf("Vaso"));
+  t.ok("último pedido da Lia em horário de Brasília", stl.includes("06/08/2026, 18:52"),
+    stl.slice(stl.indexOf("Último pedido"), stl.indexOf("Último pedido") + 120));
+  t.ok("aba não escreve nada", !/onclick="salvar|onchange=/.test(stl.slice(stl.indexOf("stl-origem"))));
+
+  globalThis.openMentorado("m2", "stlseller");
+  const stl2 = app.tela();
+  t.ok("casa pelo e-mail STLFLIX", stl2.includes("PAUSADO") && stl2.includes("Sem pedido na Lia"), stl2.slice(0, 400));
+  t.ok("epoch nulo não vira 1969", !stl2.includes("1969") && semLixo(stl2));
+  t.ok("sem produtos diz que não há", stl2.includes("Nenhum produto vendido."));
+
+  globalThis.openMentorado("m3", "stlseller");
+  t.ok("ficha sem e-mail explica o casamento", app.tela().includes("Esta ficha não tem e-mail"));
+
+  app.estado.STLSELLER_ERRO = 'relation "stlseller_mentorados" does not exist';
+  globalThis.openMentorado("m1", "stlseller");
+  t.ok("falha de carga aparece na aba", app.tela().includes("Não foi possível carregar os dados do STLSeller"));
+  app.estado.STLSELLER_ERRO = null;
+
+  t.secao("Análise (STLSeller)");
+  globalThis.location.hash = "#/analise";
+  const an = app.tela();
+  t.ok("tela de análise desenha", an.includes("<h2>STLSeller</h2>") && an.includes("Dados do STLSeller"), an.slice(0, 300));
+  t.ok("sem lixo", semLixo(an), an.slice(0, 300));
+  t.ok("recorte padrão é o de ativos", an.includes("Vendendo</div><div class=\"v\">1 de 2"), an.slice(an.indexOf("Vendendo"), an.indexOf("Vendendo") + 120));
+  t.ok("bruto vem dos pedidos", brl(an).includes("R$ 1.500,00"));
+  t.ok("atribuído vem dos produtos, com a cobertura", brl(an).includes("R$ 1.234,50") && an.includes("82,3% do bruto"));
+  t.ok("% de cancelados sobre os pedidos", an.includes("16,7% cancelados"));
+  t.ok("nome leva à aba STLSeller da ficha", an.includes("openMentorado('m1','stlseller')"));
+  t.ok("anúncio do marketplace escapado", escapado(an));
+  t.ok("permalink javascript: não vira href", !an.includes('href="javascript'));
+  t.ok("STLFLIX que não é o da loja fica como cadastro incorreto",
+    an.includes("E-mail não cadastrado corretamente &middot; 1") && an.includes("E-mail STLFLIX não é o da loja"),
+    an.slice(an.indexOf("E-mail não cadastrado"), an.indexOf("E-mail não cadastrado") + 400));
+  t.ok("STLFLIX que acha a loja conta como resolvido", an.includes("1 resolvido(s) pelo e-mail STLFLIX: Eva Sem Ficha"));
+  globalThis.setAnalise("statusAnalise", "");
+  const anTodos = app.tela();
+  t.ok("recorte Todos inclui o pausado", anTodos.includes("Vendendo</div><div class=\"v\">1 de 3") && anTodos.includes("Sem conta de seller &middot; 1"),
+    anTodos.slice(anTodos.indexOf("Vendendo"), anTodos.indexOf("Vendendo") + 120));
+  globalThis.setAnalise("chipAnalise", "vende");
+  t.ok("filtro Vendendo tira quem não vende", app.tela().includes("Visão geral por mentorado &middot; 1"));
+  globalThis.setAnalise("chipAnalise", "email");
+  t.ok("filtro E-mail incorreto usa a mesma regra", app.tela().includes("Visão geral por mentorado &middot; 2")
+    && app.tela().includes("Formulário sem e-mail STLFLIX") === false && app.tela().includes("E-mail STLFLIX não encontra conta de seller"));
+  globalThis.setAnalise("chipAnalise", "todos");
+  globalThis.setAnalise("statusAnalise", "ATIVO");
+
   t.secao("Endereço da ficha");
   /* Link colado com aba inexistente não pode deixar a página vazia. */
   globalThis.location.hash = "#/mentorado/m1/inventada";
@@ -391,6 +452,13 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   globalThis.location.hash = "#/mentorado/m1/financeiro";
   t.ok("link da aba financeira cai nas sessões",
     app.tela().includes("Sessões 1:1 com mentores") && !app.tela().includes('id="e_contr"'),
+    app.tela().slice(0, 200));
+  t.ok("mentor não recebe a aba STLSeller", !app.tela().includes(">STLSeller</button>"));
+  globalThis.location.hash = "#/analise";
+  t.ok("link da análise não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>STLSeller</h2>"), app.endereco());
+  globalThis.location.hash = "#/mentorado/m1/stlseller";
+  t.ok("link da aba STLSeller cai nas sessões",
+    app.tela().includes("Sessões 1:1 com mentores") && !app.tela().includes("Dados do STLSeller"),
     app.tela().slice(0, 200));
   globalThis.location.hash = "#/financeiro";
   t.ok("link da tela financeira volta para o dashboard",

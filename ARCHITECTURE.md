@@ -226,6 +226,19 @@ Marcos 01 e 03 de Feiras.
 desenho, servida pela Edge Function `diagnostico-api`. Liga a `mentorados` por
 nome textual, sem FK.
 
+**`stlseller_mentorados`**, **`stlseller_pedidos_marketplace`** e
+**`stlseller_produtos_vendidos`** — foto do STLSeller gravada pelo
+`sync-stlseller`, em colunas (um `jsonb` com o objeto inteiro existiu por uma
+migration e foi substituído). A primeira tem uma linha por e-mail do formulário:
+status no formulário, `status_real`, plano, loja e o pagamento na Lia visto pelo
+STLSeller (`lia_*`). As outras duas penduram nela por `email` com `ON DELETE
+CASCADE`: chave `(email, marketplace)` e `(email, marketplace, anuncio_id)`.
+`total_liquido` nulo é "o marketplace não informa" (Mercado Livre), não zero.
+
+**Sem `mentorado_id` de propósito:** o front casa pelo e-mail da ficha contra
+`email` ou `email_stlflix`, então corrigir o e-mail na ficha reflete na hora,
+sem esperar o próximo sync.
+
 ### Views
 
 - **`mentorados_basic`** — `SECURITY DEFINER`. Expõe os campos não financeiros
@@ -309,6 +322,7 @@ as policies.
 | `rotas`, `canais`, `marcos_definicao` | escrita | leitura | leitura |
 | `profiles` | lê todos | lê o próprio | lê o próprio |
 | `diagnosticos` | — | — | — (só `service_role`) |
+| `stlseller_*` (3 tabelas) | `SELECT` | `SELECT` | nada — tem status de pagamento e faturamento |
 
 `diretoria` **não tem uma única policy de `INSERT`, `UPDATE` ou `DELETE`** —
 em nenhuma tabela. É o que torna o perfil somente-leitura verdadeiro e não
@@ -508,6 +522,87 @@ como saber. Forma de pagamento só preenche campo vazio, nunca sobrescreve.
 `parcelas_numero_check` foi de `1..12` para `1..60`: a trilha tinha 12 por
 desenho, mas a Lia parcela no que o cliente contratar, e um plano fora da faixa
 faria o webhook falhar em silêncio.
+
+### `sync-stlseller` — Edge Function, a cada 6 h
+
+Traz para a aba **STLSeller** da ficha o que o STLSeller sabe de cada
+mentorado. Cadeia, de mão única:
+
+```
+BigQuery financial-448617.stlseller_raw        (só leitura)
+   │  vw_mentorados_status_real + sellers + marketplace_orders + products
+   ▼
+n8n-ops · workflow "GET - SELLERS" (obqbyo0K7cPB6Ycb) · webhook GET
+   │  Header Auth (X-Central-Token)
+   ▼
+edge function sync-stlseller ──rpc──▶ stlseller_sincronizar(payload)
+                                          │  uma transação
+                                          ▼
+          stlseller_mentorados · stlseller_pedidos_marketplace · stlseller_produtos_vendidos
+                                          ▲
+                          index.html, aba STLSeller (admin e diretoria)
+```
+
+A **view `vw_mentorados_status_real` é a fonte da lista**: todos os status do
+formulário (ATIVO, PAUSADO, CANCELADO), com o `status_real_sugerido` que ela
+cruza com a Lia. Duas particularidades do nó BigQuery do n8n, tratadas no
+`Assemble payload`: e-mail vem com caixa alta em algumas linhas, e **timestamp
+nulo chega como o epoch** (`1969-12-31T21:00-03:00`) — sem o tratamento, a
+ficha mostraria "último pedido em 1969".
+
+**A regra de gravar vive no banco:** `stlseller_sincronizar(jsonb)` mapeia o
+JSON para colunas e grava as três tabelas **numa transação só** — via PostgREST
+seriam três chamadas, e uma falha no meio deixaria um mentorado com os pedidos
+de uma rodada e os produtos de outra. Pedidos e produtos são a foto da rodada:
+apaga e regrava. Quem sumiu da view sai, e leva os filhos pelo cascade — **mas
+só depois de um payload com mentorados**: sem eles a função levanta exceção
+antes de apagar qualquer coisa. `SECURITY INVOKER`, execute só para
+`service_role`. A edge function só busca e entrega; sem `STLSELLER_WEBHOOK_URL`
+ou `STLSELLER_WEBHOOK_TOKEN` ela falha fechada.
+
+Carga manual (a mesma que a função faz), útil antes do deploy ou para forçar:
+
+```bash
+curl -s https://n8n-ops.stlflix.com/webhook/get-sellers-test > /tmp/stl.json
+python3 -c "import sys;r=open('/tmp/stl.json').read();print('select stlseller_sincronizar(\$stl\$'+r+'\$stl\$::jsonb);')" > /tmp/stl.sql
+npx supabase@latest db query --linked --project-ref matgynpiscyoshnjzolo -f /tmp/stl.sql
+```
+
+**Tela STLSeller (`#/analise`, menu lateral)** — a visão da carteira sobre as
+mesmas três tabelas: bruto vendido, quanto dele foi atribuído a anúncio
+(cobertura), pedidos e % de cancelados, concentração do bruto nos 5 maiores,
+distribuição do `status_real`, tabela ordenável por mentorado com filtros, os
+15 anúncios que mais faturam e as listas de sem venda, sem conta de seller e
+e-mail não cadastrado corretamente.
+
+**E-mail: o STLFLIX vem primeiro.** Quando o formulário traz `email_stlflix`,
+ele é o preferido para achar a loja — no n8n, o `QUALIFY` das duas queries
+ordena primeiro pela loja cujo e-mail é o STLFLIX, antes de plano ativo e data.
+Na tela (`situacaoEmail`), o mentorado só sai da lista de cadastro incorreto se
+o e-mail STLFLIX for igual ao do formulário ou **de fato encontrar a loja**
+(`loja_email`); os demais ficam com o motivo: formulário sem e-mail STLFLIX,
+STLFLIX que não é o da loja, ou STLFLIX sem conta de seller. O recorte padrão é **Ativos** (status do formulário); os
+números do topo seguem o recorte. **Bruto vem de `stlseller_pedidos_marketplace`
+e a receita por anúncio de `stlseller_produtos_vendidos`** — são fontes
+diferentes de propósito, e a diferença entre elas é a venda sem anúncio
+atribuído. Fechada por `verFinanceiro`, como a aba: link colado por mentor cai
+no Dashboard.
+
+**A aba não escreve nada e não compete com a ficha.** O bloco "Pagamento na
+Lia, segundo o STLSeller" pode divergir das parcelas, que vêm do `lia-webhook`:
+são duas leituras da mesma Lia por caminhos diferentes, e a aba diz de qual
+veio. O que estiver errado se corrige na origem.
+
+Deploy (as migrations `20260922_stlseller_mentorados.sql` e
+`20260922_stlseller_estruturado.sql` já estão aplicadas):
+
+```bash
+npx supabase@latest secrets set STLSELLER_WEBHOOK_URL=https://n8n-ops.stlflix.com/webhook/get-sellers-test \
+  STLSELLER_WEBHOOK_TOKEN=<o mesmo valor da credencial Header Auth no n8n> --project-ref matgynpiscyoshnjzolo
+npx supabase@latest functions deploy sync-stlseller --project-ref matgynpiscyoshnjzolo --use-api
+```
+
+e o agendamento descrito no fim da migration.
 
 ### `promover_sessoes_vencidas()` — função Postgres
 

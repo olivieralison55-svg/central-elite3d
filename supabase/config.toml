@@ -8,3 +8,7 @@ project_id = "matgynpiscyoshnjzolo"
 # recomenda fixar aqui justamente para o valor nao variar entre deploys.
 [functions.sync-google-calendar]
 verify_jwt = true
+
+# Mesmo motivo: grava em `stlseller_mentorados` com a service_role key.
+[functions.sync-stlseller]
+verify_jwt = true
