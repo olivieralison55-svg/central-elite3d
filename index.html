@@ -2265,6 +2265,15 @@ const ANALISE_FILTROS = [["todos","Todos"],["vende","Vendendo"],["parado","Sem v
    tenta primeiro (o n8n também prefere a loja achada por ele). Só conta como
    resolvido se o e-mail STLFLIX de fato encontra a conta de seller; o resto
    fica marcado como não cadastrado corretamente, com o motivo. */
+/* Por qual e-mail a loja foi achada. Quase sempre é o do formulário, e repetir
+   o endereço na tabela só duplicaria a coluna ao lado. */
+function lojaPor(r){
+  const loja = normalizaEmail(r.loja_email);
+  if(!r.loja_id) return `<span class="pill gray">sem loja</span>`;
+  if(loja===r.email) return "e-mail do formulário";
+  if(loja && loja===normalizaEmail(r.email_stlflix)) return "e-mail STLFLIX";
+  return esc(r.loja_email||"—");
+}
 function situacaoEmail(r){
   const stl = normalizaEmail(r.email_stlflix), loja = normalizaEmail(r.loja_email);
   if(stl && stl===r.email) return {ok:true};
@@ -2408,8 +2417,8 @@ function renderAnalise(){
     <div class="hint" style="margin-bottom:10px">Sem cadastro no STLSeller, não dá para acompanhar venda nenhuma.</div>${tags(semConta)}</div>
   <div class="panel"><h3>E-mail não cadastrado corretamente &middot; ${emailIncorreto.length}</h3>
     <div class="hint" style="margin-bottom:10px">Quando o formulário traz o e-mail STLFLIX, ele é usado primeiro para achar a loja. Ficam aqui os que não têm e-mail STLFLIX ou cujo e-mail STLFLIX não leva à conta de seller: corrija o cadastro na origem.${peloStlflix.length?` ${peloStlflix.length} resolvido(s) pelo e-mail STLFLIX: ${peloStlflix.map(l=>esc(nomeAnalise(l))).join(", ")}.`:""}</div>
-    ${emailIncorreto.length?`<div class="tw"><table><thead><tr><th>Mentorado</th><th>Motivo</th><th>E-mail do formulário</th><th>E-mail STLFLIX</th><th>E-mail da loja</th></tr></thead><tbody>
-      ${emailIncorreto.map(l=>`<tr><td>${linkFichaAnalise(l)}</td><td><span class="pill amber">${esc(l.email.motivo)}</span></td><td>${esc(l.r.email)}</td><td>${esc(l.r.email_stlflix||"—")}</td><td>${esc(l.r.loja_email||"—")}</td></tr>`).join("")}
+    ${emailIncorreto.length?`<div class="tw"><table><thead><tr><th>Mentorado</th><th>Motivo</th><th>E-mail do formulário</th><th>E-mail STLFLIX</th><th>Loja encontrada por</th></tr></thead><tbody>
+      ${emailIncorreto.map(l=>`<tr><td>${linkFichaAnalise(l)}</td><td><span class="pill amber">${esc(l.email.motivo)}</span></td><td>${esc(l.r.email)}</td><td>${esc(l.r.email_stlflix||"—")}</td><td>${lojaPor(l.r)}</td></tr>`).join("")}
     </table></div>`:`<div class="empty" style="padding:12px">Ninguém neste recorte.</div>`}</div>`}`;
 }
 
