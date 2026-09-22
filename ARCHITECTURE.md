@@ -560,12 +560,25 @@ antes de apagar qualquer coisa. `SECURITY INVOKER`, execute só para
 `service_role`. A edge function só busca e entrega; sem `STLSELLER_WEBHOOK_URL`
 ou `STLSELLER_WEBHOOK_TOKEN` ela falha fechada.
 
-Carga manual (a mesma que a função faz), útil antes do deploy ou para forçar:
+**Em produção desde 22/09/2026.** Job `pg_cron` `sync-stlseller-6h`
+(`20 */6 * * *`, UTC — 21:20, 03:20, 09:20 e 15:20 em Brasília) chama a função
+por `net.http_post` com o mesmo `Authorization` do job do Calendar, **mais
+`timeout_milliseconds := 60000`**: o `pg_net` corta em 5 s por padrão e a
+rodada leva ~8 s (três queries no BigQuery). O webhook do n8n exige o header
+`X-Central-Token`; o valor vive só na credencial n8n
+`Central Elite3D - sync-stlseller` e no secret `STLSELLER_WEBHOOK_TOKEN` da
+função — trocar um exige trocar o outro.
 
-```bash
-curl -s https://n8n-ops.stlflix.com/webhook/get-sellers-test > /tmp/stl.json
-python3 -c "import sys;r=open('/tmp/stl.json').read();print('select stlseller_sincronizar(\$stl\$'+r+'\$stl\$::jsonb);')" > /tmp/stl.sql
-npx supabase@latest db query --linked --project-ref matgynpiscyoshnjzolo -f /tmp/stl.sql
+**`safeupdate`:** o Supabase carrega essa extensão nas sessões do PostgREST, e
+ela recusa `DELETE`/`UPDATE` sem `WHERE`. Rodando como `postgres` (SQL direto)
+não aparece — foi assim que a primeira versão de `stlseller_sincronizar` passou
+nos testes e falhou na primeira chamada pela função. Por isso os `delete ...
+where true`; não "simplifique" tirando o `where`.
+
+Forçar uma rodada agora (resposta em `net._http_response`):
+
+```sql
+do $$ begin execute (select command from cron.job where jobname = 'sync-stlseller-6h'); end $$;
 ```
 
 **Tela STLSeller (`#/analise`, menu lateral)** — a visão da carteira sobre as
@@ -593,16 +606,11 @@ Lia, segundo o STLSeller" pode divergir das parcelas, que vêm do `lia-webhook`:
 são duas leituras da mesma Lia por caminhos diferentes, e a aba diz de qual
 veio. O que estiver errado se corrige na origem.
 
-Deploy (as migrations `20260922_stlseller_mentorados.sql` e
-`20260922_stlseller_estruturado.sql` já estão aplicadas):
+Redeploy da função, da raiz do repo:
 
 ```bash
-npx supabase@latest secrets set STLSELLER_WEBHOOK_URL=https://n8n-ops.stlflix.com/webhook/get-sellers-test \
-  STLSELLER_WEBHOOK_TOKEN=<o mesmo valor da credencial Header Auth no n8n> --project-ref matgynpiscyoshnjzolo
 npx supabase@latest functions deploy sync-stlseller --project-ref matgynpiscyoshnjzolo --use-api
 ```
-
-e o agendamento descrito no fim da migration.
 
 ### `promover_sessoes_vencidas()` — função Postgres
 
