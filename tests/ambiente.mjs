@@ -38,6 +38,7 @@ const EXPORTA = [
   "normalizaEmail", "msgErroMentorado", "alvoBuscaData",
   "prazoTexto", "diasAte", "parcelaDaLia", "proximaParcela",
   "cobrancasOrfas", "motivoOrfa", "cobrancasDescartadas",
+  "lerEndereco", "aplicarEndereco", "irPara", "renderFicha", "render",
 ];
 
 export function carregarApp() {
@@ -103,7 +104,23 @@ export function carregarApp() {
        falta do stub, nao o comportamento. */
     rpc: (nome, args) => { escritas.push({tabela: "rpc:" + nome, op: "rpc", dados: args}); return Promise.resolve({data: 0, error: null}); },
   })};
-  globalThis.addEventListener = () => {};
+  /* A tela do app vive em `location.hash`: sem um stub que guarde o valor E
+     avise o listener de `hashchange`, navegar num teste não desenharia nada. */
+  const ouvintes = new Map();
+  globalThis.addEventListener = (ev, fn) => {
+    if (!ouvintes.has(ev)) ouvintes.set(ev, []);
+    ouvintes.get(ev).push(fn);
+  };
+  let hashAtual = "";
+  globalThis.location = {
+    get hash() { return hashAtual; },
+    set hash(v) {
+      const novo = v.startsWith("#") ? v : "#" + v;
+      if (novo === hashAtual) return;
+      hashAtual = novo;
+      (ouvintes.get("hashchange") || []).forEach((fn) => fn());
+    },
+  };
   globalThis.window = globalThis;
   globalThis.innerWidth = 1280;
   globalThis.innerHeight = 800;
@@ -132,6 +149,11 @@ export function carregarApp() {
         get filtro(){ return filtro },
         get mesMatriz(){ return mesMatriz }, set mesMatriz(v){ mesMatriz = v },
         get GRUPO_REG(){ return GRUPO_REG },
+        /* O loadAll é quem libera o render em produção; aqui os dados chegam
+           por atribuição direta, então o teste liga a chave. */
+        set dadosProntos(v){ dadosProntos = v },
+        get fichaAba(){ return fichaAba },
+        get voltarPara(){ return voltarPara },
       },
     };`)();
 
@@ -142,6 +164,8 @@ export function carregarApp() {
     /* HTML que uma tela ou modal produziu */
     tela: (sel = "#app") => (nodes.get(sel) ? nodes.get(sel).innerHTML : ""),
     modal: () => (nodes.get("#modalBox") ? nodes.get("#modalBox").innerHTML : ""),
+    /* endereço atual — a ficha e cada tela têm o seu */
+    endereco: () => globalThis.location.hash,
     /* último toast exibido */
     toast: () => (nodes.get("#toast") ? nodes.get("#toast").textContent : ""),
     /* preenche um campo que o app vai ler com $("#id").value */
@@ -228,6 +252,7 @@ export function fixtures() {
 export function preparar(app, papel = "admin") {
   const {M, S, P, rotas} = fixtures();
   app.estado.papel = papel;
+  app.estado.dadosProntos = true; // o loadAll não roda aqui; os dados vêm abaixo
   app.estado.M = M;
   app.estado.S = S;
   /* quem não vê financeiro não carrega parcelas — é o que o loadAll faz */

@@ -140,7 +140,7 @@ encontros em grupo não contam como avanço da trilha.
 Quem está pausado ou cancelado aparece esmaecido, com uma etiqueta ao lado.
 Clique em qualquer coluna do cabeçalho para ordenar.
 
-Na ficha, logo abaixo do nome, fica o campo **E-mail no Google Agenda**. É o
+Na aba **Cadastro** da ficha, logo abaixo do nome, fica o campo **E-mail no Google Agenda**. É o
 e-mail com que o mentorado entra como convidado nas reuniões — preenchê-lo faz o
 sync casar a sessão por ele, e aí o título do convite não precisa mais trazer o
 nome da pessoa. Um e-mail só pode estar em um mentorado: se já estiver em outro,
@@ -236,18 +236,28 @@ um nome vira cobrança esquecida.
 
 ### Ficha do mentorado
 
-Abre ao clicar em qualquer mentorado, em qualquer tela. Ela se adapta à origem:
-vindo de Sessões mostra só a trilha; vindo de Financeiro mostra só contrato,
-pagamentos e parcelas; das outras telas mostra tudo.
+Abre ao clicar em qualquer mentorado, em qualquer tela. **É uma página, com
+endereço próprio** — dá para mandar o link para alguém, recarregar em cima dela
+e usar o voltar do navegador. O endereço é `#/mentorado/<id>`, com a aba no
+fim quando não é o cadastro.
+
+São três abas, e a origem escolhe em qual a ficha abre: vindo de Sessões abre em
+**Sessões**, vindo de Financeiro abre em **Financeiro**, das outras telas abre em
+**Cadastro**. Trocar de aba é um clique, e o link muda junto. Quem não vê
+financeiro não recebe essa aba — nem clicando num link dela.
+
+No alto, à esquerda, o caminho de volta aponta para a tela de onde a ficha foi
+aberta.
 
 É onde se registra sessão, se marca parcela como paga, se troca a situação para
 pausado ou cancelado, e onde ficam os links de Drive, mapa mental e grupo de
 WhatsApp.
 
-A trilha 1:1 e os encontros em grupo do mentorado ficam em blocos separados. A
-contagem de *"N de 12 concluídas"* no topo da ficha considera só a trilha.
+A trilha 1:1 e os encontros em grupo do mentorado ficam em blocos separados, na
+aba **Sessões**. A contagem de *"N de N sessões concluídas"* no topo da ficha
+considera só a trilha.
 
-No fim da ficha completa, só para administrador, fica **Excluir mentorado**.
+No fim da aba **Cadastro**, só para administrador, fica **Excluir mentorado**.
 Apagar a ficha apaga junto tudo que está pendurado nela — sessões, parcelas,
 marcos de rota e registros de faturamento — e as sessões concluídas que saírem
 levam embora a contagem que o fechamento dos mentores usa. Por isso a confirmação

@@ -63,9 +63,9 @@ seções marcadas por comentário:
 | `CAMPO DE DATA` | `dateField`/`monthField` e o popover `dp*`, usados por todo campo de data |
 | `ORDENAÇÃO GENÉRICA` | `toggleSort`/`applySort`, reaproveitados por todas as tabelas |
 | `BUSCA POR MENTORADO` | `casaBusca`/`buscaField`/`setBusca` e `btnNovoMentorado`, repetidos nas cinco telas |
-| `RENDER ROUTER` | `setView` e `render`, que despacham para a view atual |
+| `ENDEREÇO (roteador)` | `lerEndereco`/`aplicarEndereco`/`irPara` e `render`, que despacham para a tela do hash |
 | `DASHBOARD` … `ROTAS / MARCOS` | As cinco telas |
-| `FICHA DO MENTORADO` | Modal principal, em três modos: `completo`, `sessoes`, `financeiro` |
+| `FICHA DO MENTORADO` | Página com endereço próprio, em três abas: `cadastro`, `financeiro`, `sessoes` |
 | `SESSÃO (form)`, `NOVO MENTORADO` | Modais de escrita |
 | grupo (dentro de `SESSÕES`) | `openGrupo`/`confirmarGrupo` e `openSessaoGrupo`/`criarSessaoGrupo` |
 
@@ -74,6 +74,38 @@ Todo o estado vive em variáveis de módulo (`M`, `P`, `S`, `ROTAS`, `MARCOS`,
 `GRUPO_REG`, `grupoAberto` e `dpState`). O ciclo é
 sempre o mesmo: escrever no banco → `loadAll()` → `render()`. Não há atualização
 otimista nem cache.
+
+### A tela é o endereço
+
+`view`, `fichaId` e `fichaAba` não são escritos à mão em lugar nenhum: quem os
+define é `aplicarEndereco()`, lendo `location.hash`. Trocar de tela é trocar o
+hash — `irPara()` faz isso, o `hashchange` chama `aplicarEndereco()`, e ele
+chama `render()`. `setView` e `openMentorado` sobrevivem como atalhos para
+`irPara`, porque são chamados de dezenas de `onclick` espalhados pelas telas.
+
+| Endereço | Tela |
+|---|---|
+| `#/dash`, `#/mentorados`, `#/sessoes`, `#/rotas`, `#/financeiro` | as cinco telas |
+| `#/mentorado/<id>` | ficha, aba de cadastro |
+| `#/mentorado/<id>/financeiro`, `#/mentorado/<id>/sessoes` | ficha, nas outras duas abas |
+
+**Hash e não caminho** porque o deploy é estático e sem build: `/mentorado/<id>`
+pedido direto devolveria 404 antes de o JS rodar. Passar a caminho de verdade
+exigiria um `vercel.json` com rewrite de tudo para `index.html`.
+
+Três consequências que não são óbvias:
+
+- **O endereço é público, a permissão não.** Um link da aba financeira mandado a
+  um mentor abre a ficha nas sessões, e `#/financeiro` volta para o dashboard.
+  O recorte por papel não pode morar só no menu, que o link contorna.
+- **`dadosProntos` existe por causa do boot.** O hash pode pedir um render antes
+  do primeiro `loadAll()` — `render()` não desenha até os dados chegarem, senão a
+  ficha de alguém que existe piscaria como "não encontrada".
+- **Os submodais continuam modais.** Parcela, sessão, confirmação e exclusão
+  abrem por cima da ficha e voltam para ela com `openMentorado(mid)` sem
+  `secao` — sem `secao`, a aba atual é mantida. Como o endereço não muda nesse
+  caso, `irPara` chama `aplicarEndereco` direto: `hashchange` não dispara para o
+  endereço em que já se está.
 
 ---
 
@@ -215,10 +247,27 @@ nome textual, sem FK.
   sustenta o perfil `diretoria` ser somente-leitura. O app nunca escreveu por
   essa view — todas as escritas vão para `mentorados` direto.
 - **`sessoes_orfas`** — sessões com `google_event_id` preenchido que a última
-  execução do sync **não confirmou**. A regra é esperta: compara o `synced_at` da
-  linha com o maior `synced_at` da tabela inteira (que é o carimbo da rodada mais
-  recente), com 5 minutos de tolerância. Quem ficou para trás é órfão — evento
-  apagado, renomeado ou fora da janela. Já traz `mentorado_nome` pelo join.
+  execução do sync **não confirmou**. Compara o `synced_at` da linha com o maior
+  `synced_at` da tabela inteira (que é o carimbo da rodada mais recente), com 5
+  minutos de tolerância. Quem ficou para trás é órfão — evento apagado ou
+  renomeado. Já traz `mentorado_nome` pelo join.
+
+  **Só olha sessões dos últimos 28 dias**, e esse recorte é o que torna a view
+  útil. O sync busca a janela `hoje-30d → hoje+90d`
+  (`sync-google-calendar/index.ts`), então toda sessão parava de ser confirmada
+  exatamente 30 dias depois de acontecer, por envelhecer — não por sumir do
+  Agenda. Sem o recorte a view acusava isso como problema: em 21/09/2026 eram 40
+  linhas no painel, das quais **39 eram sessões velhas normais** e só uma era
+  evento realmente apagado. O painel crescia ~1 linha/dia e ia engolir as 76
+  sessões sincronizadas. Corrigido na migration
+  `sessoes_orfas_so_dentro_da_janela_do_sync`. Fora da janela do sync o silêncio
+  é esperado, não sintoma. São 28 dias e não 30 de propósito: a margem evita que
+  a sessão pisque entrando e saindo na borda.
+
+  **O custo:** a marcação não é permanente. Um evento apagado no dia 5 aparece no
+  painel até o dia 28 e depois some sozinho, sem ninguém ter conferido. Para
+  rastro permanente o sync teria que gravar a ausência explicitamente (uma
+  `evento_removido_em`) em vez de deixar o `synced_at` inferir.
 
 ### Chaves de unicidade
 
@@ -521,8 +570,8 @@ porque `&#39;` volta a ser `'` no parse de JS. É a mesma razão pela qual
 
 `foco` recorta `renderSessoes` para esses ids, **antes** dos filtros de tipo e
 mentor — um filtro ativo não deveria conseguir esconder a linha que o alerta
-aponta, e por isso `focarSessoes` também os zera. `setView` descarta o foco ao
-sair da tela: ele pertence ao alerta que trouxe a pessoa até ali.
+aponta, e por isso `focarSessoes` também os zera. `aplicarEndereco` descarta o
+foco ao sair da tela: ele pertence ao alerta que trouxe a pessoa até ali.
 
 Sob foco, "Concluídas" não corta em 30. O alerta pode apontar uma sessão de
 meses atrás, e o corte esconderia exatamente a linha que a pessoa veio conferir.

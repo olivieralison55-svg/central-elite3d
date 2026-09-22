@@ -245,6 +245,16 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
 .modal header h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:20px;font-weight:800;text-transform:none;letter-spacing:-.03em;color:var(--foreground)}
 .modal header .x{background:none;border:none;color:var(--subtle-foreground);font-size:20px;line-height:1;padding:6px 10px;border-radius:8px}
 .modal header .x:hover{color:var(--foreground);background:rgba(254,254,254,.05)}
+.crumb{margin-bottom:14px}
+.crumb button{background:none;border:none;color:var(--subtle-foreground);font-size:12.5px;font-weight:500;padding:6px 10px 6px 0;min-height:36px;border-radius:8px;transition:color var(--speed) ease}
+.crumb button:hover{color:var(--primary)}
+.abas{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.abas button{background:none;border:none;border-bottom:2px solid transparent;color:var(--subtle-foreground);font-size:13.5px;font-weight:500;padding:11px 15px;min-height:44px;white-space:nowrap;transition:color var(--speed) ease,border-color var(--speed) ease}
+.abas button:hover{color:var(--foreground)}
+.abas button.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.ficha-corpo{padding:26px}
+.ficha-corpo .sec:first-child{border-top:none;margin-top:0;padding-top:0}
+.ficha-h4{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--primary);font-weight:700;margin-bottom:14px}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
 .f label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--subtle-foreground);font-weight:600;margin-bottom:6px}
 .f .hint{font-size:11px;color:var(--subtle-foreground);line-height:1.45;margin-top:6px}
@@ -590,6 +600,7 @@ async function afterLogin(session){
     $("#navFinanceiro").style.display = "none";
     $("#navFinanceiroMobile").style.display = "none";
   }
+  aplicarEndereco(false); // o endereço da URL decide a tela; quem desenha é o loadAll
   await loadAll();
 }
 async function doLogin(){
@@ -649,6 +660,7 @@ async function loadAll(){
   FAT = fat.data||[]; CANAIS_DB = cn.data||[]; MC = mc.data||[]; ORFAS = orf.data||[];
   COBRANCAS = cob.data||[];
   if(!rotaAtual && ROTAS.length) rotaAtual = ROTAS[0].slug;
+  dadosProntos = true;
   render();
 }
 const parcelasDe = id => P.filter(x=>x.mentorado_id===id);
@@ -1094,17 +1106,65 @@ function btnNovoMentorado(secundario){
   return `<button class="btn${secundario?" ghost":""}" onclick="openNovoMentorado()">+ Novo mentorado</button>`;
 }
 
-/* ================= RENDER ROUTER ================= */
-function setView(v){
-  if(v!=="sessoes") foco = null; // foco e do alerta que trouxe a pessoa aqui
-  view=v;
-  document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
-  render();
+/* ================= ENDEREÇO (roteador) ================= */
+/* A tela vive na URL. Antes o estado era só a variável `view`: recarregar caía
+   no Dashboard, o voltar do navegador saía do sistema e não havia link para
+   mandar a alguém. Agora cada tela — e cada ficha — tem endereço.
+
+   Hash e não caminho porque o deploy é estático na Vercel, sem build nem
+   servidor: `/mentorado/<id>` pedido direto devolveria 404 antes de o JS rodar. */
+const TELAS = ["dash","mentorados","sessoes","rotas","financeiro"];
+const ROTULO_TELA = {"#/dash":"Dashboard", "#/mentorados":"Mentorados",
+  "#/sessoes":"Sessões", "#/rotas":"Rotas", "#/financeiro":"Financeiro"};
+let fichaId = null, fichaAba = "cadastro";
+/* Antes do primeiro loadAll não há o que desenhar, e o roteador pode pedir um
+   render antes disso — trocar o hash no boot dispara hashchange na hora. */
+let dadosProntos = false;
+/* De qual lista a ficha foi aberta — é para lá que o "voltar" da ficha aponta.
+   Chegando por link colado não houve lista nenhuma, e Mentorados é o palpite
+   honesto. */
+let voltarPara = "#/mentorados";
+
+function lerEndereco(){
+  const partes = (location.hash||"").replace(/^#\/?/,"").split("/").filter(Boolean).map(decodeURIComponent);
+  const [a,b,c] = partes;
+  if(a==="mentorado" && b) return {view:"mentorado", id:b, aba: ABAS_FICHA.includes(c)?c:"cadastro"};
+  if(TELAS.includes(a)) return {view:a};
+  return {view:"dash"};
 }
+/* `desenhar` é falso no boot: o roteador acerta o estado antes dos dados
+   chegarem, e quem desenha é o render() no fim do loadAll. */
+function aplicarEndereco(desenhar=true){
+  if(!myRole) return; // hashchange antes do login não tem tela para desenhar
+  const e = lerEndereco();
+  // o financeiro é fechado por papel: link colado não abre o que a tela esconde
+  if(e.view==="financeiro" && !pode("verFinanceiro")) return irPara("#/dash");
+  if(e.view!=="sessoes") foco = null; // foco é do alerta que trouxe a pessoa aqui
+  if(e.view!=="mentorado") voltarPara = "#/"+e.view;
+  view = e.view; fichaId = e.id||null; fichaAba = e.aba||"cadastro";
+  /* Na ficha o item aceso é a lista de onde ela veio: a ficha não é uma sexta
+     tela do menu, é o detalhe de uma das cinco. */
+  const aceso = e.view==="mentorado" ? voltarPara.replace("#/","") : e.view;
+  document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active", b.dataset.view===aceso));
+  if(desenhar){ closeModal(); render(); }
+}
+/* Trocar o hash dispara `hashchange`, e é de lá que sai o desenho. Pedir o
+   endereço em que já se está não dispara nada — daí a chamada direta: é o caso
+   de quem fecha um submodal e volta para a ficha que está atrás dele. */
+function irPara(hash){
+  if(location.hash === hash) aplicarEndereco();
+  else location.hash = hash;
+}
+window.irPara = irPara;
+window.addEventListener("hashchange", ()=>aplicarEndereco());
+
+function setView(v){ irPara("#/"+v); }
 document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>setView(b.dataset.view));
 function render(){
+  if(!dadosProntos) return; // quem chega antes dos dados espera o loadAll
   dpClose(); // calendário aberto não sobrevive a um re-render da tela
-  if(view==="dash") renderDash();
+  if(view==="mentorado") renderFicha();
+  else if(view==="dash") renderDash();
   else if(view==="mentorados") renderMentorados();
   else if(view==="sessoes") renderSessoes();
   else if(view==="rotas") renderRotas();
@@ -2154,46 +2214,74 @@ window.salvarMarco = async function(marcoId, mentoradoId){
 }
 
 /* ================= FICHA DO MENTORADO ================= */
-/* A ficha se adapta à tela de origem:
-   "sessoes"    -> só a trilha de sessões
-   "financeiro" -> só contrato, pagamentos e parcelas
-   "completo"   -> tudo (Mentorados, Dashboard, Rotas)
-   Chamadas internas (voltar de um submodal) omitem o parâmetro e herdam o contexto. */
-let fichaSecao = "completo";
+/* A ficha é uma página com endereço próprio — `#/mentorado/<id>/<aba>` — e não
+   mais um overlay. Link colado no WhatsApp abre a ficha certa, F5 em cima dela
+   volta nela, e o voltar do navegador sai dela.
+
+   As abas são os três recortes que a ficha já servia conforme a tela de origem:
+   "cadastro"   -> nome, datas, links e situação
+   "financeiro" -> contrato, pagamento e parcelas
+   "sessoes"    -> a trilha de 12 etapas e os encontros em grupo
+   Quem clica numa parcela vencida no Financeiro cai direto na aba Financeiro;
+   antes isso era o parâmetro `secao`, e continua sendo — agora ele vira URL. */
+const ABAS_FICHA = ["cadastro","financeiro","sessoes"];
+const ABA_DE_SECAO = {completo:"cadastro", basico:"cadastro", cadastro:"cadastro",
+                      financeiro:"financeiro", sessoes:"sessoes"};
+const ROTULO_ABA = {cadastro:"Cadastro", financeiro:"Financeiro", sessoes:"Sessões"};
+
+/* O nome fica: 25 pontos da interface chamam `openMentorado`. O que mudou é o
+   efeito — em vez de abrir overlay, troca o endereço e o roteador desenha.
+   Sem `secao` (é o caso de quem volta de um submodal) a aba atual é mantida. */
 window.openMentorado = function(id, secao){
-  const m = M.find(x=>x.id===id); if(!m) return;
-  if(secao) fichaSecao = secao;
+  const aba = secao ? (ABA_DE_SECAO[secao] || "cadastro")
+                    : (fichaId===id ? fichaAba : "cadastro");
+  irPara(`#/mentorado/${encodeURIComponent(id)}${aba==="cadastro"?"":"/"+aba}`);
+};
+
+function renderFicha(){
+  const id = fichaId;
+  const m = M.find(x=>x.id===id);
+  /* Ficha excluída ou link errado não pode virar tela em branco: o endereço
+     sobrevive ao registro, então a página precisa dizer o que houve. */
+  if(!m){
+    $("#app").innerHTML = `
+    <div class="crumb"><button onclick="irPara('${voltarPara}')">&larr; ${ROTULO_TELA[voltarPara]||"Mentorados"}</button></div>
+    <div class="topbar"><div><h2>Ficha não encontrada</h2>
+      <div class="sub">Este mentorado não existe mais, ou o endereço está errado.</div></div></div>
+    <div class="panel"><div class="empty">Se a ficha foi excluída, o histórico dela saiu junto.
+      <div class="rowflex mt8" style="justify-content:center"><button class="btn sm ghost" onclick="irPara('#/mentorados')">Ver todos os mentorados</button></div></div></div>`;
+    return;
+  }
   const verFin = pode("verFinanceiro");
   const editarM = pode("editarMentorado");
   const escreverS = pode("escreverSessao");
-  // quem não vê financeiro nunca cai no recorte financeiro, venha por onde vier
-  const sec = (!verFin && fichaSecao==="financeiro") ? "sessoes" : fichaSecao;
+  // quem não vê financeiro nunca para na aba financeira, nem por link colado
+  const aba = (!verFin && fichaAba==="financeiro") ? "sessoes" : fichaAba;
   const ps = parcelasDe(id);
   const ss = sessoes1a1De(id);        // trilha de 12 etapas
   const ssGrupo = sessoesGrupoDe(id); // plantão e implementação
   const aExcluir = pode("excluir") ? resumoExclusao(id) : null;
 
-  const mostra = {
-    basico:     sec==="completo",
-    financeiro: verFin && (sec==="completo" || sec==="financeiro"),
-    sessoes:    sec==="completo" || sec==="sessoes",
-  };
-  const legenda = {
-    completo:   `Fechamento ${fmtD(m.data_fechamento)}`,
-    sessoes:    `Trilha de sessões · ${ss.filter(s=>s.status==="Concluída").length} de ${ss.length} concluída(s)`,
-    financeiro: `Financeiro · ${ps.length?`${ps.filter(p=>p.status==="paga").length}/${ps.length} parcelas pagas`:"sem parcelas"}`,
-  }[sec];
+  const abas = ABAS_FICHA.filter(a => a!=="financeiro" || verFin);
+  /* O resumo do topo não depende da aba: quem está no cadastro também quer
+     saber se o financeiro está em dia sem trocar de aba para descobrir. */
+  const resumo = [
+    `Fechamento ${fmtD(m.data_fechamento)}`,
+    (verFin && ps.length) ? `${ps.filter(p=>p.status==="paga").length}/${ps.length} parcelas pagas` : "",
+    ss.length ? `${ss.filter(s=>s.status==="Concluída").length} de ${ss.length} sessões concluídas` : "",
+  ].filter(Boolean).join(" · ");
 
-  const box = $("#modalBox"); box.className="modal";
-  box.innerHTML = `
-  <header><div><h3>${esc(m.nome)}</h3><div class="sub" style="color:var(--mut);font-size:12px;margin-top:3px">${legenda}</div></div>
-  <button class="x" onclick="closeModal()">✕</button></header>
+  $("#app").innerHTML = `
+  <div class="crumb"><button onclick="irPara('${voltarPara}')">&larr; ${ROTULO_TELA[voltarPara]||"Mentorados"}</button></div>
+  <div class="topbar"><div><h2>${esc(m.nome)} ${pillSituacao(m)}</h2>
+    <div class="sub">${resumo}</div></div>
+  ${(pode("criarSessao") && aba==="sessoes")?`<button class="btn" onclick="openSessao(null,'${id}')">+ Nova sessão</button>`:""}</div>
 
-  ${sec!=="completo"?`<div class="rowflex" style="margin-bottom:18px">
-    <button class="btn sm ghost" onclick="openMentorado('${id}','completo')">Ver ficha completa</button>
-  </div>`:''}
+  <div class="abas">${abas.map(a=>
+    `<button class="${a===aba?"active":""}" onclick="openMentorado('${id}','${a}')">${ROTULO_ABA[a]}</button>`).join("")}</div>
 
-  ${mostra.basico?`
+  <div class="panel ficha-corpo">
+  ${aba==="cadastro"?`
   <div class="fgrid">
     <div class="f"><label>Nome</label><input id="e_nome" value="${esc(m.nome)}" ${editarM?"":"disabled"}></div>
     <div class="f"><label>Data de fechamento</label>${dateField("e_fech", m.data_fechamento, {disabled:!editarM})}</div>
@@ -2210,24 +2298,12 @@ window.openMentorado = function(id, secao){
     <div class="f"><label>Link Drive</label><input id="e_ldrive" value="${esc(m.link_drive)}" ${editarM?"":"disabled"}></div>
     <div class="f"><label>Link Mapa Mental</label><input id="e_lmapa" value="${esc(m.link_mapa_mental)}" ${editarM?"":"disabled"}></div>
     <div class="f"><label>Canal WhatsApp</label><input id="e_lwhats" value="${esc(m.link_whatsapp)}" ${editarM?"":"disabled"}></div>
-  </div>`:''}
-
-  ${mostra.financeiro?`
-  ${sec==="completo"?`<div class="sec"><h4>Contrato e pagamento</h4>`:`<div>`}
-  <div class="fgrid">
-    <div class="f"><label>Contrato</label><select id="e_contr">${["Assinado","Aguardando assinatura","Ainda não","Cancelou"].map(c=>`<option ${m.contrato_status===c?"selected":""}>${c}</option>`).join("")}</select></div>
-    <div class="f"><label>Entrada</label><select id="e_ent">${["Pago","Pago parcial","Patrocinado","Ainda não","Cancelou"].map(c=>`<option ${m.entrada_status===c?"selected":""}>${c}</option>`).join("")}</select></div>
-    <div class="f"><label>Forma entrada</label><input id="e_entf" value="${esc(m.entrada_forma_pgto)}" placeholder="pix, cartão…"></div>
-    <div class="f"><label>Restante</label><select id="e_res">${["Pago","Pago parcial","Ainda não","Patrocinado","Cancelou"].map(c=>`<option ${m.restante_status===c?"selected":""}>${c}</option>`).join("")}</select></div>
-    <div class="f"><label>Forma restante</label><input id="e_resf" value="${esc(m.restante_forma_pgto)}" placeholder="parc. boleto…"></div>
   </div>
-  </div>`:''}
-
-  ${(mostra.basico||mostra.financeiro)&&editarM?`<div class="rowflex">
+  ${editarM?`<div class="rowflex">
     <button class="btn" onclick="salvarMentorado('${id}')">Salvar alterações</button>
   </div>`:''}
 
-  ${mostra.basico&&editarM?`
+  ${editarM?`
   <div class="sec"><h4>Situa&ccedil;&atilde;o</h4>
   <div class="fgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:0">
     <div class="f"><label>Situa&ccedil;&atilde;o</label><select id="e_situacao" onchange="togglePausaCampos()">
@@ -2239,7 +2315,27 @@ window.openMentorado = function(id, secao){
   <div class="rowflex mt8"><button class="btn sm" onclick="salvarSituacao('${id}')">Salvar situa&ccedil;&atilde;o</button></div>
   </div>`:''}
 
-  ${mostra.financeiro?`
+  ${pode("excluir")?`
+  <div class="sec"><h4>Excluir mentorado</h4>
+  <div class="sub" style="color:var(--mut);font-size:12.5px;line-height:1.6;margin-bottom:12px">
+    Apaga a ficha e tudo que está pendurado nela${aExcluir.partes.length?`: ${esc(aExcluir.partes.join(", "))}`:""}. Não dá para desfazer.
+    Se a pessoa apenas saiu do programa, marque <b>Cancelado</b> na situação acima — assim o histórico fica de pé.
+  </div>
+  <button class="btn danger sm" onclick="openExcluirMentorado('${id}')">Excluir mentorado…</button>
+  </div>`:''}`:''}
+
+  ${aba==="financeiro"?`
+  <div class="fgrid">
+    <div class="f"><label>Contrato</label><select id="e_contr">${["Assinado","Aguardando assinatura","Ainda não","Cancelou"].map(c=>`<option ${m.contrato_status===c?"selected":""}>${c}</option>`).join("")}</select></div>
+    <div class="f"><label>Entrada</label><select id="e_ent">${["Pago","Pago parcial","Patrocinado","Ainda não","Cancelou"].map(c=>`<option ${m.entrada_status===c?"selected":""}>${c}</option>`).join("")}</select></div>
+    <div class="f"><label>Forma entrada</label><input id="e_entf" value="${esc(m.entrada_forma_pgto)}" placeholder="pix, cartão…"></div>
+    <div class="f"><label>Restante</label><select id="e_res">${["Pago","Pago parcial","Ainda não","Patrocinado","Cancelou"].map(c=>`<option ${m.restante_status===c?"selected":""}>${c}</option>`).join("")}</select></div>
+    <div class="f"><label>Forma restante</label><input id="e_resf" value="${esc(m.restante_forma_pgto)}" placeholder="parc. boleto…"></div>
+  </div>
+  ${editarM?`<div class="rowflex">
+    <button class="btn" onclick="salvarMentorado('${id}')">Salvar alterações</button>
+  </div>`:''}
+
   <div class="sec"><h4>Parcelas ${ps.length?`· ${ps.filter(p=>p.status==="paga").length}/${ps.length} pagas`:""}${(()=>{
       const prox = proximaParcela(ps);
       return prox ? ` · #${prox.numero} ${prazoTexto(prox.vencimento)}` : "";
@@ -2262,8 +2358,8 @@ window.openMentorado = function(id, secao){
     <button class="btn sm ghost" onclick="addParcela('${id}')">+ Adicionar parcela</button>
   </div>`:""}</div>`:''}
 
-  ${mostra.sessoes?`
-  <div class="sec"><h4>Sessões 1:1 com mentores</h4>
+  ${aba==="sessoes"?`
+  <h4 class="ficha-h4">Sessões 1:1 com mentores</h4>
   ${ss.map(s=>`
   <div class="sess">
     <div class="et">${esc(s.etapa)}</div>
@@ -2276,7 +2372,6 @@ window.openMentorado = function(id, secao){
       ${escreverS?`<button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>`:""}
     </div>
   </div>`).join("")||`<div class="empty" style="padding:12px">Nenhuma sessão registrada ainda.</div>`}
-  ${pode("criarSessao")?`<button class="btn sm mt8" onclick="openSessao(null,'${id}')">+ Nova sessão</button>`:''}</div>
   ${ssGrupo.length?`<div class="sec"><h4>Sessões em grupo &middot; ${ssGrupo.length}</h4>
   ${ssGrupo.slice().sort((a,b)=>(a.data||"")<(b.data||"")?1:-1).map(s=>`
   <div class="sess">
@@ -2290,16 +2385,7 @@ window.openMentorado = function(id, secao){
       ${escreverS?`<button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>`:""}
     </div>
   </div>`).join("")}</div>`:''}`:''}
-
-  ${(sec==="completo" && pode("excluir"))?`
-  <div class="sec"><h4>Excluir mentorado</h4>
-  <div class="sub" style="color:var(--mut);font-size:12.5px;line-height:1.6;margin-bottom:12px">
-    Apaga a ficha e tudo que está pendurado nela${aExcluir.partes.length?`: ${esc(aExcluir.partes.join(", "))}`:""}. Não dá para desfazer.
-    Se a pessoa apenas saiu do programa, marque <b>Cancelado</b> na situação acima — assim o histórico fica de pé.
-  </div>
-  <button class="btn danger sm" onclick="openExcluirMentorado('${id}')">Excluir mentorado…</button>
-  </div>`:''}`;
-  $("#overlay").classList.add("open");
+  </div>`;
 }
 window.closeModal = ()=>{ dpClose(); $("#overlay").classList.remove("open"); };
 $("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeModal(); });
@@ -2599,8 +2685,8 @@ window.excluirMentorado = async function(id){
     return toast("Nada foi excluído — seu acesso não permite apagar mentorados", true);
   closeModal();
   toast("Mentorado excluído");
+  irPara("#/mentorados"); // o endereço da ficha morreu junto com ela
   await loadAll();
-  render();
 }
 
 /* ================= NOVO MENTORADO ================= */

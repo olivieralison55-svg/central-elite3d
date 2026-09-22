@@ -214,21 +214,46 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   const app = preparar(carregarApp(), "admin");
   const {mod} = app;
 
+  /* A ficha é página, não modal: sai em #app e leva o endereço junto. */
   t.secao("Ficha do mentorado");
   globalThis.openMentorado("m1", "sessoes");
-  const ficha = app.modal();
+  const ficha = app.tela();
+  t.ok("endereço leva id e aba", app.endereco() === "#/mentorado/m1/sessoes", app.endereco());
   t.ok("sem lixo", semLixo(ficha), ficha.slice(0, 300));
   t.ok("bloco 1:1 rotulado", ficha.includes("Sessões 1:1 com mentores"));
   t.ok("bloco de grupo com contagem", ficha.includes("Sessões em grupo &middot; 2"));
-  t.ok("legenda conta só a trilha 1:1", ficha.includes("1 de 2 concluída(s)"),
-    ficha.slice(ficha.indexOf("Trilha"), ficha.indexOf("Trilha") + 120));
+  t.ok("resumo conta só a trilha 1:1", ficha.includes("1 de 2 sessões concluídas"),
+    ficha.slice(ficha.indexOf("Fechamento"), ficha.indexOf("Fechamento") + 160));
+  t.ok("aba financeira não vaza para a de sessões", !ficha.includes('id="e_contr"'));
 
   globalThis.openMentorado("m1", "financeiro");
-  const fichaFin = app.modal();
+  const fichaFin = app.tela();
+  t.ok("endereço acompanha a troca de aba", app.endereco() === "#/mentorado/m1/financeiro", app.endereco());
   t.ok("ficha financeira mostra o valor da parcela em real",
     brl(fichaFin).includes("R$ 500,00"), fichaFin.slice(fichaFin.indexOf("Parcelas"), fichaFin.indexOf("Parcelas") + 250));
   t.ok("ficha financeira usa o campo de calendário no vencimento",
     fichaFin.includes('data-dp="np_venc"'));
+
+  /* Aba cadastro é o endereço curto: /financeiro e /sessoes são os sufixos. */
+  globalThis.openMentorado("m1", "completo");
+  t.ok("cadastro é o endereço sem sufixo", app.endereco() === "#/mentorado/m1", app.endereco());
+  t.ok("cadastro traz nome e situação",
+    app.tela().includes('id="e_nome"') && app.tela().includes('id="e_situacao"'));
+  t.ok("cadastro escapa o nome", semLixo(app.tela()), app.tela().slice(0, 300));
+
+  t.secao("Endereço da ficha");
+  /* Link colado com aba inexistente não pode deixar a página vazia. */
+  globalThis.location.hash = "#/mentorado/m1/inventada";
+  t.ok("aba desconhecida cai no cadastro", app.tela().includes('id="e_nome"'),
+    app.tela().slice(0, 200));
+  globalThis.location.hash = "#/mentorado/nao-existe";
+  t.ok("ficha inexistente explica em vez de sumir",
+    app.tela().includes("Ficha não encontrada"), app.tela().slice(0, 200));
+  globalThis.location.hash = "#/mentorados";
+  t.ok("voltar para a lista desenha a lista", app.tela().includes("Mentorados"));
+  globalThis.openMentorado("m1", "financeiro");
+  t.ok("voltar da ficha aponta para a lista de origem",
+    app.estado.voltarPara === "#/mentorados", app.estado.voltarPara);
 
   t.secao("Formulário de sessão");
   globalThis.openSessao("g1", "m1");
@@ -351,12 +376,25 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("card de grupo presente", dash.includes("Encontros em grupo"));
 
   globalThis.openMentorado("m1", "completo");
-  const ficha = app.modal();
+  const ficha = app.tela();
   t.ok("ficha sem lixo", semLixo(ficha), ficha.slice(0, 300));
   t.ok("ficha sem bloco financeiro", !ficha.includes("Contrato e pagamento"));
-  t.ok("ficha mantém a divisão de sessões",
-    ficha.includes("Sessões 1:1 com mentores") && ficha.includes("Sessões em grupo"));
+  /* Sem verFinanceiro a aba financeira nem é oferecida. */
+  t.ok("sem aba financeira", !ficha.includes(">Financeiro</button>"), ficha.slice(0, 300));
   t.ok("campo de data vem desabilitado", /data-dp="e_fech"[^>]*disabled/.test(ficha), "campo editável");
+  globalThis.openMentorado("m1", "sessoes");
+  t.ok("ficha mantém a divisão de sessões",
+    app.tela().includes("Sessões 1:1 com mentores") && app.tela().includes("Sessões em grupo"));
+
+  /* O endereço é público: quem manda um link do financeiro para um mentor não
+     pode abrir para ele o que a tela esconde. */
+  globalThis.location.hash = "#/mentorado/m1/financeiro";
+  t.ok("link da aba financeira cai nas sessões",
+    app.tela().includes("Sessões 1:1 com mentores") && !app.tela().includes('id="e_contr"'),
+    app.tela().slice(0, 200));
+  globalThis.location.hash = "#/financeiro";
+  t.ok("link da tela financeira volta para o dashboard",
+    app.endereco() === "#/dash", app.endereco());
 
   /* Mentor tem UPDATE em sessoes, então confirma — igual à confirmação individual. */
   mod.renderSessoes();
@@ -392,9 +430,9 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   const dash = app.tela();
   t.ok("vê os alertas financeiros",
     dash.includes("Parcelas vencidas em aberto") && dash.includes("Contratos pendentes de assinatura"));
-  globalThis.openMentorado("m1", "completo");
-  const ficha = app.modal();
-  t.ok("vê o bloco financeiro da ficha", ficha.includes("Contrato e pagamento"));
+  globalThis.openMentorado("m1", "financeiro");
+  const ficha = app.tela();
+  t.ok("vê o bloco financeiro da ficha", ficha.includes("Contrato"));
   t.ok("vê o valor da parcela", brl(ficha).includes("R$ 500,00"));
 
   t.secao("Papel diretoria — não escreve");
@@ -410,7 +448,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   saidas.push(["openGrupo", app.modal()]);
   for (const sec of ["completo", "sessoes", "financeiro"]) {
     globalThis.openMentorado("m1", sec);
-    saidas.push(["ficha:" + sec, app.modal()]);
+    saidas.push(["ficha:" + sec, app.tela()]);
   }
 
   let vazamentos = [];
@@ -424,7 +462,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 
   /* Alguns pontos específicos que não são botão e passam batido fácil. */
   globalThis.openMentorado("m1", "financeiro");
-  const fichaFin = app.modal();
+  const fichaFin = app.tela();
   t.ok("azulejo da parcela não tem onclick", !fichaFin.includes("toggleParcela"));
   t.ok("sem lápis de editar parcela", !fichaFin.includes("parc-edit"));
   t.ok("sem adicionar parcela", !fichaFin.includes("+ Adicionar parcela"));
@@ -667,8 +705,10 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     app.mod[render]();
     varrer(app.tela());
   }
-  globalThis.openMentorado("m1", "completo");
-  varrer(app.modal());
+  for (const aba of ["cadastro", "financeiro", "sessoes"]) {
+    globalThis.openMentorado("m1", aba);
+    varrer(app.tela());
+  }
   t.ok("a varredura acha handler de escrita quando ele existe",
     achados.size >= 10, "achou so " + achados.size + ": " + [...achados].join(", "));
 }
@@ -827,8 +867,8 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 
   t.secao("Exclusão de mentorado (admin)");
   globalThis.openMentorado("m1", "completo");
-  const ficha = app.modal();
-  t.ok("a ficha completa oferece excluir", ficha.includes("openExcluirMentorado('m1')"), ficha.slice(0, 200));
+  const ficha = app.tela();
+  t.ok("a aba de cadastro oferece excluir", ficha.includes("openExcluirMentorado('m1')"), ficha.slice(0, 200));
   /* Cancelar é quase sempre o que a pessoa quer; a ficha precisa dizer isso
      antes, não depois do banco apagar. */
   t.ok("aponta cancelar como alternativa", ficha.includes("Cancelado</b> na situação acima"),
@@ -838,7 +878,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   /* Recorte parcial não é lugar de apagar: quem abriu pelo alerta de sessões
      está ali para conferir uma linha. */
   globalThis.openMentorado("m1", "sessoes");
-  t.ok("o recorte de sessões não oferece excluir", !app.modal().includes("openExcluirMentorado"));
+  t.ok("a aba de sessões não oferece excluir", !app.tela().includes("openExcluirMentorado"));
 
   t.secao("Confirmação de exclusão");
   globalThis.openExcluirMentorado("m1");
@@ -874,8 +914,8 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   const app = preparar(carregarApp(), "diretoria");
   t.secao("Exclusão de mentorado (diretoria)");
   globalThis.openMentorado("m1", "completo");
-  t.ok("diretoria não vê o botão de excluir", !app.modal().includes("openExcluirMentorado"),
-    app.modal().slice(0, 200));
+  t.ok("diretoria não vê o botão de excluir", !app.tela().includes("openExcluirMentorado"),
+    app.tela().slice(0, 200));
 }
 
 /* =======================================================================
@@ -1035,11 +1075,11 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   /* O que garante que o recorte financeiro não zere a marca é o campo de nome
      não estar na tela: sem ele, `val("#e_nome")` volta undefined e o bloco
      inteiro é pulado. Testo a ausência do campo, não o salvamento — o stub de
-     DOM guarda um elemento por seletor, então lá `#e_nome` "existe" mesmo num
-     recorte que não o desenha, e o salvamento não distinguiria os dois casos. */
+     DOM guarda um elemento por seletor, então lá `#e_nome` "existe" mesmo numa
+     aba que não o desenha, e o salvamento não distinguiria os dois casos. */
   globalThis.openMentorado("m3", "financeiro");
-  t.ok("recorte financeiro não traz o campo de nome",
-    !app.modal().includes('id="e_nome"'), app.modal().slice(0, 200));
+  t.ok("aba financeira não traz o campo de nome",
+    !app.tela().includes('id="e_nome"'), app.tela().slice(0, 200));
 }
 
 /* =======================================================================
@@ -1056,7 +1096,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 
   t.secao("Prazo da próxima parcela");
   globalThis.openMentorado("m2", "financeiro");
-  const ficha = app.modal();
+  const ficha = app.tela();
   t.ok("o cabeçalho anuncia a próxima", ficha.includes("vence em 3 dias"),
     ficha.slice(ficha.indexOf("Parcelas"), ficha.indexOf("Parcelas") + 260));
   t.ok("conta quantas foram pagas", ficha.includes("1/2 pagas"));
@@ -1070,7 +1110,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 
   t.secao("Parcela manual continua editável");
   globalThis.openMentorado("m1", "financeiro");
-  const manual = app.modal();
+  const manual = app.tela();
   t.ok("tem lápis", manual.includes("openParcela"));
   t.ok("alterna paga/aberta", manual.includes("toggleParcela"));
   t.ok("oferece adicionar", manual.includes("+ Adicionar parcela"));
@@ -1204,7 +1244,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
 
   t.secao("E-mail na ficha");
   globalThis.openMentorado("m1", "completo");
-  const ficha = app.modal();
+  const ficha = app.tela();
   t.ok("o campo existe", ficha.includes('id="e_email"'), ficha.slice(0, 200));
   t.ok("traz o e-mail salvo", ficha.includes('value="ana.clara@exemplo.com"'));
   t.ok("explica para que serve", ficha.includes("o nome no título do convite não importa"));
@@ -1214,7 +1254,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
      órfã ter com quem casar. */
   globalThis.openMentorado("m4", "completo");
   t.ok("ficha sem e-mail avisa que o sync ainda depende do título",
-    app.modal().includes("ainda depende do nome escrito no título"));
+    app.tela().includes("ainda depende do nome escrito no título"));
 
   t.secao("Normalização ao salvar");
   globalThis.openMentorado("m1", "completo");
@@ -1261,7 +1301,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   const app = preparar(carregarApp(), "mentor");
   t.secao("E-mail do mentorado (mentor)");
   globalThis.openMentorado("m1", "completo");
-  const ficha = app.modal();
+  const ficha = app.tela();
   t.ok("vê o campo travado", ficha.includes('id="e_email"') && /id="e_email"[^>]*disabled/.test(ficha),
     ficha.slice(ficha.indexOf('id="e_email"') - 60, ficha.indexOf('id="e_email"') + 200));
   t.ok("sem salvar alterações", !ficha.includes("Salvar alterações"));
