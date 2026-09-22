@@ -289,6 +289,8 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("STLFLIX que não é o da loja fica como cadastro incorreto",
     an.includes("E-mail não cadastrado corretamente &middot; 1") && an.includes("E-mail STLFLIX não é o da loja"),
     an.slice(an.indexOf("E-mail não cadastrado"), an.indexOf("E-mail não cadastrado") + 400));
+  t.ok("loja achada por outro e-mail mostra o endereço, não duplica o do formulário",
+    an.includes("<td>loja@ana.com</td>") && !an.includes("E-mail da loja"));
   t.ok("STLFLIX que acha a loja conta como resolvido", an.includes("1 resolvido(s) pelo e-mail STLFLIX: Eva Sem Ficha"));
   globalThis.setAnalise("statusAnalise", "");
   const anTodos = app.tela();
@@ -299,6 +301,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   globalThis.setAnalise("chipAnalise", "email");
   t.ok("filtro E-mail incorreto usa a mesma regra", app.tela().includes("Visão geral por mentorado &middot; 2")
     && app.tela().includes("Formulário sem e-mail STLFLIX") === false && app.tela().includes("E-mail STLFLIX não encontra conta de seller"));
+  t.ok("sem loja vira etiqueta", app.tela().includes('<span class="pill gray">sem loja</span>'));
   globalThis.setAnalise("chipAnalise", "todos");
   globalThis.setAnalise("statusAnalise", "ATIVO");
 
