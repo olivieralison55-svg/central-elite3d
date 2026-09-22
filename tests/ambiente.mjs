@@ -142,6 +142,8 @@ export function carregarApp() {
         get S(){ return S }, set S(v){ S = v },
         set ORFAS(v){ ORFAS = v },
         get COBRANCAS(){ return COBRANCAS }, set COBRANCAS(v){ COBRANCAS = v },
+        set STLSELLER(v){ STLSELLER = v }, set STLSELLER_ERRO(v){ STLSELLER_ERRO = v },
+        set STL_PEDIDOS(v){ STL_PEDIDOS = v }, set STL_PRODUTOS(v){ STL_PRODUTOS = v },
         set papel(v){ myRole = v; myProfile = {nome:"Teste", email:"teste@exemplo.com", role:v} },
         rotas(r, mk, mm, cn, mc, f){ ROTAS=r; MARCOS=mk; MM=mm; CANAIS_DB=cn; MC=mc; FAT=f;
           rotaAtual = r[0] && r[0].slug },
@@ -266,6 +268,34 @@ export function preparar(app, papel = "admin") {
     {lia_bill_id:"ok1",  mentorado_id:"m1", status:"paid",    amount_cents:600,    due_date:"2026-09-18", contact_email:"ana.clara@exemplo.com"},
     /* Compra de teste ja descartada: nao conta como orfa nem aparece em ficha. */
     {lia_bill_id:"desc1", mentorado_id:null, status:"paid", amount_cents:100, due_date:"2026-09-01", contact_email:"teste@exemplo.com", ignorada:true},
+  ];
+  /* STLSeller: m1 casa pelo e-mail do formulario, m2 pelo e-mail STLFLIX (o
+     do formulario e outro). m3 e m4 nao tem registro. O titulo com XSS prova
+     que o que vem do marketplace passa por esc(); o permalink javascript: prova
+     que link de fora nao vira href. */
+  app.estado.STLSELLER_ERRO = null;
+  app.estado.STLSELLER = [
+    {email:"ana.clara@exemplo.com", email_stlflix:"ana@stlflix.com", status_formulario:"ATIVO", status_real:"pago",
+     plano_ativo:true, vendas_marketplace:214, loja_id:"s1", loja_nome:"Loja da Ana", loja_email:"loja@ana.com",
+     lia_status_pagamento:"finished", lia_pedidos:1, lia_pedidos_finalizados:1, lia_ultimo_pedido_em:"2026-08-06T21:52:45.995+00:00",
+     lia_motivo_cancelamento:null, produtos_vendidos:2, faturamento_total:"1234.50", synced_at:"2026-09-22T12:00:00Z"},
+    {email:"outro@exemplo.com", email_stlflix:"bruno@exemplo.com", status_formulario:"PAUSADO", status_real:"sem_pedido_lia",
+     plano_ativo:false, loja_id:null, lia_ultimo_pedido_em:null, produtos_vendidos:0, faturamento_total:"0.00", synced_at:"2026-09-22T12:00:00Z"},
+    /* E-mail do formulario diferente, mas o STLFLIX acha a loja (caixa diferente
+       de proposito): conta como resolvido, nao como cadastro incorreto. */
+    {email:"form.eva@exemplo.com", email_stlflix:"eva@stlflix.com", nome:"Eva Sem Ficha", status_formulario:"ATIVO", status_real:"pago",
+     plano_ativo:true, loja_id:"s3", loja_nome:"Loja da Eva", loja_email:"EVA@stlflix.com", produtos_vendidos:0, faturamento_total:"0.00", synced_at:"2026-09-22T12:00:00Z"},
+  ];
+  app.estado.STL_PEDIDOS = [
+    {email:"ana.clara@exemplo.com", marketplace:"mercadolivre", pedidos:12, pedidos_vendidos:10, pedidos_cancelados:2,
+     total_bruto:"1500.00", total_liquido:null, ultimo_pedido_em:"2026-09-01T10:00:00Z"},
+  ];
+  /* numeric chega do PostgREST como string: a ordenacao tem que converter. */
+  app.estado.STL_PRODUTOS = [
+    {email:"ana.clara@exemplo.com", marketplace:"mercadolivre", anuncio_id:"MLB1", titulo:"Vaso " + XSS, link:"javascript:alert(1)",
+     pedidos:3, unidades:4, faturamento:"234.50", ultima_venda_em:"2026-09-01T10:00:00Z"},
+    {email:"ana.clara@exemplo.com", marketplace:"shopee", anuncio_id:"SP1", titulo:"Chaveiro", link:"https://exemplo.com/p/1",
+     pedidos:7, unidades:9, faturamento:"1000.00", ultima_venda_em:"2026-08-20T10:00:00Z"},
   ];
   app.estado.rotas(...rotas);
   /* Trilha de rotas já com um marco expandido: é onde vivem o teste de

@@ -22,7 +22,7 @@
   --surface-interactive:#1B2916;
   --primary:#B9FF46;
   --primary-foreground:#10141A;
-  --foreground:#FEFEFE;
+  --foreground:#FDFDFD;
   --muted-foreground:rgba(232,237,245,.72);
   --subtle-foreground:#929699;
   --disabled-foreground:#5C6166;
@@ -252,6 +252,18 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
 .abas button{background:none;border:none;border-bottom:2px solid transparent;color:var(--subtle-foreground);font-size:13.5px;font-weight:500;padding:11px 15px;min-height:44px;white-space:nowrap;transition:color var(--speed) ease,border-color var(--speed) ease}
 .abas button:hover{color:var(--foreground)}
 .abas button.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.stl-origem{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.5px;color:var(--mut);margin-bottom:18px}
+.tw{overflow-x:auto}
+.an-conc{display:flex;height:30px;border-radius:6px;overflow:hidden;background:var(--border)}
+.an-conc span{display:block;height:100%;border-right:1px solid var(--bg)}
+.an-leg{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:13.5px;color:var(--mut)}
+.an-leg b{color:var(--foreground);font-weight:600}
+.an-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+.an-pills{display:flex;flex-wrap:wrap;gap:8px}
+.an-pills .pill{white-space:normal}
+tr.an-zero td{color:var(--subtle-foreground)}
+.lk-nome{cursor:pointer;color:var(--foreground);border-bottom:1px solid var(--border)}
+.lk-nome:hover{color:var(--primary);border-bottom-color:var(--primary)}
 .ficha-corpo{padding:26px}
 .ficha-corpo .sec:first-child{border-top:none;margin-top:0;padding-top:0}
 .ficha-h4{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--primary);font-weight:700;margin-bottom:14px}
@@ -434,6 +446,7 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
     <button data-view="mentorados"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Mentorados</button>
     <button data-view="sessoes"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span> Sessões</button>
     <button data-view="rotas"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="5.5" r="2.5"/><path d="M8 18.5h6a4.5 4.5 0 0 0 0-9H10a4.5 4.5 0 0 1 0-9"/></svg></span> Rotas</button>
+    <button data-view="analise" id="navAnalise"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/></svg></span> STLSeller</button>
     <button data-view="financeiro" id="navFinanceiro"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 7l2.5-3h13L21 7"/><path d="M12 11v6M9.5 12.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg></span> Financeiro</button>
   </nav>
   <div class="side-foot">
@@ -450,6 +463,7 @@ td.num,th.num{text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-s
     <button data-view="mentorados">Mentorados</button>
     <button data-view="sessoes">Sessões</button>
     <button data-view="rotas">Rotas</button>
+    <button data-view="analise" id="navAnaliseMobile">STLSeller</button>
     <button data-view="financeiro" id="navFinanceiroMobile">Financeiro</button>
   </div>
   <div id="app"><div class="skel-wrap" aria-busy="true" aria-label="Carregando dados"><div class="skel" style="height:34px;width:220px"></div><div class="skel" style="height:120px"></div><div class="skel-row"><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div></div><div class="skel" style="height:200px"></div></div></div>
@@ -537,11 +551,16 @@ let CANAIS_DB = [], MC = []; // canais (por rota), mentorado_canais
 let FAT = []; // faturamento_mensal
 let ORFAS = []; // sessoes cujo evento sumiu do Google Calendar
 let COBRANCAS = []; // lia_cobrancas -- so carregada para quem ve financeiro
+/* Foto do STLSeller trazida pelo sync-stlseller: stlseller_mentorados,
+   stlseller_pedidos_marketplace e stlseller_produtos_vendidos. So para quem ve
+   financeiro. O erro fica guardado porque a aba tem que dizer que nao carregou,
+   e nao fingir que o mentorado nao tem registro la. */
+let STLSELLER = [], STL_PEDIDOS = [], STL_PRODUTOS = [], STLSELLER_ERRO = null;
 let view = "dash";
 /* `q` e a busca da tela Mentorados; as outras telas tem a sua propria. O termo
    fica separado por tela de proposito: quem filtrou um nome em Sessoes nao
    espera abrir o Financeiro e encontrar a tela recortada pelo mesmo nome. */
-let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:""};
+let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:"", qAnalise:""};
 /* Mes selecionado na matriz de sessoes por mentor ("YYYY-MM"), ou "" para o
    historico inteiro. `null` significa "ainda no padrao": quem resolve e o
    renderDash, que sabe quais meses tem sessao. */
@@ -599,6 +618,8 @@ async function afterLogin(session){
   if(!pode("verFinanceiro")){
     $("#navFinanceiro").style.display = "none";
     $("#navFinanceiroMobile").style.display = "none";
+    $("#navAnalise").style.display = "none";
+    $("#navAnaliseMobile").style.display = "none";
   }
   aplicarEndereco(false); // o endereço da URL decide a tela; quem desenha é o loadAll
   await loadAll();
@@ -641,7 +662,9 @@ async function loadAll(){
   const cobrancaQuery = pode("verFinanceiro")
     ? db.from("lia_cobrancas").select("*").order("due_date")
     : Promise.resolve({data:[], error:null});
-  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf] = await Promise.all([
+  const semNada = Promise.resolve({data:[], error:null});
+  const verStl = pode("verFinanceiro");
+  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd] = await Promise.all([
     mentorQuery,
     parcelaQuery,
     cobrancaQuery,
@@ -653,12 +676,21 @@ async function loadAll(){
     db.from("canais").select("*").order("ordem"),
     db.from("mentorado_canais").select("*"),
     db.from("sessoes_orfas").select("*"),
+    verStl ? db.from("stlseller_mentorados").select("*") : semNada,
+    verStl ? db.from("stlseller_pedidos_marketplace").select("*") : semNada,
+    verStl ? paginado(()=>db.from("stlseller_produtos_vendidos").select("*").order("faturamento",{ascending:false})) : semNada,
   ]);
   if(m.error||p.error||s.error){ toast((m.error||p.error||s.error).message, true); return; }
   M = m.data; P = p.data; S = s.data;
   ROTAS = r.data||[]; MARCOS = md.data||[]; MM = mm.data||[];
   FAT = fat.data||[]; CANAIS_DB = cn.data||[]; MC = mc.data||[]; ORFAS = orf.data||[];
   COBRANCAS = cob.data||[];
+  /* O STLSeller nao trava a aplicacao: e dado de referencia, e a ficha segue
+     util sem ele. A falha aparece na propria aba. */
+  const erroStl = stl.error || stlPed.error || stlProd.error;
+  STLSELLER = stl.data||[]; STL_PEDIDOS = stlPed.data||[]; STL_PRODUTOS = stlProd.data||[];
+  STLSELLER_ERRO = erroStl ? erroStl.message : null;
+  if(erroStl) console.error("[stlseller] load failed", erroStl);
   if(!rotaAtual && ROTAS.length) rotaAtual = ROTAS[0].slug;
   dadosProntos = true;
   render();
@@ -1113,9 +1145,9 @@ function btnNovoMentorado(secundario){
 
    Hash e não caminho porque o deploy é estático na Vercel, sem build nem
    servidor: `/mentorado/<id>` pedido direto devolveria 404 antes de o JS rodar. */
-const TELAS = ["dash","mentorados","sessoes","rotas","financeiro"];
+const TELAS = ["dash","mentorados","sessoes","rotas","analise","financeiro"];
 const ROTULO_TELA = {"#/dash":"Dashboard", "#/mentorados":"Mentorados",
-  "#/sessoes":"Sessões", "#/rotas":"Rotas", "#/financeiro":"Financeiro"};
+  "#/sessoes":"Sessões", "#/rotas":"Rotas", "#/analise":"STLSeller", "#/financeiro":"Financeiro"};
 let fichaId = null, fichaAba = "cadastro";
 /* Antes do primeiro loadAll não há o que desenhar, e o roteador pode pedir um
    render antes disso — trocar o hash no boot dispara hashchange na hora. */
@@ -1138,7 +1170,7 @@ function aplicarEndereco(desenhar=true){
   if(!myRole) return; // hashchange antes do login não tem tela para desenhar
   const e = lerEndereco();
   // o financeiro é fechado por papel: link colado não abre o que a tela esconde
-  if(e.view==="financeiro" && !pode("verFinanceiro")) return irPara("#/dash");
+  if((e.view==="financeiro" || e.view==="analise") && !pode("verFinanceiro")) return irPara("#/dash");
   if(e.view!=="sessoes") foco = null; // foco é do alerta que trouxe a pessoa aqui
   if(e.view!=="mentorado") voltarPara = "#/"+e.view;
   view = e.view; fichaId = e.id||null; fichaAba = e.aba||"cadastro";
@@ -1169,6 +1201,7 @@ function render(){
   else if(view==="sessoes") renderSessoes();
   else if(view==="rotas") renderRotas();
   else if(view==="financeiro" && pode("verFinanceiro")) renderFinanceiro();
+  else if(view==="analise" && pode("verFinanceiro")) renderAnalise();
   else { view="dash"; renderDash(); }
 }
 
@@ -2213,6 +2246,171 @@ window.salvarMarco = async function(marcoId, mentoradoId){
   toast("Evolução registrada"); await loadAll(); rotaMentoradoId=mentoradoId; marcoAberto=marcoId; renderRotas();
 }
 
+/* ================= ANÁLISE (STLSeller) ================= */
+/* Visão analítica dos mentorados a partir das tabelas stlseller_*: quanto a
+   carteira vende nos marketplaces, quem concentra o faturamento, quem ainda
+   não vendeu e onde o cruzamento por e-mail falha. Mesmo recorte de papel da
+   aba STLSeller da ficha — tem faturamento e status de pagamento.
+
+   "Bruto" vem dos pedidos (já sem cancelados); "receita por anúncio" vem dos
+   produtos. A cobertura é uma sobre a outra: abaixo de 100% é venda que não
+   foi atribuída a anúncio nenhum. */
+const MKT_ROTULO = {mercadolivre:"Mercado Livre", shopee:"Shopee"};
+const ANALISE_STATUS = [["ATIVO","Ativos"],["PAUSADO","Pausados"],["CANCELADO","Cancelados"],["","Todos"]];
+const ANALISE_FILTROS = [["todos","Todos"],["vende","Vendendo"],["parado","Sem venda"],["plano","Plano ativo"],
+  ["fora","Anúncio fora do catálogo"],["email","E-mail incorreto"]];
+/* E-mail do mentorado. Quando o formulário traz o e-mail STLFLIX, é ele que se
+   tenta primeiro (o n8n também prefere a loja achada por ele). Só conta como
+   resolvido se o e-mail STLFLIX de fato encontra a conta de seller; o resto
+   fica marcado como não cadastrado corretamente, com o motivo. */
+function situacaoEmail(r){
+  const stl = normalizaEmail(r.email_stlflix), loja = normalizaEmail(r.loja_email);
+  if(stl && stl===r.email) return {ok:true};
+  if(stl && loja===stl) return {ok:true, resolvidoPorStlflix:true};
+  if(!stl) return {ok:false, motivo:"Formulário sem e-mail STLFLIX"};
+  return {ok:false, motivo: loja ? "E-mail STLFLIX não é o da loja" : "E-mail STLFLIX não encontra conta de seller"};
+}
+
+/* Uma linha por mentorado do STLSeller, já com os números somados. */
+function linhasAnalise(){
+  const pedPor = new Map(), prodPor = new Map();
+  for(const o of STL_PEDIDOS){ if(!pedPor.has(o.email)) pedPor.set(o.email, []); pedPor.get(o.email).push(o); }
+  for(const p of STL_PRODUTOS){ if(!prodPor.has(p.email)) prodPor.set(p.email, []); prodPor.get(p.email).push(p); }
+  const soma = (xs, f) => xs.reduce((a,x)=>a+(Number(x[f])||0), 0);
+  return STLSELLER.map(r=>{
+    const ped = pedPor.get(r.email)||[], prod = prodPor.get(r.email)||[];
+    const pedidos = soma(ped,"pedidos"), cancelados = soma(ped,"pedidos_cancelados");
+    const bruto = soma(ped,"total_bruto"), receita = soma(prod,"faturamento");
+    const ultimo = ped.map(o=>o.ultimo_pedido_em).filter(Boolean).sort().pop() || null;
+    const situacao = !r.loja_id ? "sem-conta" : (pedidos>0 || prod.length>0) ? "vende" : "parado";
+    const ficha = M.find(m=>{ const e = normalizaEmail(m.email); return e && (e===r.email || e===normalizaEmail(r.email_stlflix)); });
+    return {r, ficha, situacao, pedidos, cancelados, bruto, receita, ultimo,
+      pctCancel: pedidos ? cancelados/pedidos : null,
+      cobertura: bruto ? receita/bruto : null,
+      anuncios: prod.length, fora: prod.filter(p=>p.cadastrado_no_stlseller===false).length,
+      canais: [...new Set(ped.map(o=>o.marketplace))].sort(),
+      email: situacaoEmail(r), prod};
+  });
+}
+const pct = v => v==null ? "—" : (v*100).toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
+const nomeAnalise = l => l.ficha ? l.ficha.nome : (l.r.nome || l.r.email);
+function linkFichaAnalise(l){
+  const nomeTxt = esc(nomeAnalise(l));
+  return l.ficha ? `<a class="lk-nome" onclick="openMentorado('${l.ficha.id}','stlseller')">${nomeTxt}</a>` : nomeTxt;
+}
+window.setAnalise = function(campo, v){ filtro[campo] = v; render(); };
+
+function renderAnalise(){
+  const status = filtro.statusAnalise ?? "ATIVO";
+  const base = linhasAnalise().filter(l => !status || l.r.status_formulario===status);
+  const vendendo = base.filter(l=>l.situacao==="vende");
+  const bruto = base.reduce((a,l)=>a+l.bruto,0), receita = base.reduce((a,l)=>a+l.receita,0);
+  const pedidos = base.reduce((a,l)=>a+l.pedidos,0), cancelados = base.reduce((a,l)=>a+l.cancelados,0);
+  const sync = STLSELLER.map(r=>r.synced_at).filter(Boolean).sort().pop();
+  const rotStatus = (ANALISE_STATUS.find(s=>s[0]===status)||[])[1] || "Todos";
+
+  /* Concentração: os 5 maiores e o resto, para mostrar de quem depende o bruto. */
+  const porBruto = vendendo.slice().sort((a,b)=>b.bruto-a.bruto);
+  const top = porBruto.slice(0,5), resto = porBruto.slice(5).reduce((a,l)=>a+l.bruto,0);
+  const cores = [100,78,58,40,26].map(p=>`color-mix(in srgb, var(--primary) ${p}%, var(--surface))`);
+  const fatias = top.map((l,i)=>({nome:nomeAnalise(l), v:l.bruto, cor:cores[i]}))
+    .concat(resto>0 ? [{nome:`outros ${porBruto.length-5}`, v:resto, cor:"var(--border-hover)"}] : []);
+
+  const chip = filtro.chipAnalise || "todos";
+  const passaChip = l => chip==="todos" || (chip==="vende" && l.situacao==="vende") || (chip==="parado" && l.situacao!=="vende")
+    || (chip==="plano" && l.r.plano_ativo===true) || (chip==="fora" && l.fora>0) || (chip==="email" && !l.email.ok);
+  let lista = base.filter(passaChip).filter(l=>casaBusca(filtro.qAnalise, nomeAnalise(l), l.r.email, l.r.email_stlflix, l.r.loja_nome));
+  lista = applySort(lista, "analise", {
+    nome:l=>nomeAnalise(l).toLowerCase(), status:l=>l.r.status_real||"", plano:l=>l.r.plano_ativo?1:0,
+    pedidos:l=>l.pedidos, cancel:l=>l.pctCancel??-1, bruto:l=>l.bruto, receita:l=>l.receita,
+    cobertura:l=>l.cobertura??-1, anuncios:l=>l.anuncios, fora:l=>l.fora, ultimo:l=>l.ultimo||"",
+  }, "bruto", "desc");
+
+  const topAnuncios = base.flatMap(l=>l.prod.map(p=>({p, l})))
+    .sort((a,b)=>(Number(b.p.faturamento)||0)-(Number(a.p.faturamento)||0)).slice(0,15);
+  const semVenda = base.filter(l=>l.situacao==="parado");
+  const semConta = base.filter(l=>l.situacao==="sem-conta");
+  const emailIncorreto = base.filter(l=>!l.email.ok);
+  const peloStlflix = base.filter(l=>l.email.resolvidoPorStlflix);
+  const porReal = Object.entries(base.reduce((a,l)=>((a[l.r.status_real||"—"]=(a[l.r.status_real||"—"]||0)+1),a),{}))
+    .sort((a,b)=>b[1]-a[1]);
+  const tags = (ls) => ls.length ? `<div class="an-pills">${ls.map(l=>`<span class="pill gray">${linkFichaAnalise(l)}${l.r.loja_nome?` · ${esc(l.r.loja_nome)}`:""}</span>`).join("")}</div>`
+    : `<div class="empty" style="padding:12px">Ninguém neste recorte.</div>`;
+
+  $("#app").innerHTML = `
+  <div class="topbar"><div><h2>STLSeller</h2>
+    <div class="sub">Como os mentorados vendem nos marketplaces. <span class="pill blue">Dados do STLSeller</span>
+      ${sync?` atualizado em ${fmtInstante(sync)}`:""}</div></div></div>
+
+  ${STLSELLER_ERRO?`<div class="panel"><div class="empty">Não foi possível carregar os dados do STLSeller: ${esc(STLSELLER_ERRO)}</div></div>`:`
+  <div class="rowflex" style="margin-bottom:18px">${ANALISE_STATUS.map(([v,rot])=>
+    `<button class="btn sm${v===status?"":" ghost"}" aria-pressed="${v===status}" onclick="setAnalise('statusAnalise','${v}')">${rot} &middot; ${STLSELLER.filter(r=>!v||r.status_formulario===v).length}</button>`).join("")}</div>
+
+  <div class="cards quiet" style="margin-bottom:20px">
+    <div class="card"><div class="k">Bruto vendido</div><div class="v">${fmtBRL(bruto)}</div><div class="d">pedidos pagos, enviados e entregues</div></div>
+    <div class="card"><div class="k">Atribuído a anúncios</div><div class="v">${fmtBRL(receita)}</div><div class="d">${pct(bruto?receita/bruto:null)} do bruto</div></div>
+    <div class="card"><div class="k">Pedidos</div><div class="v">${pedidos.toLocaleString("pt-BR")}</div><div class="d">${pct(pedidos?cancelados/pedidos:null)} cancelados (${cancelados.toLocaleString("pt-BR")})</div></div>
+    <div class="card"><div class="k">Vendendo</div><div class="v">${vendendo.length} de ${base.length}</div><div class="d">${rotStatus.toLowerCase()}</div></div>
+    <div class="card"><div class="k">Plano STLSeller ativo</div><div class="v">${base.filter(l=>l.r.plano_ativo===true).length} de ${base.length}</div><div class="d">${semConta.length} sem conta de seller</div></div>
+  </div>
+
+  ${fatias.length?`<div class="panel"><h3>Concentração do bruto</h3>
+    <div class="an-conc" role="img" aria-label="Participação de cada mentorado no bruto vendido">${fatias.map(f=>
+      `<span style="width:${(f.v/bruto*100).toFixed(2)}%;background:${f.cor}" title="${esc(f.nome)}: ${fmtBRL(f.v)}"></span>`).join("")}</div>
+    <div class="an-leg">${fatias.map(f=>`<span><i style="background:${f.cor}"></i>${esc(f.nome)} <b>${pct(f.v/bruto)}</b></span>`).join("")}</div></div>`:""}
+
+  <div class="panel"><h3>Status real sugerido</h3>
+    <div class="an-pills">${porReal.map(([k,n])=>{ const [cor,rot] = STATUS_REAL[k]||["gray",k];
+      return `<span class="pill ${cor}">${esc(rot)} &middot; ${n}</span>`; }).join("")}</div>
+    <div class="hint mt8">Cruzamento do formulário com os pedidos na Lia, feito pela view do STLSeller.</div></div>
+
+  <div class="panel">
+    <div class="rowflex" style="justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">
+      <h3 style="margin:0">Visão geral por mentorado &middot; ${lista.length}</h3>
+      ${buscaField("qAnalise","Buscar por nome, loja ou e-mail")}</div>
+    <div class="rowflex" style="flex-wrap:wrap;margin-bottom:12px">${ANALISE_FILTROS.map(([v,rot])=>
+      `<button class="btn sm${v===chip?"":" ghost"}" aria-pressed="${v===chip}" onclick="setAnalise('chipAnalise','${v}')">${rot}</button>`).join("")}</div>
+    <div class="tw"><table><thead><tr>
+      ${th("analise","nome","Mentorado")}${th("analise","status","Status real")}${th("analise","plano","Plano")}<th>Canais</th>
+      ${th("analise","pedidos","Pedidos","num")}${th("analise","cancel","% cancel.","num")}${th("analise","bruto","Bruto","num")}
+      ${th("analise","receita","Por anúncio","num")}${th("analise","cobertura","Cobertura","num")}${th("analise","anuncios","Anúncios","num")}
+      ${th("analise","fora","Fora do catálogo","num")}${th("analise","ultimo","Último pedido")}
+    </tr></thead><tbody>
+    ${lista.map(l=>{ const [cor,rot] = STATUS_REAL[l.r.status_real]||["gray",l.r.status_real||"—"]; const vende = l.situacao==="vende";
+      return `<tr${vende?"":' class="an-zero"'}>
+      <td>${linkFichaAnalise(l)}<div class="hint">${esc(l.r.loja_nome||l.r.email)}</div></td>
+      <td><span class="pill ${cor}">${esc(rot)}</span></td>
+      <td>${l.situacao==="sem-conta"?'<span class="pill amber">sem conta</span>':l.r.plano_ativo?'<span class="pill green">ativo</span>':'<span class="pill gray">inativo</span>'}</td>
+      <td>${l.canais.map(c=>esc(MKT_ROTULO[c]||c)).join(", ")||"—"}</td>
+      <td class="num">${vende?l.pedidos.toLocaleString("pt-BR"):"—"}</td>
+      <td class="num">${vende?pct(l.pctCancel):"—"}</td>
+      <td class="num">${vende?fmtBRL(l.bruto):"—"}</td>
+      <td class="num">${vende?fmtBRL(l.receita):"—"}</td>
+      <td class="num">${vende?pct(l.cobertura):"—"}</td>
+      <td class="num">${vende?l.anuncios:"—"}</td>
+      <td class="num">${l.fora||"—"}</td>
+      <td>${l.ultimo?fmtInstante(l.ultimo):"—"}</td></tr>`; }).join("")
+      || `<tr><td colspan="12"><div class="empty">Ninguém neste recorte.</div></td></tr>`}
+    </tbody></table></div></div>
+
+  <div class="panel"><h3>Os 15 anúncios que mais faturam</h3>
+  ${topAnuncios.length?`<div class="tw"><table><thead><tr><th>Anúncio</th><th>Mentorado</th><th>Marketplace</th><th class="num">Pedidos</th><th class="num">Unidades</th><th class="num">Faturamento</th></tr></thead><tbody>
+    ${topAnuncios.map(({p,l})=>`<tr><td>${esc(p.titulo||p.anuncio_id)} ${linkOr(p.link,"anúncio")}${p.cadastrado_no_stlseller===false?' <span class="pill amber">fora do catálogo</span>':""}</td>
+      <td>${linkFichaAnalise(l)}</td><td>${esc(MKT_ROTULO[p.marketplace]||p.marketplace)}</td>
+      <td class="num">${numOuTraco(p.pedidos)}</td><td class="num">${numOuTraco(p.unidades)}</td><td class="num">${brlOuTraco(p.faturamento)}</td></tr>`).join("")}
+  </tbody></table></div>`:`<div class="empty" style="padding:12px">Nenhum anúncio com venda.</div>`}</div>
+
+  <div class="panel"><h3>Ainda sem nenhuma venda &middot; ${semVenda.length}</h3>
+    <div class="hint" style="margin-bottom:10px">Têm conta de seller, mas nenhum pedido registrado.</div>${tags(semVenda)}</div>
+  <div class="panel"><h3>Sem conta de seller &middot; ${semConta.length}</h3>
+    <div class="hint" style="margin-bottom:10px">Sem cadastro no STLSeller, não dá para acompanhar venda nenhuma.</div>${tags(semConta)}</div>
+  <div class="panel"><h3>E-mail não cadastrado corretamente &middot; ${emailIncorreto.length}</h3>
+    <div class="hint" style="margin-bottom:10px">Quando o formulário traz o e-mail STLFLIX, ele é usado primeiro para achar a loja. Ficam aqui os que não têm e-mail STLFLIX ou cujo e-mail STLFLIX não leva à conta de seller: corrija o cadastro na origem.${peloStlflix.length?` ${peloStlflix.length} resolvido(s) pelo e-mail STLFLIX: ${peloStlflix.map(l=>esc(nomeAnalise(l))).join(", ")}.`:""}</div>
+    ${emailIncorreto.length?`<div class="tw"><table><thead><tr><th>Mentorado</th><th>Motivo</th><th>E-mail do formulário</th><th>E-mail STLFLIX</th><th>E-mail da loja</th></tr></thead><tbody>
+      ${emailIncorreto.map(l=>`<tr><td>${linkFichaAnalise(l)}</td><td><span class="pill amber">${esc(l.email.motivo)}</span></td><td>${esc(l.r.email)}</td><td>${esc(l.r.email_stlflix||"—")}</td><td>${esc(l.r.loja_email||"—")}</td></tr>`).join("")}
+    </table></div>`:`<div class="empty" style="padding:12px">Ninguém neste recorte.</div>`}</div>`}`;
+}
+
 /* ================= FICHA DO MENTORADO ================= */
 /* A ficha é uma página com endereço próprio — `#/mentorado/<id>/<aba>` — e não
    mais um overlay. Link colado no WhatsApp abre a ficha certa, F5 em cima dela
@@ -2222,12 +2420,15 @@ window.salvarMarco = async function(marcoId, mentoradoId){
    "cadastro"   -> nome, datas, links e situação
    "financeiro" -> contrato, pagamento e parcelas
    "sessoes"    -> a trilha de 12 etapas e os encontros em grupo
+   "stlseller"  -> o que o STLSeller sabe da pessoa (loja, vendas, status real)
    Quem clica numa parcela vencida no Financeiro cai direto na aba Financeiro;
    antes isso era o parâmetro `secao`, e continua sendo — agora ele vira URL. */
-const ABAS_FICHA = ["cadastro","financeiro","sessoes"];
+const ABAS_FICHA = ["cadastro","financeiro","sessoes","stlseller"];
 const ABA_DE_SECAO = {completo:"cadastro", basico:"cadastro", cadastro:"cadastro",
-                      financeiro:"financeiro", sessoes:"sessoes"};
-const ROTULO_ABA = {cadastro:"Cadastro", financeiro:"Financeiro", sessoes:"Sessões"};
+                      financeiro:"financeiro", sessoes:"sessoes", stlseller:"stlseller"};
+const ROTULO_ABA = {cadastro:"Cadastro", financeiro:"Financeiro", sessoes:"Sessões", stlseller:"STLSeller"};
+/* Abas que carregam dinheiro ou status de pagamento: fechadas por papel. */
+const ABAS_FINANCEIRAS = ["financeiro","stlseller"];
 
 /* O nome fica: 25 pontos da interface chamam `openMentorado`. O que mudou é o
    efeito — em vez de abrir overlay, troca o endereço e o roteador desenha.
@@ -2237,6 +2438,84 @@ window.openMentorado = function(id, secao){
                     : (fichaId===id ? fichaAba : "cadastro");
   irPara(`#/mentorado/${encodeURIComponent(id)}${aba==="cadastro"?"":"/"+aba}`);
 };
+
+/* ---- Aba STLSeller ----
+   Tudo aqui vem do STLSeller (a plataforma de vendas) e do formulário da
+   mentoria, lidos no BigQuery pelo n8n e gravados nas tabelas stlseller_*
+   pelo sync-stlseller. Somente leitura: nada nesta aba escreve em lugar nenhum,
+   e o que diverge da ficha se corrige na origem, não aqui.
+
+   O casamento é pelo e-mail da ficha contra o e-mail do formulário ou o da
+   conta STLFLIX — os dois existem porque muita gente usa um endereço na
+   mentoria e outro na loja. */
+function stlsellerDe(m){
+  const e = normalizaEmail(m.email);
+  if(!e) return null;
+  return STLSELLER.find(r => r.email===e) || STLSELLER.find(r => normalizaEmail(r.email_stlflix)===e) || null;
+}
+// Instante do STLSeller/Lia em horário de Brasília; valor inválido vira "—".
+function fmtInstante(v){
+  const d = v ? new Date(v) : null;
+  if(!d || isNaN(d.getTime()) || d.getTime()<=0) return "—";
+  return d.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo", dateStyle:"short", timeStyle:"short"});
+}
+const numOuTraco = v => (v===null || v===undefined || v==="") ? "—" : Number(v).toLocaleString("pt-BR");
+// Nulo é "o marketplace não informou" (o Mercado Livre não manda o líquido), não zero.
+const brlOuTraco = v => (v===null || v===undefined || v==="") ? "—" : fmtBRL(Number(v));
+const STATUS_REAL = {
+  pago:["green","Pago"], pendente:["amber","Pagamento pendente"],
+  inadimplente_ou_cancelado:["red","Inadimplente ou cancelado"], sem_pedido_lia:["gray","Sem pedido na Lia"],
+};
+const PAGTO_LIA = {finished:"Finalizado", canceled:"Cancelado", initiated:"Iniciado"};
+const MAX_PRODUTOS = 50;
+
+function abaStlseller(m){
+  const r = stlsellerDe(m);
+  const aviso = `<div class="stl-origem"><span class="pill blue">Dados do STLSeller</span>
+    <span>Vêm do STLSeller e do formulário da mentoria, via BigQuery. Somente leitura: o que estiver errado se corrige lá, não aqui.${r?` Atualizado em ${fmtInstante(r.synced_at)}.`:""}</span></div>`;
+  if(STLSELLER_ERRO) return aviso + `<div class="empty">Não foi possível carregar os dados do STLSeller: ${esc(STLSELLER_ERRO)}</div>`;
+  if(!normalizaEmail(m.email)) return aviso + `<div class="empty">Esta ficha não tem e-mail. O STLSeller é casado pelo e-mail — preencha na aba Cadastro.</div>`;
+  if(!r) return aviso + `<div class="empty">Nenhum registro no STLSeller para <b>${esc(normalizaEmail(m.email))}</b>.</div>`;
+
+  const [corReal, rotReal] = STATUS_REAL[r.status_real] || ["gray", r.status_real || "—"];
+  const pedidos = STL_PEDIDOS.filter(o => o.email===r.email);
+  const produtos = STL_PRODUTOS.filter(p => p.email===r.email).sort((a,b)=>(Number(b.faturamento)||0)-(Number(a.faturamento)||0));
+  return aviso + `
+  <div class="cards quiet">
+    <div class="card"><div class="k">Status no formulário</div><div class="v">${esc(r.status_formulario||"—")}</div><div class="d">formulário da mentoria</div></div>
+    <div class="card"><div class="k">Status real sugerido</div><div class="v"><span class="pill ${corReal}">${esc(rotReal)}</span></div><div class="d">cruzamento com a Lia</div></div>
+    <div class="card"><div class="k">Plano STLSeller</div><div class="v">${r.plano_ativo===true?"Ativo":r.plano_ativo===false?"Inativo":"—"}</div><div class="d">${r.loja_id?"loja cadastrada":"sem loja cadastrada"}</div></div>
+    <div class="card"><div class="k">Faturamento em marketplaces</div><div class="v">${fmtBRL(Number(r.faturamento_total)||0)}</div><div class="d">${numOuTraco(r.produtos_vendidos)} produto(s) vendido(s)</div></div>
+  </div>
+
+  <div class="sec"><h4>Loja no STLSeller</h4>
+  <div class="fgrid">
+    <div class="f"><label>Loja</label><input value="${esc(r.loja_nome)}" disabled></div>
+    <div class="f"><label>E-mail da loja</label><input value="${esc(r.loja_email)}" disabled></div>
+    <div class="f"><label>E-mail STLFLIX</label><input value="${esc(r.email_stlflix)}" disabled></div>
+    <div class="f"><label>Vendas em marketplaces</label><input value="${numOuTraco(r.vendas_marketplace)}" disabled></div>
+  </div></div>
+
+  <div class="sec"><h4>Pagamento na Lia, segundo o STLSeller</h4>
+  <div class="fgrid">
+    <div class="f"><label>Status</label><input value="${esc(PAGTO_LIA[r.lia_status_pagamento]||r.lia_status_pagamento||"—")}" disabled></div>
+    <div class="f"><label>Pedidos finalizados</label><input value="${numOuTraco(r.lia_pedidos_finalizados)} de ${numOuTraco(r.lia_pedidos)}" disabled></div>
+    <div class="f"><label>Último pedido</label><input value="${fmtInstante(r.lia_ultimo_pedido_em)}" disabled></div>
+    <div class="f"><label>Motivo do cancelamento</label><input value="${esc(r.lia_motivo_cancelamento||"—")}" disabled></div>
+  </div></div>
+
+  <div class="sec"><h4>Pedidos por marketplace${pedidos.length?` &middot; ${pedidos.length}`:""}</h4>
+  ${pedidos.length?`<div class="tw"><table><thead><tr><th>Marketplace</th><th class="num">Pedidos</th><th class="num">Vendidos</th><th class="num">Cancelados</th><th class="num">Bruto</th><th class="num">Líquido</th><th>Último pedido</th></tr></thead><tbody>
+    ${pedidos.map(o=>`<tr><td>${esc(o.marketplace)}</td><td class="num">${numOuTraco(o.pedidos)}</td><td class="num">${numOuTraco(o.pedidos_vendidos)}</td><td class="num">${numOuTraco(o.pedidos_cancelados)}</td><td class="num">${brlOuTraco(o.total_bruto)}</td><td class="num">${brlOuTraco(o.total_liquido)}</td><td>${fmtInstante(o.ultimo_pedido_em)}</td></tr>`).join("")}
+  </tbody></table></div>`:`<div class="empty" style="padding:12px">Nenhum pedido em marketplace.</div>`}</div>
+
+  <div class="sec"><h4>Produtos vendidos${produtos.length?` &middot; ${produtos.length}`:""}</h4>
+  ${produtos.length?`<div class="tw"><table><thead><tr><th>Produto</th><th>Marketplace</th><th class="num">Pedidos</th><th class="num">Unidades</th><th class="num">Faturamento</th><th>Última venda</th></tr></thead><tbody>
+    ${produtos.slice(0,MAX_PRODUTOS).map(p=>`<tr><td>${esc(p.titulo||p.anuncio_id||"—")} ${linkOr(p.link,"anúncio")}</td><td>${esc(p.marketplace)}</td><td class="num">${numOuTraco(p.pedidos)}</td><td class="num">${numOuTraco(p.unidades)}</td><td class="num">${brlOuTraco(p.faturamento)}</td><td>${fmtInstante(p.ultima_venda_em)}</td></tr>`).join("")}
+  </tbody></table></div>
+  ${produtos.length>MAX_PRODUTOS?`<div class="hint mt8">Mostrando os ${MAX_PRODUTOS} de maior faturamento, de ${produtos.length}.</div>`:""}`
+  :`<div class="empty" style="padding:12px">Nenhum produto vendido.</div>`}</div>`;
+}
 
 function renderFicha(){
   const id = fichaId;
@@ -2256,13 +2535,13 @@ function renderFicha(){
   const editarM = pode("editarMentorado");
   const escreverS = pode("escreverSessao");
   // quem não vê financeiro nunca para na aba financeira, nem por link colado
-  const aba = (!verFin && fichaAba==="financeiro") ? "sessoes" : fichaAba;
+  const aba = (!verFin && ABAS_FINANCEIRAS.includes(fichaAba)) ? "sessoes" : fichaAba;
   const ps = parcelasDe(id);
   const ss = sessoes1a1De(id);        // trilha de 12 etapas
   const ssGrupo = sessoesGrupoDe(id); // plantão e implementação
   const aExcluir = pode("excluir") ? resumoExclusao(id) : null;
 
-  const abas = ABAS_FICHA.filter(a => a!=="financeiro" || verFin);
+  const abas = ABAS_FICHA.filter(a => verFin || !ABAS_FINANCEIRAS.includes(a));
   /* O resumo do topo não depende da aba: quem está no cadastro também quer
      saber se o financeiro está em dia sem trocar de aba para descobrir. */
   const resumo = [
@@ -2385,6 +2664,8 @@ function renderFicha(){
       ${escreverS?`<button class="btn sm ghost" onclick="openSessao('${s.id}','${id}')">Editar</button>`:""}
     </div>
   </div>`).join("")}</div>`:''}`:''}
+
+  ${aba==="stlseller"?abaStlseller(m):''}
   </div>`;
 }
 window.closeModal = ()=>{ dpClose(); $("#overlay").classList.remove("open"); };
