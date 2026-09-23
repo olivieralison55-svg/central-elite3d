@@ -567,7 +567,7 @@ let view = "dash";
 /* `q` e a busca da tela Mentorados; as outras telas tem a sua propria. O termo
    fica separado por tela de proposito: quem filtrou um nome em Sessoes nao
    espera abrir o Financeiro e encontrar a tela recortada pelo mesmo nome. */
-let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:"", qAnalise:"", qNps:"", npsPeriodo:"semana", npsMentor:""};
+let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:"", qAnalise:"", qNps:"", npsPeriodo:"semana", npsMentor:"", npsPagPeriodo:1, npsPagResp:1};
 /* Mes selecionado na matriz de sessoes por mentor ("YYYY-MM"), ou "" para o
    historico inteiro. `null` significa "ainda no padrao": quem resolve e o
    renderDash, que sabe quais meses tem sessao. */
@@ -2458,11 +2458,24 @@ function nomeNps(r){
   const m = r.mentorado_id && M.find(x=>x.id===r.mentorado_id);
   return m ? `<a class="lk-nome" onclick="openMentorado('${m.id}')">${esc(m.nome)}</a>` : esc(r.nome_informado||"—");
 }
-window.setNps = function(campo, v){ filtro[campo] = v; render(); };
+window.setNps = function(campo, v){ filtro[campo] = v; filtro.npsPagPeriodo = filtro.npsPagResp = 1; render(); };
+window.setNpsPag = function(campo, n){ filtro[campo] = n; render(); };
+/* Recorta a página `filtro[campo]` da lista. A página é limitada ao que existe:
+   um filtro que encolhe a lista não deixa a tela numa página vazia. */
+function paginaNps(lista, campo, tamanho){
+  const total = Math.max(1, Math.ceil(lista.length/tamanho));
+  const pag = Math.min(Math.max(1, filtro[campo]||1), total);
+  const itens = lista.slice((pag-1)*tamanho, pag*tamanho);
+  const controles = total<2 ? "" : `<div class="rowflex" style="justify-content:flex-end;margin-top:12px">
+    <button class="btn sm ghost" ${pag<=1?"disabled":""} onclick="setNpsPag('${campo}',${pag-1})">‹ Anterior</button>
+    <span class="hint">Página ${pag} de ${total}</span>
+    <button class="btn sm ghost" ${pag>=total?"disabled":""} onclick="setNpsPag('${campo}',${pag+1})">Próxima ›</button></div>`;
+  return {itens, controles};
+}
 /* O filtro de mentor vai por índice: nome de mentor dentro de onclick seria furo
    de escape (ver "Escape de HTML" no ARCHITECTURE.md). -1 é "todos". */
 let NPS_MENTORES = [];
-window.setNpsMentor = function(i){ filtro.npsMentor = NPS_MENTORES[i] || ""; render(); };
+window.setNpsMentor = function(i){ filtro.npsMentor = NPS_MENTORES[i] || ""; filtro.npsPagResp = 1; render(); };
 
 function renderNps(){
   const periodo = filtro.npsPeriodo, mentorSel = filtro.npsMentor;
@@ -2476,6 +2489,7 @@ function renderNps(){
   lista = applySort(lista, "nps", {
     data:r=>r.respondido_em, nome:r=>(r.nome_informado||"").toLowerCase(), mentor:r=>r.mentor, nota:r=>Number(r.nota),
   }, "data", "desc");
+  const pagPeriodos = paginaNps(periodos, "npsPagPeriodo", 10), pagResp = paginaNps(lista, "npsPagResp", 20);
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>NPS</h2>
@@ -2496,11 +2510,11 @@ function renderNps(){
         `<button class="btn sm${v===periodo?"":" ghost"}" aria-pressed="${v===periodo}" onclick="setNps('npsPeriodo','${v}')">${rot}</button>`).join("")}</div></div>
     <div class="tw"><table><thead><tr><th>${periodo==="mes"?"Mês":"Semana"}</th><th class="num">Respostas</th><th class="num">Média</th>
       ${mentores.map(m=>`<th class="num">${esc(m)}</th>`).join("")}</tr></thead><tbody>
-    ${periodos.map(k=>{ const doPeriodo = NPS.filter(r=>chave(r)===k);
+    ${pagPeriodos.itens.map(k=>{ const doPeriodo = NPS.filter(r=>chave(r)===k);
       return `<tr><td>${esc(rotuloPeriodoNps(k, periodo))}</td><td class="num">${doPeriodo.length}</td><td class="num"><b>${fmtMedia(mediaNps(doPeriodo))}</b></td>
       ${mentores.map(m=>{ const ls = doPeriodo.filter(r=>r.mentor===m);
         return `<td class="num">${ls.length?`${fmtMedia(mediaNps(ls))} <span class="hint">(${ls.length})</span>`:"—"}</td>`; }).join("")}</tr>`; }).join("")}
-    </tbody></table></div></div>
+    </tbody></table></div>${pagPeriodos.controles}</div>
 
   <div class="panel">
     <div class="rowflex" style="justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">
@@ -2511,10 +2525,10 @@ function renderNps(){
     <div class="tw"><table><thead><tr>
       ${th("nps","data","Data")}${th("nps","nome","Mentorado")}${th("nps","mentor","Mentor")}${th("nps","nota","Nota","num")}<th>Comentário</th>
     </tr></thead><tbody>
-    ${lista.map(r=>`<tr><td>${fmtInstante(r.respondido_em)}</td><td>${nomeNps(r)}</td><td>${esc(r.mentor)}</td><td class="num">${pillNota(r.nota)}</td>
+    ${pagResp.itens.map(r=>`<tr><td>${fmtInstante(r.respondido_em)}</td><td>${nomeNps(r)}</td><td>${esc(r.mentor)}</td><td class="num">${pillNota(r.nota)}</td>
       <td style="white-space:pre-line;min-width:260px">${esc(r.comentario||"—")}</td></tr>`).join("")
       || `<tr><td colspan="5"><div class="empty">Ninguém neste recorte.</div></td></tr>`}
-    </tbody></table></div></div>`}`;
+    </tbody></table></div>${pagResp.controles}</div>`}`;
 }
 
 /* ================= FICHA DO MENTORADO ================= */
