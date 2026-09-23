@@ -449,6 +449,7 @@ tr.an-zero td{color:var(--subtle-foreground)}
     <button data-view="sessoes"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span> Sessões</button>
     <button data-view="rotas"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="5.5" r="2.5"/><path d="M8 18.5h6a4.5 4.5 0 0 0 0-9H10a4.5 4.5 0 0 1 0-9"/></svg></span> Rotas</button>
     <button data-view="analise" id="navAnalise"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/></svg></span> STLSeller</button>
+    <button data-view="nps" id="navNps"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span> NPS</button>
     <button data-view="financeiro" id="navFinanceiro"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 7l2.5-3h13L21 7"/><path d="M12 11v6M9.5 12.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg></span> Financeiro</button>
   </nav>
   <div class="side-foot">
@@ -466,6 +467,7 @@ tr.an-zero td{color:var(--subtle-foreground)}
     <button data-view="sessoes">Sessões</button>
     <button data-view="rotas">Rotas</button>
     <button data-view="analise" id="navAnaliseMobile">STLSeller</button>
+    <button data-view="nps" id="navNpsMobile">NPS</button>
     <button data-view="financeiro" id="navFinanceiroMobile">Financeiro</button>
   </div>
   <div id="app"><div class="skel-wrap" aria-busy="true" aria-label="Carregando dados"><div class="skel" style="height:34px;width:220px"></div><div class="skel" style="height:120px"></div><div class="skel-row"><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div></div><div class="skel" style="height:200px"></div></div></div>
@@ -558,11 +560,14 @@ let COBRANCAS = []; // lia_cobrancas -- so carregada para quem ve financeiro
    financeiro. O erro fica guardado porque a aba tem que dizer que nao carregou,
    e nao fingir que o mentorado nao tem registro la. */
 let STLSELLER = [], STL_PEDIDOS = [], STL_PRODUTOS = [], STLSELLER_ERRO = null;
+/* NPS das sessoes (nps_respostas), gravado pela edge function nps-forms a partir
+   da planilha do formulario. Mesmo recorte do STLSeller: admin e diretoria. */
+let NPS = [], NPS_ERRO = null;
 let view = "dash";
 /* `q` e a busca da tela Mentorados; as outras telas tem a sua propria. O termo
    fica separado por tela de proposito: quem filtrou um nome em Sessoes nao
    espera abrir o Financeiro e encontrar a tela recortada pelo mesmo nome. */
-let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:"", qAnalise:""};
+let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:"", qAnalise:"", qNps:"", npsPeriodo:"semana", npsMentor:""};
 /* Mes selecionado na matriz de sessoes por mentor ("YYYY-MM"), ou "" para o
    historico inteiro. `null` significa "ainda no padrao": quem resolve e o
    renderDash, que sabe quais meses tem sessao. */
@@ -622,6 +627,8 @@ async function afterLogin(session){
     $("#navFinanceiroMobile").style.display = "none";
     $("#navAnalise").style.display = "none";
     $("#navAnaliseMobile").style.display = "none";
+    $("#navNps").style.display = "none";
+    $("#navNpsMobile").style.display = "none";
   }
   aplicarEndereco(false); // o endereço da URL decide a tela; quem desenha é o loadAll
   await loadAll();
@@ -666,7 +673,7 @@ async function loadAll(){
     : Promise.resolve({data:[], error:null});
   const semNada = Promise.resolve({data:[], error:null});
   const verStl = pode("verFinanceiro");
-  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd] = await Promise.all([
+  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd,nps] = await Promise.all([
     mentorQuery,
     parcelaQuery,
     cobrancaQuery,
@@ -681,6 +688,7 @@ async function loadAll(){
     verStl ? db.from("stlseller_mentorados").select("*") : semNada,
     verStl ? db.from("stlseller_pedidos_marketplace").select("*") : semNada,
     verStl ? paginado(()=>db.from("stlseller_produtos_vendidos").select("*").order("faturamento",{ascending:false})) : semNada,
+    verStl ? paginado(()=>db.from("nps_respostas").select("*").order("respondido_em",{ascending:false})) : semNada,
   ]);
   if(m.error||p.error||s.error){ toast((m.error||p.error||s.error).message, true); return; }
   M = m.data; P = p.data; S = s.data;
@@ -693,6 +701,8 @@ async function loadAll(){
   STLSELLER = stl.data||[]; STL_PEDIDOS = stlPed.data||[]; STL_PRODUTOS = stlProd.data||[];
   STLSELLER_ERRO = erroStl ? erroStl.message : null;
   if(erroStl) console.error("[stlseller] load failed", erroStl);
+  NPS = nps.data||[]; NPS_ERRO = nps.error ? nps.error.message : null;
+  if(nps.error) console.error("[nps] load failed", nps.error);
   if(!rotaAtual && ROTAS.length) rotaAtual = ROTAS[0].slug;
   dadosProntos = true;
   render();
@@ -1147,9 +1157,9 @@ function btnNovoMentorado(secundario){
 
    Hash e não caminho porque o deploy é estático na Vercel, sem build nem
    servidor: `/mentorado/<id>` pedido direto devolveria 404 antes de o JS rodar. */
-const TELAS = ["dash","mentorados","sessoes","rotas","analise","financeiro"];
+const TELAS = ["dash","mentorados","sessoes","rotas","analise","nps","financeiro"];
 const ROTULO_TELA = {"#/dash":"Dashboard", "#/mentorados":"Mentorados",
-  "#/sessoes":"Sessões", "#/rotas":"Rotas", "#/analise":"STLSeller", "#/financeiro":"Financeiro"};
+  "#/sessoes":"Sessões", "#/rotas":"Rotas", "#/analise":"STLSeller", "#/nps":"NPS", "#/financeiro":"Financeiro"};
 let fichaId = null, fichaAba = "cadastro";
 /* Antes do primeiro loadAll não há o que desenhar, e o roteador pode pedir um
    render antes disso — trocar o hash no boot dispara hashchange na hora. */
@@ -1172,7 +1182,7 @@ function aplicarEndereco(desenhar=true){
   if(!myRole) return; // hashchange antes do login não tem tela para desenhar
   const e = lerEndereco();
   // o financeiro é fechado por papel: link colado não abre o que a tela esconde
-  if((e.view==="financeiro" || e.view==="analise") && !pode("verFinanceiro")) return irPara("#/dash");
+  if(["financeiro","analise","nps"].includes(e.view) && !pode("verFinanceiro")) return irPara("#/dash");
   if(e.view!=="sessoes") foco = null; // foco é do alerta que trouxe a pessoa aqui
   if(e.view!=="mentorado") voltarPara = "#/"+e.view;
   view = e.view; fichaId = e.id||null; fichaAba = e.aba||"cadastro";
@@ -1204,6 +1214,7 @@ function render(){
   else if(view==="rotas") renderRotas();
   else if(view==="financeiro" && pode("verFinanceiro")) renderFinanceiro();
   else if(view==="analise" && pode("verFinanceiro")) renderAnalise();
+  else if(view==="nps" && pode("verFinanceiro")) renderNps();
   else { view="dash"; renderDash(); }
 }
 
@@ -2420,6 +2431,90 @@ function renderAnalise(){
     ${emailIncorreto.length?`<div class="tw"><table><thead><tr><th>Mentorado</th><th>Motivo</th><th>E-mail do formulário</th><th>E-mail STLFLIX</th><th>Loja encontrada por</th></tr></thead><tbody>
       ${emailIncorreto.map(l=>`<tr><td>${linkFichaAnalise(l)}</td><td><span class="pill amber">${esc(l.email.motivo)}</span></td><td>${esc(l.r.email)}</td><td>${esc(l.r.email_stlflix||"—")}</td><td>${lojaPor(l.r)}</td></tr>`).join("")}
     </table></div>`:`<div class="empty" style="padding:12px">Ninguém neste recorte.</div>`}</div>`}`;
+}
+
+/* ================= NPS ================= */
+/* Notas que o mentorado dá à sessão (0 a 10), por mentor. A origem é a planilha
+   do formulário, lida pelo n8n a cada 6 h e gravada pela edge function
+   nps-forms. A tela só lê: nota errada se corrige na planilha. */
+const diaSP = v => new Date(v).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});
+/* Segunda-feira da semana do dia "YYYY-MM-DD". Conta de calendário em UTC ao
+   meio-dia, sobre um dia que já está no fuso de Brasília — o toISOString aqui
+   não converte fuso nenhum. */
+function segundaDe(dia){
+  const d = new Date(dia+"T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() - (d.getUTCDay()+6)%7);
+  return d.toISOString().slice(0,10);
+}
+function rotuloPeriodoNps(k, periodo){
+  if(periodo==="mes") return new Date(k+"-15T12:00:00Z").toLocaleDateString("pt-BR",{month:"long", year:"numeric", timeZone:"UTC"});
+  const fim = new Date(k+"T12:00:00Z"); fim.setUTCDate(fim.getUTCDate()+6);
+  return `${fmtDshort(k)} a ${fmtDshort(fim.toISOString().slice(0,10))}`;
+}
+const mediaNps = ls => ls.length ? ls.reduce((a,r)=>a+Number(r.nota),0)/ls.length : null;
+const fmtMedia = v => v==null ? "—" : v.toLocaleString("pt-BR",{minimumFractionDigits:1, maximumFractionDigits:1});
+const pillNota = n => `<span class="pill ${n>=9?"green":n>=7?"amber":"red"}">${esc(n)}</span>`;
+function nomeNps(r){
+  const m = r.mentorado_id && M.find(x=>x.id===r.mentorado_id);
+  return m ? `<a class="lk-nome" onclick="openMentorado('${m.id}')">${esc(m.nome)}</a>` : esc(r.nome_informado||"—");
+}
+window.setNps = function(campo, v){ filtro[campo] = v; render(); };
+/* O filtro de mentor vai por índice: nome de mentor dentro de onclick seria furo
+   de escape (ver "Escape de HTML" no ARCHITECTURE.md). -1 é "todos". */
+let NPS_MENTORES = [];
+window.setNpsMentor = function(i){ filtro.npsMentor = NPS_MENTORES[i] || ""; render(); };
+
+function renderNps(){
+  const periodo = filtro.npsPeriodo, mentorSel = filtro.npsMentor;
+  const mentores = NPS_MENTORES = [...new Set(NPS.map(r=>r.mentor))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+  const chave = r => periodo==="mes" ? diaSP(r.respondido_em).slice(0,7) : segundaDe(diaSP(r.respondido_em));
+  const periodos = [...new Set(NPS.map(chave))].sort().reverse();
+  const doMentor = m => NPS.filter(r=>r.mentor===m);
+
+  let lista = NPS.filter(r=>!mentorSel || r.mentor===mentorSel)
+    .filter(r=>casaBusca(filtro.qNps, r.nome_informado, r.mentor, r.comentario, (M.find(x=>x.id===r.mentorado_id)||{}).nome));
+  lista = applySort(lista, "nps", {
+    data:r=>r.respondido_em, nome:r=>(r.nome_informado||"").toLowerCase(), mentor:r=>r.mentor, nota:r=>Number(r.nota),
+  }, "data", "desc");
+
+  $("#app").innerHTML = `
+  <div class="topbar"><div><h2>NPS</h2>
+    <div class="sub">Nota que o mentorado dá à sessão, de 0 a 10. Planilha do formulário
+      lida a cada 6 h — resposta nova pode levar até lá para aparecer.</div></div></div>
+
+  ${NPS_ERRO?`<div class="panel"><div class="empty">Não foi possível carregar o NPS: ${esc(NPS_ERRO)}</div></div>`:!NPS.length?
+  `<div class="panel"><div class="empty">Nenhuma resposta de NPS ainda.</div></div>`:`
+  <div class="cards quiet" style="margin-bottom:20px">
+    <div class="card"><div class="k">Média geral</div><div class="v">${fmtMedia(mediaNps(NPS))}</div><div class="d">${NPS.length} resposta(s)</div></div>
+    ${mentores.map(m=>`<div class="card"><div class="k">${esc(m)}</div><div class="v">${fmtMedia(mediaNps(doMentor(m)))}</div><div class="d">${doMentor(m).length} resposta(s)</div></div>`).join("")}
+  </div>
+
+  <div class="panel">
+    <div class="rowflex" style="justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">
+      <h3 style="margin:0">Média por ${periodo==="mes"?"mês":"semana"}</h3>
+      <div class="rowflex">${[["semana","Semana"],["mes","Mês"]].map(([v,rot])=>
+        `<button class="btn sm${v===periodo?"":" ghost"}" aria-pressed="${v===periodo}" onclick="setNps('npsPeriodo','${v}')">${rot}</button>`).join("")}</div></div>
+    <div class="tw"><table><thead><tr><th>${periodo==="mes"?"Mês":"Semana"}</th><th class="num">Respostas</th><th class="num">Média</th>
+      ${mentores.map(m=>`<th class="num">${esc(m)}</th>`).join("")}</tr></thead><tbody>
+    ${periodos.map(k=>{ const doPeriodo = NPS.filter(r=>chave(r)===k);
+      return `<tr><td>${esc(rotuloPeriodoNps(k, periodo))}</td><td class="num">${doPeriodo.length}</td><td class="num"><b>${fmtMedia(mediaNps(doPeriodo))}</b></td>
+      ${mentores.map(m=>{ const ls = doPeriodo.filter(r=>r.mentor===m);
+        return `<td class="num">${ls.length?`${fmtMedia(mediaNps(ls))} <span class="hint">(${ls.length})</span>`:"—"}</td>`; }).join("")}</tr>`; }).join("")}
+    </tbody></table></div></div>
+
+  <div class="panel">
+    <div class="rowflex" style="justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">
+      <h3 style="margin:0">Respostas &middot; ${lista.length}</h3>
+      ${buscaField("qNps","Buscar por mentorado, mentor ou comentário")}</div>
+    <div class="rowflex" style="flex-wrap:wrap;margin-bottom:12px">${[["","Todos"],...mentores.map(m=>[m,m])].map(([v,rot],i)=>
+      `<button class="btn sm${v===mentorSel?"":" ghost"}" aria-pressed="${v===mentorSel}" onclick="setNpsMentor(${i-1})">${esc(rot)}</button>`).join("")}</div>
+    <div class="tw"><table><thead><tr>
+      ${th("nps","data","Data")}${th("nps","nome","Mentorado")}${th("nps","mentor","Mentor")}${th("nps","nota","Nota","num")}<th>Comentário</th>
+    </tr></thead><tbody>
+    ${lista.map(r=>`<tr><td>${fmtInstante(r.respondido_em)}</td><td>${nomeNps(r)}</td><td>${esc(r.mentor)}</td><td class="num">${pillNota(r.nota)}</td>
+      <td style="white-space:pre-line;min-width:260px">${esc(r.comentario||"—")}</td></tr>`).join("")
+      || `<tr><td colspan="5"><div class="empty">Ninguém neste recorte.</div></td></tr>`}
+    </tbody></table></div></div>`}`;
 }
 
 /* ================= FICHA DO MENTORADO ================= */

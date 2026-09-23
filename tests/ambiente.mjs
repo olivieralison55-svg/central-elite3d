@@ -144,6 +144,7 @@ export function carregarApp() {
         get COBRANCAS(){ return COBRANCAS }, set COBRANCAS(v){ COBRANCAS = v },
         set STLSELLER(v){ STLSELLER = v }, set STLSELLER_ERRO(v){ STLSELLER_ERRO = v },
         set STL_PEDIDOS(v){ STL_PEDIDOS = v }, set STL_PRODUTOS(v){ STL_PRODUTOS = v },
+        set NPS(v){ NPS = v }, set NPS_ERRO(v){ NPS_ERRO = v },
         set papel(v){ myRole = v; myProfile = {nome:"Teste", email:"teste@exemplo.com", role:v} },
         rotas(r, mk, mm, cn, mc, f){ ROTAS=r; MARCOS=mk; MM=mm; CANAIS_DB=cn; MC=mc; FAT=f;
           rotaAtual = r[0] && r[0].slug },
@@ -296,6 +297,16 @@ export function preparar(app, papel = "admin") {
      pedidos:3, unidades:4, faturamento:"234.50", ultima_venda_em:"2026-09-01T10:00:00Z"},
     {email:"ana.clara@exemplo.com", marketplace:"shopee", anuncio_id:"SP1", titulo:"Chaveiro", link:"https://exemplo.com/p/1",
      pedidos:7, unidades:9, faturamento:"1000.00", ultima_venda_em:"2026-08-20T10:00:00Z"},
+  ];
+  /* NPS: duas semanas de setembro e uma de agosto. A 1a resposta e das 22h de
+     domingo em Brasilia (01h de segunda em UTC): conta no domingo, na semana
+     de 07/09, nao na seguinte. Mentor com XSS prova o escape no onclick. */
+  app.estado.NPS_ERRO = null;
+  app.estado.NPS = [
+    {id:"n1", mentor:"Diovani", nota:10, respondido_em:"2026-09-14T01:00:00Z", mentorado_id:"m1", nome_informado:"Ana Clara Silva", comentario:"Ótima " + XSS, created_at:"2026-09-23T19:00:00Z"},
+    {id:"n2", mentor:"Diovani", nota:8,  respondido_em:"2026-09-16T13:00:00Z", mentorado_id:null, nome_informado:"Zé " + XSS, created_at:"2026-09-23T19:00:00Z"},
+    {id:"n3", mentor:"Petare " + XSS, nota:5, respondido_em:"2026-09-17T13:00:00Z", mentorado_id:null, nome_informado:"Fulano", created_at:"2026-09-23T19:00:00Z"},
+    {id:"n4", mentor:"Diovani", nota:9,  respondido_em:"2026-08-20T13:00:00Z", mentorado_id:null, nome_informado:"Beltrano", created_at:"2026-09-23T19:00:00Z"},
   ];
   app.estado.rotas(...rotas);
   /* Trilha de rotas já com um marco expandido: é onde vivem o teste de

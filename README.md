@@ -38,6 +38,7 @@ inferior esquerdo, embaixo do seu nome.
 |---|---|---|---|
 | Dashboard, Mentorados, Sessões, Rotas | ✅ | ✅ | ✅ |
 | Aba **Financeiro** | ✅ | ✅ | ❌ não aparece |
+| Aba **NPS** (nota de cada sessão, média por semana e mês) | ✅ | ✅ só vê | ❌ não aparece |
 | Contrato, entrada, restante e parcelas | ✅ vê e edita | ✅ só vê | ❌ não vê |
 | Faturamento do mentorado | ✅ | ✅ só vê | ✅ vê e registra |
 | Criar mentorado | ✅ | ❌ | ❌ |

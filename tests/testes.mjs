@@ -292,6 +292,34 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("loja achada por outro e-mail mostra o endereço, não duplica o do formulário",
     an.includes("<td>loja@ana.com</td>") && !an.includes("E-mail da loja"));
   t.ok("STLFLIX que acha a loja conta como resolvido", an.includes("1 resolvido(s) pelo e-mail STLFLIX: Eva Sem Ficha"));
+
+  t.secao("NPS");
+  globalThis.location.hash = "#/nps";
+  const nps = app.tela();
+  t.ok("tela de NPS desenha", nps.includes("<h2>NPS</h2>") && semLixo(nps), nps.slice(0, 300));
+  t.ok("média geral sobre todas as respostas", nps.includes("Média geral</div><div class=\"v\">8,0"), nps.slice(nps.indexOf("Média geral"), nps.indexOf("Média geral") + 120));
+  t.ok("média por semana, domingo à noite fica no domingo",
+    nps.includes("<td>07/09 a 13/09</td><td class=\"num\">1</td><td class=\"num\"><b>10,0</b>")
+    && nps.includes("<td>14/09 a 20/09</td><td class=\"num\">2</td><td class=\"num\"><b>6,5</b>"),
+    nps.slice(nps.indexOf("Média por"), nps.indexOf("Média por") + 900));
+  t.ok("mentor e mentorado escapados", escapado(nps));
+  t.ok("resposta vinculada leva à ficha", nps.includes("openMentorado('m1')") && nps.includes(">Ana Clara</a>"));
+  t.ok("comentário aparece na lista", nps.includes("<th>Comentário</th>") && nps.includes("Ótima &quot;&gt;&lt;img"));
+  t.ok("nome de mentor não entra no onclick", !/onclick="[^"]*Petare/.test(nps));
+  globalThis.setNps("npsPeriodo", "mes");
+  const npsMes = app.tela();
+  t.ok("média por mês", npsMes.includes("setembro de 2026</td><td class=\"num\">3</td><td class=\"num\"><b>7,7</b>")
+    && npsMes.includes("agosto de 2026</td><td class=\"num\">1</td><td class=\"num\"><b>9,0</b>"),
+    npsMes.slice(npsMes.indexOf("Média por"), npsMes.indexOf("Média por") + 700));
+  globalThis.setNpsMentor(0);
+  t.ok("filtro por mentor", app.tela().includes("Respostas &middot; 3"));
+  globalThis.setNpsMentor(-1);
+  t.ok("filtro volta para todos", app.tela().includes("Respostas &middot; 4"));
+  app.estado.NPS_ERRO = "permission denied";
+  mod.render();
+  t.ok("falha de carga aparece na tela", app.tela().includes("Não foi possível carregar o NPS"));
+  app.estado.NPS_ERRO = null;
+  globalThis.location.hash = "#/analise"; // o resto da seção segue na Análise
   globalThis.setAnalise("statusAnalise", "");
   const anTodos = app.tela();
   t.ok("recorte Todos inclui o pausado", anTodos.includes("Vendendo</div><div class=\"v\">1 de 3") && anTodos.includes("Sem conta de seller &middot; 1"),
@@ -459,6 +487,8 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("mentor não recebe a aba STLSeller", !app.tela().includes(">STLSeller</button>"));
   globalThis.location.hash = "#/analise";
   t.ok("link da análise não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>STLSeller</h2>"), app.endereco());
+  globalThis.location.hash = "#/nps";
+  t.ok("link do NPS não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>NPS</h2>"), app.endereco());
   globalThis.location.hash = "#/mentorado/m1/stlseller";
   t.ok("link da aba STLSeller cai nas sessões",
     app.tela().includes("Sessões 1:1 com mentores") && !app.tela().includes("Dados do STLSeller"),
