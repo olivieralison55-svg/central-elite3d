@@ -36,7 +36,7 @@ policies permitirem, independente do que a tela mostra.
 | Front | HTML + CSS + JS sem framework, arquivo único |
 | Dependências | `@supabase/supabase-js@2` e `Chart.js@4.4.1`, ambas por CDN |
 | Banco / Auth | Supabase — Postgres 17, Auth por e-mail e senha |
-| Automação | 2 jobs `pg_cron` + 2 Edge Functions (Deno) |
+| Automação | 3 jobs `pg_cron` + Edge Functions (Deno) + 2 workflows n8n (STLSeller, NPS) |
 | Deploy | Vercel, automático no push para `main`. Sem etapa de build |
 | Projeto Supabase | `matgynpiscyoshnjzolo` (região `sa-east-1`) |
 | Testes | `tests/` — 132 asserções em Node puro, sem dependência. Nenhum lint |
@@ -610,6 +610,57 @@ Redeploy da função, da raiz do repo:
 
 ```bash
 npx supabase@latest functions deploy sync-stlseller --project-ref matgynpiscyoshnjzolo --use-api
+```
+
+### NPS — n8n a cada 6 h → edge function `nps-forms`
+
+Traz para a tela **NPS** (`#/nps`) as notas que o mentorado dá à sessão.
+
+```
+Planilha "Pesquisa de Satisfação com a Sessão - Elite 3D (respostas)"
+   │  aba "Respostas NPS 2" (gid 1875301760) — A data, B mentorado, C mentor, D nota, E comentário
+   ▼
+n8n-ops · "[Central Elite3D] NPS - planilha -> nps-forms (6h)" (oNBtTs1TVwtsAaaf)
+   │  Schedule a cada 6 h (minuto 40, America/Sao_Paulo) · service account @lucasstlflix
+   │  POST, header X-NPS-Token
+   ▼
+edge function nps-forms ──upsert on origem_id──▶ nps_respostas ◀── index.html, tela NPS
+```
+
+**A aba certa não é a do link.** O `gid=274559119` que circula é a aba
+"Dashboard" (só gráfico, zero célula); "Respostas NPS 2" tem **s** no nome. O nó
+do Sheets aponta pelo gid 1875301760, não pelo nome.
+
+**`nps-forms`, a tabela e a view `nps_mentores_mensal` não nasceram aqui.**
+Foram aplicadas direto no projeto em 23/09/2026 (migrations `nps_mentores` e
+`nps_forms`), pensadas para um Apps Script no próprio Forms, e **o código da
+função não está versionado neste repo** — `functions download nps-forms` é a
+única cópia. O n8n passou a ser o alimentador: o `NPS_FORMS_TOKEN` foi
+regenerado nessa data e vive só no secret da função e na credencial n8n
+`Central Elite3D - nps-forms`; um Apps Script instalado antes disso recebe 401.
+
+**Idempotência:** a planilha não tem o id da resposta no Forms, então o
+workflow manda `id = sheet:<data ISO>|<nome em minúsculas>` — estável se a
+planilha for reordenada ou tiver linha apagada, ao contrário do número da
+linha. A função grava `origem_id = forms:<id>`, então rodar de novo atualiza em
+vez de duplicar. A data da planilha é hora de Brasília sem fuso; o workflow
+anexa `-03:00`. Cabeçalho renomeado faz o nó falhar em vez de gravar vazio.
+
+**Vínculo com a ficha:** `mentorado_id` é preenchido pela função quando o nome
+digitado casa com um cadastro só (primeiro nome + duas palavras em comum). Na
+tela, nome vinculado vira link para a ficha; o resto mostra `nome_informado`.
+
+**Tela NPS:** média geral e por mentor, tabela de média por **semana**
+(segunda a domingo, no fuso de Brasília) ou **mês** com uma coluna por mentor,
+e a lista de respostas, com o comentário, filtro por mentor e busca. Fechada por
+`verFinanceiro`, como o STLSeller — o RLS de `nps_respostas` só deixa admin e
+diretoria lerem. A tela não escreve nada.
+
+Forçar uma rodada agora (devolve `{recebidas, gravadas, descartadas, vinculadas}`):
+
+```bash
+curl -H "X-Central-Token: <credencial n8n 'Central Elite3D - sync-nps'>" \
+  https://n8n-ops.stlflix.com/webhook/central-elite3d-nps
 ```
 
 ### `promover_sessoes_vencidas()` — função Postgres
