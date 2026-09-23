@@ -315,6 +315,28 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("filtro por mentor", app.tela().includes("Respostas &middot; 3"));
   globalThis.setNpsMentor(-1);
   t.ok("filtro volta para todos", app.tela().includes("Respostas &middot; 4"));
+  /* 25 respostas, uma por semana para trás a partir de 21/09 nas 13 primeiras e
+     o resto repetindo semanas: 13 semanas, 25 linhas. */
+  const npsFixo = app.estado.NPS;
+  app.estado.NPS = Array.from({length:25}, (_, i) => ({id:"p"+i, mentor:i%2?"Luan":"Diovani", nota:9,
+    respondido_em:new Date(Date.UTC(2026, 8, 21 - 7*(i%13), 15)).toISOString(), nome_informado:"Pessoa "+i}));
+  globalThis.setNps("npsPeriodo", "semana");
+  const pg1 = app.tela();
+  const linhasSemana = h => (h.slice(h.indexOf("Média por"), h.indexOf("Respostas &middot;")).match(/<td>\d\d\/\d\d a /g) || []).length;
+  const linhasResp = h => (h.slice(h.indexOf("Respostas &middot;")).match(/class="pill green"/g) || []).length;
+  t.ok("média por semana mostra 10 por página", linhasSemana(pg1) === 10 && pg1.includes("Página 1 de 2"), String(linhasSemana(pg1)));
+  t.ok("lista de respostas mostra 20 por página", linhasResp(pg1) === 20 && pg1.includes("Página 1 de 2") && pg1.includes("Respostas &middot; 25"), String(linhasResp(pg1)));
+  globalThis.setNpsPag("npsPagPeriodo", 2);
+  globalThis.setNpsPag("npsPagResp", 2);
+  const pg2 = app.tela();
+  t.ok("segunda página traz o resto", linhasSemana(pg2) === 3 && linhasResp(pg2) === 5, `${linhasSemana(pg2)} / ${linhasResp(pg2)}`);
+  t.ok("última página desabilita o Próxima", /disabled onclick="setNpsPag\('npsPagResp',3\)"/.test(pg2));
+  globalThis.setNpsMentor(0);
+  t.ok("filtro volta para a primeira página", app.tela().includes("Respostas &middot; 13") && !app.tela().includes("setNpsPag('npsPagResp'"));
+  globalThis.setNpsPag("npsPagResp", 9);
+  t.ok("página além do fim cai na última", linhasResp(app.tela()) === 13, String(linhasResp(app.tela())));
+  globalThis.setNpsMentor(-1);
+  app.estado.NPS = npsFixo;
   app.estado.NPS_ERRO = "permission denied";
   mod.render();
   t.ok("falha de carga aparece na tela", app.tela().includes("Não foi possível carregar o NPS"));

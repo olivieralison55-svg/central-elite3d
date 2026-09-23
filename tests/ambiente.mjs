@@ -144,7 +144,7 @@ export function carregarApp() {
         get COBRANCAS(){ return COBRANCAS }, set COBRANCAS(v){ COBRANCAS = v },
         set STLSELLER(v){ STLSELLER = v }, set STLSELLER_ERRO(v){ STLSELLER_ERRO = v },
         set STL_PEDIDOS(v){ STL_PEDIDOS = v }, set STL_PRODUTOS(v){ STL_PRODUTOS = v },
-        set NPS(v){ NPS = v }, set NPS_ERRO(v){ NPS_ERRO = v },
+        get NPS(){ return NPS }, set NPS(v){ NPS = v }, set NPS_ERRO(v){ NPS_ERRO = v },
         set papel(v){ myRole = v; myProfile = {nome:"Teste", email:"teste@exemplo.com", role:v} },
         rotas(r, mk, mm, cn, mc, f){ ROTAS=r; MARCOS=mk; MM=mm; CANAIS_DB=cn; MC=mc; FAT=f;
           rotaAtual = r[0] && r[0].slug },
