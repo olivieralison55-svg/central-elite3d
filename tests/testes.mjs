@@ -946,19 +946,63 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     !dashBusca.slice(dashBusca.indexOf("Próximas sessões")).includes("Ana Clara"),
     dashBusca.slice(dashBusca.indexOf("Próximas sessões"), dashBusca.indexOf("Próximas sessões") + 400));
 
-  t.secao("Busca recorta o seletor de Rotas");
+  /* Antes a busca de Rotas trocava o mentorado sozinha pelo primeiro que casava
+     ("and" abria o André sem ninguém pedir). Agora digitar só abre a lista, e a
+     tela troca no clique. */
+  t.secao("Busca de Rotas: lista de resultados, troca só no clique");
   limpar();
-  estado.filtro.qRotas = "bruno";
+  estado.rotaMentoradoId = "m1";
   mod.renderRotas();
-  const rotBusca = app.tela();
-  const seletor = rotBusca.slice(rotBusca.indexOf('id="rotaSelMentorado"'), rotBusca.indexOf('id="rotaSelMentorado"') + 400);
-  t.ok("seletor lista só quem casa", seletor.includes("Bruno Dias") && !seletor.includes("Ana Clara"), seletor);
-  estado.filtro.qRotas = "zzz";
+  const rotAntes = app.tela();
+  t.ok("diz quem está aberto", rotAntes.includes("Mostrando:</span> <b>Ana Clara</b>"),
+    rotAntes.slice(rotAntes.indexOf("mostrando"), rotAntes.indexOf("mostrando") + 160));
+  t.ok("não tem mais o seletor que escolhia sozinho", !rotAntes.includes('id="rotaSelMentorado"'));
+  globalThis.rotasDigita({value: "bruno"});
+  const listaR = app.tela("#rotasLista");
+  t.ok("digitar abre a lista com quem casa", listaR.includes("rotasEscolhe('m2')") && !listaR.includes("rotasEscolhe('m1')"), listaR);
+  t.ok("a lista diz quantos casam", listaR.includes("1 de 3 mentorado(s) ativo(s)"), listaR);
+  t.ok("a lista realça o trecho que casou", listaR.includes("<mark>Bruno</mark> Dias"), listaR);
+  t.ok("digitar não troca a tela", app.tela() === rotAntes && estado.rotaMentoradoId === "m1");
+  globalThis.rotasEscolhe("m2");
+  t.ok("clicar troca o mentorado", estado.rotaMentoradoId === "m2" && app.tela().includes("Mostrando:</span> <b>Bruno Dias</b>"));
+  t.ok("clicar limpa a busca", estado.filtro.qRotas === "" && app.tela().includes('id="busca_qRotas"') && app.tela().includes('value=""'));
+  t.ok("a linha Mostrando pisca quando troca", app.tela().includes('class="mostrando pisca"'));
   mod.renderRotas();
-  t.ok("busca sem resultado avisa em vez de abrir a ficha de outro",
-    app.tela().includes("Nenhum mentorado encontrado") || app.tela().includes("nenhum mentorado encontrado"),
-    app.tela().replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").slice(0, 300));
-  t.ok("busca sem resultado não deixa lixo na tela", semLixo(app.tela()), app.tela().slice(0, 300));
+  t.ok("e não pisca num redesenho sem troca", app.tela().includes('class="mostrando"'));
+  globalThis.rotasDigita({value: "zzz"});
+  t.ok("busca sem resultado avisa na lista", app.tela("#rotasLista").includes("Nenhum mentorado ativo com esse nome."), app.tela("#rotasLista"));
+  t.ok("busca sem resultado não troca o aberto", estado.rotaMentoradoId === "m2");
+  globalThis.rotasDigita({value: XSS});
+  t.ok("lista escapa o termo", escapado(app.tela("#rotasLista")), app.tela("#rotasLista"));
+  t.ok("realce escapa o nome", escapado(mod.realcaBusca("Diego " + XSS, "diego")), mod.realcaBusca("Diego " + XSS, "diego"));
+  estado.rotaMentoradoId = null;
+  limpar();
+
+  t.secao("Selo da busca");
+  limpar();
+  mod.renderMentorados();
+  t.ok("sem busca, sem selo", !app.tela().includes("selo-busca"));
+  estado.filtro.q = "bruno";
+  mod.renderMentorados();
+  t.ok("com busca, diz o termo e quantos casam", app.tela().includes("Busca: “bruno” · 1 de 4 mentorado(s)"),
+    app.tela().slice(app.tela().indexOf("selo-busca"), app.tela().indexOf("selo-busca") + 200));
+  t.ok("oferece limpar", app.tela().includes("limparBusca('q')"));
+  t.ok("pisca quando o resultado aparece", app.tela().includes('class="selo pisca"'));
+  mod.renderMentorados();
+  t.ok("não pisca num redesenho com o mesmo resultado", app.tela().includes('class="selo"'));
+  estado.filtro.statusFin = "pausados";
+  mod.renderMentorados();
+  t.ok("conta sobre o que o filtro de situação deixou", app.tela().includes("0 de 1 mentorado(s)"),
+    app.tela().slice(app.tela().indexOf("selo-busca"), app.tela().indexOf("selo-busca") + 200));
+  estado.filtro.statusFin = "";
+  globalThis.limparBusca("q");
+  t.ok("limpar zera a busca", estado.filtro.q === "");
+  estado.filtro.q = XSS;
+  t.ok("selo escapa o termo", escapado(mod.seloBusca("q", 0, 4, "mentorado(s)")));
+  for (const [render, campo] of [["renderDash","qDash"], ["renderSessoes","qSessoes"], ["renderFinanceiro","qFin"]]) {
+    limpar(); estado.filtro[campo] = "bruno"; mod[render]();
+    t.ok(render + " mostra o selo", app.tela().includes("Busca: “bruno”"), render);
+  }
   limpar();
 
   t.secao("Busca na lista de participantes do encontro em grupo");

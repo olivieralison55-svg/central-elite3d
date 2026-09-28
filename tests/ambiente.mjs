@@ -34,7 +34,7 @@ const EXPORTA = [
   "ETAPAS", "ETAPAS_GRUPO", "ETAPA_ORD", "chartScales", "progBar",
   "sessoes1a1De", "sessoesGrupoDe", "pode", "CAPACIDADES", "PAPEL_LABEL",
   "renderDash", "renderMentorados", "renderSessoes", "renderFinanceiro", "renderRotas",
-  "setView", "reunioesConcluidas1a1", "casaBusca", "buscaField", "btnNovoMentorado",
+  "setView", "reunioesConcluidas1a1", "casaBusca", "buscaField", "seloBusca", "realcaBusca", "btnNovoMentorado",
   "normalizaEmail", "msgErroMentorado", "alvoBuscaData",
   "prazoTexto", "diasAte", "parcelaDaLia", "proximaParcela",
   "cobrancasOrfas", "motivoOrfa", "cobrancasDescartadas",
@@ -148,6 +148,7 @@ export function carregarApp() {
         set papel(v){ myRole = v; myProfile = {nome:"Teste", email:"teste@exemplo.com", role:v} },
         rotas(r, mk, mm, cn, mc, f){ ROTAS=r; MARCOS=mk; MM=mm; CANAIS_DB=cn; MC=mc; FAT=f;
           rotaAtual = r[0] && r[0].slug },
+        get rotaMentoradoId(){ return rotaMentoradoId }, set rotaMentoradoId(v){ rotaMentoradoId = v },
         get marcoAberto(){ return marcoAberto }, set marcoAberto(v){ marcoAberto = v },
         get filtro(){ return filtro },
         get mesMatriz(){ return mesMatriz }, set mesMatriz(v){ mesMatriz = v },

@@ -193,6 +193,24 @@ td.num,th.num{text-align:right;font-family:'Manrope',sans-serif;font-size:14px;f
 .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
 .filters input,.filters select{width:auto;min-width:160px}
 .filters input[type=search]{min-width:250px}
+/* Selo da busca e linha "Mostrando": dizem o que a tela está mostrando. A
+   piscada só acontece quando o resultado mudou -- se nada piscou, nada mudou. */
+.selo-busca{display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;font-size:13px;color:var(--dim)}
+.selo-busca .selo{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:var(--radius-pill);color:var(--info);border:1px solid rgba(77,159,224,.35)}
+.selo-busca a{cursor:pointer}
+@keyframes pisca{0%{background:var(--info-dim)}100%{background:transparent}}
+.pisca{animation:pisca .9s ease-out}
+.busca-combo{position:relative;min-width:250px;flex:0 1 380px}
+.busca-combo input[type=search]{width:100%}
+.busca-lista{position:absolute;z-index:30;left:0;right:0;top:calc(100% + 4px);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);max-height:280px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.busca-lista .cab{padding:7px 12px;font-size:12px;color:var(--dim);border-bottom:1px solid var(--line)}
+.busca-lista .opt{padding:9px 12px;font-size:14px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.busca-lista .opt:hover,.busca-lista .opt.ativo{background:var(--surface-active)}
+.busca-lista .opt small{color:var(--dim);font-size:12px}
+.busca-lista mark{background:var(--surface-selected);color:inherit;border-radius:2px}
+.busca-lista .vazio{padding:10px 12px;font-size:14px;color:var(--dim)}
+.mostrando{padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);font-size:14px;margin-bottom:14px}
+.mostrando span{color:var(--dim)}
 
 /* ---------- date picker ---------- */
 .dp{position:relative}
@@ -1161,6 +1179,83 @@ window.setBusca = function(campo, el){
   novo.focus({preventScroll:true});
   try{ novo.setSelectionRange(pos, pos); }catch(e){}
 };
+/* Selo da busca: sem ele a pessoa não sabia se a tela já era o resultado do que
+   digitou. Diz o termo e quantos casam, e pisca só quando isso muda -- a tela
+   redesenha por outros motivos (ordenar, recarregar), e piscar a cada redesenho
+   ensinaria a ignorar a piscada. `n` e `total` são do que a busca recorta, com
+   os outros filtros da tela já aplicados. */
+const SELO_VISTO = {};
+function seloBusca(campo, n, total, unidade, estilo){
+  const termo = (filtro[campo]||"").trim();
+  if(!termo){ delete SELO_VISTO[campo]; return ""; }
+  const chave = termo+"|"+n+"|"+total;
+  const pisca = SELO_VISTO[campo]!==chave;
+  SELO_VISTO[campo] = chave;
+  return `<div class="selo-busca" role="status"${estilo?` style="${estilo}"`:""}><span class="selo${pisca?" pisca":""}">🔎 Busca: “${esc(termo)}” · ${n} de ${total} ${unidade}</span><a onclick="limparBusca('${campo}')">limpar busca</a></div>`;
+}
+window.limparBusca = function(campo){ filtro[campo] = ""; render(); };
+
+/* ---- Rotas: busca com lista de resultados ----
+   Aqui a busca escolhe UM mentorado, e antes ela trocava a tela sozinha pelo
+   primeiro que casava: com "and" abria o André sem ninguém pedir. Agora digitar
+   só abre a lista; a tela troca quando a pessoa clica (ou Enter). Por isso
+   digitar não chama render() -- redesenha só a lista. */
+let rotasAtivo = 0;
+function rotasResultados(){
+  return M.filter(ehAtivo).filter(m=>casaBusca(filtro.qRotas, m.nome));
+}
+/* Destaca o primeiro pedaço do termo dentro do nome. normBusca preserva o
+   tamanho de nome com acento pré-composto, então o índice vale no original. */
+function realcaBusca(nomeTxt, termo){
+  const p = normBusca(termo).trim().split(/\s+/)[0];
+  const i = p ? normBusca(nomeTxt).indexOf(p) : -1;
+  if(i<0) return esc(nomeTxt);
+  return esc(nomeTxt.slice(0,i))+"<mark>"+esc(nomeTxt.slice(i,i+p.length))+"</mark>"+esc(nomeTxt.slice(i+p.length));
+}
+function listaRotasHTML(termo, lista, selId, ativo){
+  const total = M.filter(ehAtivo).length;
+  return `<div class="cab">${lista.length} de ${total} mentorado(s) ativo(s) para “${esc(termo.trim())}”</div>`
+    + (lista.length
+      ? lista.map((m,i)=>`<div class="opt${i===ativo?" ativo":""}" role="option" aria-selected="${i===ativo}" data-i="${i}" onmousedown="event.preventDefault();rotasEscolhe('${m.id}')"><span>${realcaBusca(m.nome, termo)}</span>${m.id===selId?"<small>aberto agora</small>":""}</div>`).join("")
+      : `<div class="vazio">Nenhum mentorado ativo com esse nome.</div>`);
+}
+function buscaComboRotas(selId){
+  return `<div class="busca-combo">
+    <input type="search" id="busca_qRotas" placeholder="Buscar mentorado por nome…" aria-label="Buscar mentorado por nome" autocomplete="off"
+      role="combobox" aria-expanded="false" aria-controls="rotasLista" value="${esc(filtro.qRotas||"")}"
+      oninput="rotasDigita(this)" onfocus="rotasAbre()" onblur="setTimeout(rotasFecha,120)" onkeydown="rotasTecla(event)">
+    <div class="busca-lista" id="rotasLista" role="listbox" hidden data-sel="${selId||""}"></div>
+  </div>`;
+}
+window.rotasAbre = function(){
+  const el = document.getElementById("rotasLista"), inp = document.getElementById("busca_qRotas");
+  if(!el || !inp) return;
+  if(!(filtro.qRotas||"").trim()){ rotasFecha(); return; }
+  const lista = rotasResultados();
+  rotasAtivo = Math.max(0, Math.min(rotasAtivo, lista.length-1));
+  el.innerHTML = listaRotasHTML(filtro.qRotas, lista, el.dataset.sel, rotasAtivo);
+  el.hidden = false; inp.setAttribute("aria-expanded","true");
+  const at = el.querySelector(".opt.ativo"); if(at && at.scrollIntoView) at.scrollIntoView({block:"nearest"});
+};
+window.rotasFecha = function(){
+  const el = document.getElementById("rotasLista"), inp = document.getElementById("busca_qRotas");
+  if(el) el.hidden = true;
+  if(inp) inp.setAttribute("aria-expanded","false");
+};
+window.rotasDigita = function(el){ filtro.qRotas = el.value; rotasAtivo = 0; rotasAbre(); };
+window.rotasTecla = function(e){
+  const el = document.getElementById("rotasLista");
+  if(e.key==="Escape"){ rotasFecha(); return; }
+  if(!el || el.hidden) return;
+  const lista = rotasResultados();
+  if(e.key==="ArrowDown"){ e.preventDefault(); rotasAtivo = Math.min(rotasAtivo+1, lista.length-1); rotasAbre(); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); rotasAtivo = Math.max(rotasAtivo-1, 0); rotasAbre(); }
+  else if(e.key==="Enter"){ e.preventDefault(); if(lista[rotasAtivo]) rotasEscolhe(lista[rotasAtivo].id); }
+};
+window.rotasEscolhe = function(id){
+  rotaMentoradoId = id; filtro.qRotas = ""; rotasAtivo = 0;
+  renderRotas();
+};
 /* Botao de criar mentorado: mesma regra de permissao nas cinco telas. Onde a
    tela ja tem uma acao propria (Sessoes cria encontro em grupo), este vai como
    secundario -- estar em todo lugar nao e o mesmo que ser a acao principal. */
@@ -1459,7 +1554,7 @@ function renderDash(){
 
   <div class="filters">
     ${buscaField("qDash","Buscar mentorado nas listas desta tela…")}
-    ${filtro.qDash?`<a style="align-self:center;cursor:pointer;font-size:13px" onclick="filtro.qDash='';renderDash()">limpar busca</a>`:`<span style="align-self:center;color:var(--dim);font-size:13px">filtra as listas de mentorados abaixo — os totais continuam da operação inteira</span>`}
+    ${filtro.qDash?seloBusca("qDash", ativos.filter(m=>casaBusca(filtro.qDash, m.nome)).length, ativos.length, "mentorado(s) ativo(s) · os totais continuam da operação inteira"):`<span style="align-self:center;color:var(--dim);font-size:13px">filtra as listas de mentorados abaixo — os totais continuam da operação inteira</span>`}
   </div>
 
   <div class="panel ${temAtencao?"attention":""}">
@@ -1551,11 +1646,13 @@ function renderDash(){
 /* ================= MENTORADOS ================= */
 function renderMentorados(){
   let list = M.slice();
-  if(filtro.q) list = list.filter(m=>casaBusca(filtro.q, m.nome));
   if(filtro.statusFin==="contrato") list = list.filter(m=>ehAtivo(m) && m.contrato_status!=="Assinado");
   if(filtro.statusFin==="ativos") list = list.filter(ehAtivo);
   if(filtro.statusFin==="pausados") list = list.filter(m=>situacaoDe(m)==="pausado");
   if(filtro.statusFin==="incompletos") list = list.filter(m=>m.cadastro_incompleto);
+  /* A busca por último: o selo conta "N de <o que o filtro de situação deixou>". */
+  const antesBusca = list.length;
+  if(filtro.q) list = list.filter(m=>casaBusca(filtro.q, m.nome));
 
   const verFin = pode("verFinanceiro");
   list = applySort(list, "mentorados", {
@@ -1578,6 +1675,7 @@ function renderMentorados(){
       <option value="incompletos" ${filtro.statusFin==="incompletos"?"selected":""}>Cadastro incompleto</option>
       ${verFin?`<option value="contrato" ${filtro.statusFin==="contrato"?"selected":""}>Contrato pendente</option>`:''}
     </select>
+    ${seloBusca("q", list.length, antesBusca, "mentorado(s)")}
   </div>
   </div>
   <div class="panel" style="padding:6px 10px;overflow-x:auto">
@@ -1619,6 +1717,13 @@ function renderSessoes(){
      nada e faz a tela parecer quebrada. */
   const mostraInd = filtro.tipoSessao !== "grupo" && (!foco || ind.length > 0);
   const mostraGrp = filtro.tipoSessao !== "individual" && (!foco || grp.length > 0);
+  /* Selo: conta sessão 1:1 por linha e encontro em grupo por encontro, que é
+     como cada bloco da tela conta. Só entra o tipo que a tela está mostrando. */
+  const encontros = agruparGrupo(grp);
+  const seloSessoes = seloBusca("qSessoes",
+    (mostraInd?ind.length:0) + (mostraGrp?encontros.filter(casaEncontro).length:0),
+    (mostraInd?list.filter(eh1a1).length:0) + (mostraGrp?encontros.length:0),
+    "sessão(ões) e encontro(s)");
   const podeCriar = pode("criarSessao");
 
   /* Marcadores: mesma regra do fechamento, por isso vem do mesmo helper que o
@@ -1679,6 +1784,7 @@ function renderSessoes(){
       <option value="grupo" ${filtro.tipoSessao==="grupo"?"selected":""}>Somente em grupo</option>
     </select>
     <select onchange="filtro.mentor=this.value;renderSessoes()"><option value="">Todos os mentores</option>${TODOS_MENTORES.map(m=>`<option ${filtro.mentor===m?"selected":""}>${m}</option>`).join("")}<option value="__sem__" ${filtro.mentor==="__sem__"?"selected":""}>— sem mentor —</option></select>
+    ${seloSessoes}
   </div>
 
   ${foco?`<div class="panel foco">
@@ -1877,7 +1983,7 @@ function renderFinanceiro(){
   <div class="topbar"><div><h2>Financeiro</h2><div class="sub">Contratos, entradas e parcelas</div></div>
   ${btnNovoMentorado()}</div>
 
-  <div class="filters">${buscaField("qFin","Buscar mentorado por nome…")}</div>
+  <div class="filters">${buscaField("qFin","Buscar mentorado por nome…")}${seloBusca("qFin", rows.filter(rowsBusca).length, rows.length, "mentorado(s) · cards e cobranças da Lia continuam inteiros")}</div>
 
   <div class="cards">
     <div class="card ${totVenc?"bad":""}"><div class="k">Parcelas vencidas</div><div class="v">${totVenc}</div><div class="d">requerem cobrança</div></div>
@@ -1939,6 +2045,8 @@ function renderFinanceiro(){
 
 /* ================= ROTAS / MARCOS ================= */
 let rotaMentoradoId = null;
+/* Quem a linha "Mostrando" mostrou da última vez: ela pisca só quando muda. */
+let rotaMostrandoVisto = null;
 const MESES_PT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const RICO_STATUS = ["NAO_INICIADO","EM_ANDAMENTO","BLOQUEADO","AGUARDANDO_VALIDACAO","CONCLUIDO","NAO_APLICAVEL"];
 const RICO_LABEL = {CONCLUIDO:"Concluído",EM_ANDAMENTO:"Em andamento",BLOQUEADO:"Bloqueado",
@@ -2065,14 +2173,14 @@ function renderRotas(){
     dados: meses.map(mes => MM.filter(x=>x.marco_id===mo.id && x.status===concluidoStatus && x.data && x.data.slice(0,7)===mes).length)
   }));
   const ativos = M.filter(ehAtivo);
-  /* A busca recorta a lista do seletor. Quando o mentorado aberto sai da busca,
-     a tela abre o primeiro que casa: deixar selecionado alguem que nao esta
-     mais na lista faria o seletor e o passo a passo falarem de pessoas
-     diferentes. */
-  const ativosBusca = ativos.filter(m=>casaBusca(filtro.qRotas, m.nome));
-  const sel = (rotaMentoradoId && ativosBusca.some(m=>m.id===rotaMentoradoId))
+  /* A busca não escolhe mais o mentorado: só a lista de resultados, no clique.
+     Sem escolha feita (ou se o escolhido deixou de ser ativo), abre o primeiro
+     ativo -- e a linha "Mostrando" diz quem é. */
+  const sel = (rotaMentoradoId && ativos.some(m=>m.id===rotaMentoradoId))
     ? rotaMentoradoId
-    : (ativosBusca[0] ? ativosBusca[0].id : null);
+    : (ativos[0] ? ativos[0].id : null);
+  const piscaMostrando = sel!==rotaMostrandoVisto;
+  rotaMostrandoVisto = sel;
   const marcosDoSel = sel ? marcos.map(mo=>({marco:mo, mm: MM.find(x=>x.mentorado_id===sel && x.marco_id===mo.id)})) : [];
 
   // Canais desta rota (sanfona quando há mais de um)
@@ -2131,10 +2239,9 @@ function renderRotas(){
   <div class="panel">
     <h3>Progresso por mentorado</h3>
     <div class="filters">
-      ${buscaField("qRotas","Buscar mentorado por nome…")}
-      <select id="rotaSelMentorado" onchange="rotaMentoradoId=this.value;renderRotas()">${ativosBusca.map(m=>`<option value="${m.id}" ${m.id===sel?"selected":""}>${esc(m.nome)}</option>`).join("")||'<option value="">— nenhum mentorado encontrado —</option>'}</select>
-      ${filtro.qRotas?`<span style="align-self:center;color:var(--dim);font-size:13px">${ativosBusca.length} de ${ativos.length} mentorado(s) ativo(s)</span>`:""}
+      ${buscaComboRotas(sel)}
     </div>
+    ${sel?`<div class="mostrando${piscaMostrando?" pisca":""}" role="status"><span>Mostrando:</span> <b>${esc(nome(sel))}</b></div>`:""}
     ${temMultiplosCanais&&sel?`<div class="rowflex" style="margin-bottom:12px">
       <span class="section-label" style="margin:0">Canal de venda deste mentorado:</span>
       <select id="mcCanalSel">${canaisDaRota.map(c=>`<option value="${c.id}" ${(canalDoMentorado?canalDoMentorado.canal_id:canalObj?.id)===c.id?"selected":""}>${esc(c.nome)}</option>`).join("")}</select>
@@ -2160,7 +2267,7 @@ function renderRotas(){
         </button>
         ${aberto?painelMarco(marco, mm, rota, sel, fatRegua, porMes):""}
       </div>`;
-    }).join("")}</div>`:`<div class="empty">${filtro.qRotas&&!ativosBusca.length?"Nenhum mentorado ativo encontrado para essa busca.":"Nenhum mentorado ativo."}</div>`}
+    }).join("")}</div>`:`<div class="empty">Nenhum mentorado ativo.</div>`}
   </div>
 
   ${canalObj&&sel?`
@@ -2409,6 +2516,7 @@ function renderAnalise(){
     <div class="rowflex" style="justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">
       <h3 style="margin:0">Visão geral por mentorado &middot; ${lista.length}</h3>
       ${buscaField("qAnalise","Buscar por nome, loja ou e-mail")}</div>
+    ${seloBusca("qAnalise", lista.length, base.filter(passaChip).length, "mentorado(s) neste recorte", "margin-bottom:12px")}
     <div class="rowflex" style="flex-wrap:wrap;margin-bottom:12px">${ANALISE_FILTROS.map(([v,rot])=>
       `<button class="btn sm${v===chip?"":" ghost"}" aria-pressed="${v===chip}" onclick="setAnalise('chipAnalise','${v}')">${rot}</button>`).join("")}</div>
     <div class="tw"><table><thead><tr>
@@ -2539,6 +2647,7 @@ function renderNps(){
     <div class="rowflex" style="justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">
       <h3 style="margin:0">Respostas &middot; ${lista.length}</h3>
       ${buscaField("qNps","Buscar por mentorado, mentor ou comentário")}</div>
+    ${seloBusca("qNps", lista.length, NPS.filter(r=>!mentorSel || r.mentor===mentorSel).length, "resposta(s)", "margin-bottom:12px")}
     <div class="rowflex" style="flex-wrap:wrap;margin-bottom:12px">${[["","Todos"],...mentores.map(m=>[m,m])].map(([v,rot],i)=>
       `<button class="btn sm${v===mentorSel?"":" ghost"}" aria-pressed="${v===mentorSel}" onclick="setNpsMentor(${i-1})">${esc(rot)}</button>`).join("")}</div>
     <div class="tw"><table><thead><tr>
