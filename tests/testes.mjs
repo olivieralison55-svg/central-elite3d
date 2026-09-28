@@ -34,6 +34,23 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("fmtD monta DD/MM/AAAA", mod.fmtD("2026-08-20") === "20/08/2026", mod.fmtD("2026-08-20"));
   t.ok("fmtD sem data", mod.fmtD(null) === "—", mod.fmtD(null));
 
+  /* Campo de valor da nova parcela mostrava "2000" em vez de "R$ 2.000,00". */
+  const casos = [
+    ["2000", false, "R$ 2.000"], ["2000", true, "R$ 2.000,00"], ["2000,5", true, "R$ 2.000,50"],
+    ["R$ 2.000", false, "R$ 2.000"], ["R$ 2.0005", false, "R$ 20.005"], ["2000.", false, "R$ 2.000,"],
+    ["2000.50", true, "R$ 2.000,50"], ["1234567,899", false, "R$ 1.234.567,89"], [",5", true, "R$ 0,50"],
+    ["", true, ""], ["abc", true, ""], ["007", true, "R$ 7,00"],
+  ];
+  for(const [raw, fim, esperado] of casos)
+    t.ok(`mascaraBRL(${JSON.stringify(raw)}${fim?", fim":""}) = ${JSON.stringify(esperado)}`,
+      mod.mascaraBRL(raw, fim) === esperado, mod.mascaraBRL(raw, fim));
+  t.ok("lerBRL(R$ 2.000,50) = 2000.5", mod.lerBRL("R$ 2.000,50") === 2000.5, mod.lerBRL("R$ 2.000,50"));
+  t.ok("lerBRL(2000) = 2000", mod.lerBRL("2000") === 2000, mod.lerBRL("2000"));
+  /* O modal de editar parcela abre com o número que veio do banco. */
+  t.ok("mascaraBRL(2000.5 do banco) = R$ 2.000,50", mod.mascaraBRL(2000.5, true) === "R$ 2.000,50", mod.mascaraBRL(2000.5, true));
+  t.ok("mascaraBRL(1500 do banco) = R$ 1.500,00", mod.mascaraBRL(1500, true) === "R$ 1.500,00", mod.mascaraBRL(1500, true));
+  t.ok("lerBRL vazio = null", mod.lerBRL("") === null, mod.lerBRL(""));
+
   /* O eixo do gráfico "Evolução mensal" abreviava para "R$ 10k". */
   const eixo = mod.chartScales({callback: (v) => mod.fmtBRL(v)});
   t.ok("eixo do gráfico usa moeda cheia",

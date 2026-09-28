@@ -718,6 +718,25 @@ const nome = id => (M.find(x=>x.id===id)||{}).nome || "—";
 /* ================= HELPERS ================= */
 const $ = s => document.querySelector(s);
 function fmtBRL(v){ return (v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+/* Campo de dinheiro digitado à brasileira: "2000" vira "R$ 2.000", e ao sair
+   do campo "R$ 2.000,00". Vírgula é o decimal; ponto no fim, ou seguido de só
+   1–2 dígitos (colado de outro lugar, "2000.50"), também vale como decimal —
+   os pontos que a própria máscara põe têm sempre 3 dígitos depois. */
+function mascaraBRL(raw, fim){
+  let s = String(raw||"").replace(/[^\d,.]/g,"");
+  if(!s.includes(",")) s = s.replace(/\.(\d{0,2})$/, ",$1");
+  const i = s.indexOf(",");
+  let int = (i<0 ? s : s.slice(0,i)).replace(/\D/g,"").replace(/^0+(?=\d)/,"");
+  let dec = i<0 ? null : s.slice(i+1).replace(/\D/g,"").slice(0,2);
+  if(!int && !dec) return "";
+  if(fim) dec = (dec||"").padEnd(2,"0");
+  return "R$ " + (int||"0").replace(/\B(?=(\d{3})+(?!\d))/g,".") + (dec!==null?","+dec:"");
+}
+/* Lê o que a máscara escreveu. Vazio é null, não zero: parcela sem valor. */
+function lerBRL(txt){
+  const s = mascaraBRL(txt, true);
+  return s ? parseFloat(s.slice(3).replace(/\./g,"").replace(",",".")) : null;
+}
 const fmtD = d => d ? d.split("-").reverse().join("/") : "—";
 const fmtDshort = d => d ? d.slice(8,10)+"/"+d.slice(5,7) : "—";
 /* Formas em que uma data pode ser digitada na busca. A tela mostra 17/09, mas
@@ -2156,7 +2175,7 @@ function renderRotas(){
   ${pode("escreverRotas")?`<div class="panel"><h3>Registrar faturamento</h3>
   <div class="fgrid fat-form">
     <div class="f"><label>Mês</label>${monthField("ft_mes", meses[meses.length-1])}</div>
-    <div class="f"><label>Valor (R$)</label><input id="ft_valor" type="number" min="0" step="0.01" placeholder="0,00"></div>
+    <div class="f"><label>Valor (R$)</label><input id="ft_valor" type="text" inputmode="decimal" placeholder="R$ 0,00" oninput="this.value=mascaraBRL(this.value)" onblur="this.value=mascaraBRL(this.value,true)"></div>
     <div class="f" style="display:flex;align-items:flex-end"><button class="btn" style="width:100%" onclick="salvarFaturamento('${sel}','${canalObj.id}')">Salvar</button></div>
   </div>
   </div>`:""}
@@ -2206,7 +2225,7 @@ window.salvarCanalMentorado = async function(mentoradoId, rotaId){
 window.salvarFaturamento = async function(mentoradoId, canalId){
   const mesInput = $("#ft_mes").value;
   if(!mesInput) return toast("Selecione o mês",true);
-  const valor = parseFloat($("#ft_valor").value||"0");
+  const valor = lerBRL($("#ft_valor").value) ?? 0;
   const {error} = await db.from("faturamento_mensal").upsert({
     mentorado_id: mentoradoId, mes: mesInput+"-01", canal_id: canalId, valor
   }, {onConflict:"mentorado_id,mes,canal_id"});
@@ -2753,7 +2772,7 @@ function renderFicha(){
   }).join("")}</div>`:`<div class="empty" style="padding:12px">Sem parcelas (pagamento à vista ou não cadastrado).</div>`}
   ${pode("editarFinanceiro")&&!ps.some(parcelaDaLia)?`<div class="rowflex mt8">
     ${dateField("np_venc", "", {style:"width:160px", title:"Vencimento da nova parcela", placeholder:"Vencimento"})}
-    <input id="np_valor" type="number" min="0" step="0.01" placeholder="Valor (R$)" style="width:140px">
+    <input id="np_valor" type="text" inputmode="decimal" placeholder="Valor (R$)" style="width:140px" oninput="this.value=mascaraBRL(this.value)" onblur="this.value=mascaraBRL(this.value,true)">
     <button class="btn sm ghost" onclick="addParcela('${id}')">+ Adicionar parcela</button>
   </div>`:""}</div>`:''}
 
@@ -2891,10 +2910,10 @@ window.toggleParcela = async function(pid, mid){
 }
 window.addParcela = async function(mid){
   const venc = $("#np_venc").value||null;
-  const valorRaw = $("#np_valor").value;
+  const valor = lerBRL($("#np_valor").value);
   const n = Math.max(0,...parcelasDe(mid).map(p=>p.numero))+1;
   if(n>12) return toast("Limite de 12 parcelas atingido",true);
-  const {error} = await db.from("parcelas").insert({mentorado_id:mid, numero:n, status:"aberta", vencimento:venc, valor: valorRaw!==""?parseFloat(valorRaw):null});
+  const {error} = await db.from("parcelas").insert({mentorado_id:mid, numero:n, status:"aberta", vencimento:venc, valor});
   if(error) return toast(error.message,true);
   await loadAll(); openMentorado(mid);
 }
@@ -2907,7 +2926,7 @@ window.openParcela = function(pid, mid){
   <div class="fgrid" style="grid-template-columns:1fr 1fr">
     <div class="f"><label>N&uacute;mero</label><input id="p_num" type="number" min="1" max="12" value="${p.numero}"></div>
     <div class="f"><label>Vencimento</label>${dateField("p_venc", p.vencimento)}</div>
-    <div class="f"><label>Valor (R$)</label><input id="p_valor" type="number" min="0" step="0.01" value="${p.valor!=null?p.valor:""}"></div>
+    <div class="f"><label>Valor (R$)</label><input id="p_valor" type="text" inputmode="decimal" placeholder="R$ 0,00" value="${p.valor!=null?mascaraBRL(p.valor,true):""}" oninput="this.value=mascaraBRL(this.value)" onblur="this.value=mascaraBRL(this.value,true)"></div>
     <div class="f"><label>Status</label><select id="p_status">
       ${["aberta","paga"].map(v=>`<option value="${v}" ${p.status===v?"selected":""}>${v==="paga"?"Paga":"Aberta"}</option>`).join("")}
     </select></div>
@@ -2923,9 +2942,8 @@ window.salvarParcela = async function(pid, mid){
   if(!num || num<1) return toast("Numero de parcela invalido",true);
   const dup = parcelasDe(mid).find(x=>x.numero===num && x.id!==pid);
   if(dup) return toast("Ja existe a parcela #"+num+" deste mentorado",true);
-  const valorRaw = $("#p_valor").value;
   const upd = { numero:num, vencimento: $("#p_venc").value||null,
-    valor: valorRaw!==""?parseFloat(valorRaw):null, status: $("#p_status").value };
+    valor: lerBRL($("#p_valor").value), status: $("#p_status").value };
   const {error} = await db.from("parcelas").update(upd).eq("id",pid);
   if(error) return toast(error.message,true);
   toast("Parcela atualizada"); await loadAll(); openMentorado(mid);

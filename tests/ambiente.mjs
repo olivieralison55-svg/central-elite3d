@@ -29,7 +29,7 @@ export const XSS = '"><img src=x onerror=alert(1)>';
 
 /* Símbolos do app que os testes precisam alcançar. */
 const EXPORTA = [
-  "esc", "fmtBRL", "fmtD", "dpLabel", "dateField", "monthField",
+  "esc", "fmtBRL", "mascaraBRL", "lerBRL", "fmtD", "dpLabel", "dateField", "monthField",
   "agruparGrupo", "statusGrupo", "resumoStatusGrupo", "ehGrupo", "eh1a1",
   "ETAPAS", "ETAPAS_GRUPO", "ETAPA_ORD", "chartScales", "progBar",
   "sessoes1a1De", "sessoesGrupoDe", "pode", "CAPACIDADES", "PAPEL_LABEL",
