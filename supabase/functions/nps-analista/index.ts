@@ -23,19 +23,34 @@ const MODELO = "claude-opus-5-5";
 // ponytail: janela fixa de 90 dias no prompt; resumir por período quando o volume passar de centenas por mês.
 const JANELA_DIAS = 90;
 
-type Sessao = { respondido_em: string; created_at: string; mentor: string; nota: number;
-  comentario: string | null; nome_informado: string | null; mentorados: { nome: string } | null };
+type Sessao = { respondido_em: string; created_at: string; mentor: string; nota: number; comentario: string | null;
+  mentorado_id: string | null; nome_informado: string | null; mentorados: { nome: string } | null };
 type Experiencia = { respondido_em: string; created_at: string; nota: number; geral: string | null;
   itens: Record<string, string>; clareza: string | null; textos: Record<string, string> };
 type Alerta = { severidade: "alta" | "media" | "baixa"; tipo: "mentorado" | "mentor" | "mentoria";
   mentor: string | null; mentorado: string | null; titulo: string; detalhe: string; evidencia: string; acao_sugerida: string };
-type Analise = { resumo: string; alertas: Alerta[] };
+type LeituraMentor = { mentor: string; leitura: string; pontos_fortes: string[]; pontos_de_atencao: string[] };
+type LeituraMentorado = { mentorado_id: string | null; mentorado: string; mentor: string; risco: "alto" | "medio" | "baixo";
+  leitura: string; sinais: string[]; acao_sugerida: string };
+type Analise = { resumo: string; alertas: Alerta[]; mentores: LeituraMentor[]; mentorados: LeituraMentorado[] };
 
 const anulavel = { anyOf: [{ type: "string" }, { type: "null" }] };
 const SCHEMA = {
-  type: "object", additionalProperties: false, required: ["resumo", "alertas"],
+  type: "object", additionalProperties: false, required: ["resumo", "alertas", "mentores", "mentorados"],
   properties: {
     resumo: { type: "string" },
+    mentores: { type: "array", items: {
+      type: "object", additionalProperties: false, required: ["mentor", "leitura", "pontos_fortes", "pontos_de_atencao"],
+      properties: { mentor: { type: "string" }, leitura: { type: "string" },
+        pontos_fortes: { type: "array", items: { type: "string" } }, pontos_de_atencao: { type: "array", items: { type: "string" } } },
+    } },
+    mentorados: { type: "array", items: {
+      type: "object", additionalProperties: false,
+      required: ["mentorado_id", "mentorado", "mentor", "risco", "leitura", "sinais", "acao_sugerida"],
+      properties: { mentorado_id: anulavel, mentorado: { type: "string" }, mentor: { type: "string" },
+        risco: { type: "string", enum: ["alto", "medio", "baixo"] }, leitura: { type: "string" },
+        sinais: { type: "array", items: { type: "string" } }, acao_sugerida: { type: "string" } },
+    } },
     alertas: { type: "array", items: {
       type: "object", additionalProperties: false,
       required: ["severidade", "tipo", "mentor", "mentorado", "titulo", "detalhe", "evidencia", "acao_sugerida"],
@@ -67,6 +82,10 @@ Escreva em português do Brasil, direto, sem jargão.
 - tema que aparece em 2+ respostas da Pesquisa de Experiência, ou item da grade com média baixa (tipo "mentoria", mentor e mentorado nulos).
 O que NÃO vira alerta: elogio, nota 9-10 sem crítica no texto, e uma única resposta anônima sem padrão (cite-a no resumo, não como alerta). Se nada pede ação, devolva "alertas": [].
 Severidade: "alta" = risco de perder o mentorado ou problema que se repete; "media" = tendência a acompanhar; "baixa" = melhoria pontual.
+
+"mentores": uma entrada para CADA mentor que aparece em "por_mentor", com o nome exatamente como nos dados. "leitura": 2 a 3 frases sobre como os mentorados percebem as sessões dele (o que elogiam, o que criticam, tendência da nota). "pontos_fortes" e "pontos_de_atencao": itens curtos, cada um sustentado por comentário ou número dos dados; lista vazia se não houver base. Não atribua a um mentor nada da Pesquisa de Experiência: ela é anônima e não diz quem foi o mentor.
+
+"mentorados": uma entrada para CADA mentorado de "por_mentorado", copiando "mentorado_id" e o nome exatamente como nos dados ("mentor" = o da sessão mais recente). "risco": "alto" se a última nota for até 6, se caiu 3+ pontos ou se o texto mostra frustração ou intenção de sair; "medio" se a nota for 7-8 ou houver crítica pontual; "baixo" se as notas forem 9-10 sem crítica. "leitura": 1 a 2 frases. "sinais": evidências curtas (nota, queda, trecho do comentário). "acao_sugerida": o próximo passo concreto para o mentor ou o CS; para risco baixo, algo simples como manter o ritmo ou pedir depoimento.
 Respostas marcadas como novas são as que chegaram depois da última análise: priorize-as, mas use o histórico para achar tendência. Não repita um alerta da análise anterior se nada novo o reforçou.`;
 
 function resposta(body: Record<string, unknown>, status = 200): Response {
@@ -83,6 +102,14 @@ function montarDados(sessoes: Sessao[], exps: Experiencia[], desde: string | nul
   const nova = (created_at: string) => !desde || created_at > desde;
   const porMentor: Record<string, number[]> = {};
   for (const s of sessoes) (porMentor[s.mentor] ??= []).push(s.nota);
+  // Mentorado sem vínculo com a ficha é agrupado pelo nome digitado (sem id).
+  const porMentorado = new Map<string, { mentorado_id: string | null; mentorado: string; sessoes: { data: string; mentor: string; nota: number }[] }>();
+  for (const s of sessoes) {
+    const nome = s.mentorados?.nome ?? s.nome_informado ?? "—";
+    const chave = s.mentorado_id ?? `nome:${nome.toLowerCase()}`;
+    if (!porMentorado.has(chave)) porMentorado.set(chave, { mentorado_id: s.mentorado_id, mentorado: nome, sessoes: [] });
+    porMentorado.get(chave)!.sessoes.push({ data: s.respondido_em.slice(0, 10), mentor: s.mentor, nota: s.nota });
+  }
   const itens: Record<string, number[]> = {};
   for (const e of exps) for (const [item, nivel] of Object.entries(e.itens)) {
     if (nivel in NIVEL) (itens[item] ??= []).push(NIVEL[nivel]);
@@ -95,17 +122,24 @@ function montarDados(sessoes: Sessao[], exps: Experiencia[], desde: string | nul
       experiencia: { respostas: exps.length, nps: nps(exps.map((e) => e.nota)),
         indice_0_100_por_item: Object.fromEntries(Object.entries(itens).map(([i, v]) => [i, media(v)])) },
     },
+    por_mentorado: [...porMentorado.values()],
     nps_sessoes: sessoes.map((s) => ({ nova: nova(s.created_at), data: s.respondido_em.slice(0, 10), mentor: s.mentor,
-      mentorado: s.mentorados?.nome ?? s.nome_informado ?? "—", nota: s.nota, comentario: s.comentario ?? "" })),
+      mentorado_id: s.mentorado_id, mentorado: s.mentorados?.nome ?? s.nome_informado ?? "—", nota: s.nota, comentario: s.comentario ?? "" })),
     experiencia: exps.map((e) => ({ nova: nova(e.created_at), data: e.respondido_em.slice(0, 10), nota: e.nota,
       geral: e.geral, clareza_proximos_passos: e.clareza, grade: e.itens, respostas_abertas: e.textos })),
     analise_anterior: anterior,
   };
 }
 
-function validar(v: unknown): Analise {
+function validar(v: unknown, idsConhecidos: Set<string>): Analise {
   const o = v as Analise;
-  if (!o || typeof o.resumo !== "string" || !o.resumo.trim() || !Array.isArray(o.alertas)) throw new Error("análise fora do schema");
+  if (!o || typeof o.resumo !== "string" || !o.resumo.trim() || !Array.isArray(o.alertas)
+    || !Array.isArray(o.mentores) || !Array.isArray(o.mentorados)) throw new Error("análise fora do schema");
+  // Um id inventado viraria link para uma ficha errada: só passa id que veio dos dados.
+  for (const m of o.mentorados) {
+    if (m.mentorado_id !== null && !idsConhecidos.has(m.mentorado_id)) throw new Error(`mentorado_id desconhecido: ${m.mentorado_id}`);
+    if (!["alto", "medio", "baixo"].includes(m.risco)) throw new Error(`risco fora do schema: ${m.risco}`);
+  }
   for (const a of o.alertas) {
     if (!["alta", "media", "baixa"].includes(a.severidade) || !["mentorado", "mentor", "mentoria"].includes(a.tipo)
       || !a.titulo || !a.evidencia) throw new Error(`alerta fora do schema: ${JSON.stringify(a).slice(0, 200)}`);
@@ -120,16 +154,16 @@ Deno.serve(async () => {
     const desdeJanela = new Date(Date.now() - JANELA_DIAS * 86400_000).toISOString();
 
     const [ses, exp, ult] = await Promise.all([
-      db.from("nps_respostas").select("respondido_em,created_at,mentor,nota,comentario,nome_informado,mentorados(nome)")
+      db.from("nps_respostas").select("respondido_em,created_at,mentor,nota,comentario,mentorado_id,nome_informado,mentorados(nome)")
         .gte("respondido_em", desdeJanela).order("respondido_em"),
       db.from("experiencia_respostas").select("respondido_em,created_at,nota,geral,itens,clareza,textos")
         .gte("respondido_em", desdeJanela).order("respondido_em"),
-      db.from("nps_analises").select("dados_ate,resumo,alertas").order("gerado_em", { ascending: false }).limit(1).maybeSingle(),
+      db.from("nps_analises").select("dados_ate,resumo,alertas,mentores,mentorados").order("gerado_em", { ascending: false }).limit(1).maybeSingle(),
     ]);
     for (const r of [ses, exp, ult]) if (r.error) throw new Error(`leitura: ${r.error.message}`);
     const sessoes = (ses.data ?? []) as unknown as Sessao[];
     const exps = (exp.data ?? []) as Experiencia[];
-    const ultima = ult.data as { dados_ate: string; resumo: string; alertas: Alerta[] } | null;
+    const ultima = ult.data as (Analise & { dados_ate: string }) | null;
 
     // A marca d'água olha a tabela inteira, não só a janela: resposta antiga
     // reimportada não conta como novidade porque o upsert preserva created_at.
@@ -145,7 +179,7 @@ Deno.serve(async () => {
       return resposta({ ok: true, pulou: "sem resposta nova desde a última análise", dados_ate: desde });
     }
 
-    const dados = montarDados(sessoes, exps, desde, ultima ? { resumo: ultima.resumo, alertas: ultima.alertas } : null);
+    const dados = montarDados(sessoes, exps, desde, ultima ? { resumo: ultima.resumo, alertas: ultima.alertas, mentores: ultima.mentores, mentorados: ultima.mentorados } : null);
     const claude = new Anthropic({ apiKey: ANTHROPIC_KEY });
     const msg = await claude.beta.messages.create({
       model: MODELO,
@@ -159,11 +193,12 @@ Deno.serve(async () => {
     if (msg.stop_reason === "refusal") throw new Error(`Claude recusou: ${JSON.stringify(msg.stop_details)}`);
     if (msg.stop_reason === "max_tokens") throw new Error("Claude parou em max_tokens");
     const texto = msg.content.flatMap((b) => b.type === "text" ? [b.text] : []).join("");
-    const analise = validar(JSON.parse(texto));
+    const ids = new Set(sessoes.flatMap((x) => x.mentorado_id ? [x.mentorado_id] : []));
+    const analise = validar(JSON.parse(texto), ids);
 
     const { error } = await db.from("nps_analises").insert({
       modelo: msg.model, dados_ate: dadosAte, respostas: sessoes.length + exps.length,
-      resumo: analise.resumo, alertas: analise.alertas,
+      resumo: analise.resumo, alertas: analise.alertas, mentores: analise.mentores, mentorados: analise.mentorados,
     });
     if (error) throw new Error(`insert nps_analises: ${error.message}`);
     return resposta({ ok: true, alertas: analise.alertas.length, respostas: sessoes.length + exps.length, modelo: msg.model });
