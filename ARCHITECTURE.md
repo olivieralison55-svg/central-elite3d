@@ -704,15 +704,24 @@ nada. Para rodar de novo com os mesmos dados, apague a última linha de
 A rodada manda ao Claude os últimos 90 dias das duas pesquisas, as métricas já
 calculadas (NPS e média geral e por mentor, índice 0–100 por item da grade),
 quais respostas são novas e a análise anterior, para ele não repetir alerta.
-A saída é `{resumo, alertas[]}` por **structured output** (`output_config.format`),
-cada alerta com severidade, tipo (`mentorado`/`mentor`/`mentoria`), evidência
-literal e ação sugerida. `fallbacks: "default"` cobre recusa de classificador.
+A saída é `{resumo, alertas[], mentores[], mentorados[]}` por **structured
+output** (`output_config.format`): alertas com severidade, tipo
+(`mentorado`/`mentor`/`mentoria`), evidência literal e ação sugerida; uma
+leitura **por mentor** (pontos fortes e de atenção, só a partir do NPS da
+sessão — a Pesquisa de Experiência é anônima e não é atribuída a ninguém) e uma
+**por mentorado** (risco alto/médio/baixo, sinais, ação). A função recusa a
+rodada se o modelo devolver um `mentorado_id` que não veio dos dados: um id
+inventado viraria link para a ficha errada. `fallbacks: "default"` cobre recusa de classificador.
 A chave é o secret `ANTHROPIC_API_KEY` da função, a mesma ANTHROPIC_API_KEY da plataforma-product-ops.
 
-**Na tela NPS** (`#/nps`, admin e diretoria): o painel **Análise da IA** fica
-no topo; o bloco **Pesquisa de Experiência** fica no fim, com o NPS da mentoria,
-o índice de experiência (média da grade), a clareza dos próximos passos, o
-índice por item (pior primeiro) e as respostas abertas. **Nada vai para os
+**Tela Análise IA** (`#/ia`, admin e diretoria): três abas — **Visão geral**
+(resumo e alertas, mais grave primeiro), **Por mentor** (cards com média, NPS e
+contagem calculados do NPS carregado, mais a leitura do modelo) e **Por
+mentorado** (tabela por risco, com link para a ficha e a última nota). **Tela
+NPS** (`#/nps`): só números, em duas abas — **NPS das sessões** e **Pesquisa de
+Experiência** (NPS da mentoria, índice de experiência = média da grade,
+clareza dos próximos passos, índice por item com o pior primeiro, e as
+respostas abertas). **Nada vai para os
 mentores**: o RLS das duas tabelas novas só deixa admin e diretoria lerem.
 
 Rodar na mão (devolvem JSON):
