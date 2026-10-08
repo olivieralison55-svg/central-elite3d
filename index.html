@@ -2579,6 +2579,9 @@ function rotuloPeriodoNps(k, periodo){
   return `${fmtDshort(k)} a ${fmtDshort(fim.toISOString().slice(0,10))}`;
 }
 const mediaNps = ls => ls.length ? ls.reduce((a,r)=>a+Number(r.nota),0)/ls.length : null;
+/* NPS clássico: % de promotores (9-10) menos % de detratores (0-6), de -100 a +100. */
+const scoreNps = ls => ls.length ? Math.round(100*(ls.filter(r=>Number(r.nota)>=9).length - ls.filter(r=>Number(r.nota)<=6).length)/ls.length) : null;
+const fmtNps = v => v==null ? "—" : (v>0?"+":"")+v;
 const fmtMedia = v => v==null ? "—" : v.toLocaleString("pt-BR",{minimumFractionDigits:1, maximumFractionDigits:1});
 const pillNota = n => `<span class="pill ${n>=9?"green":n>=7?"amber":"red"}">${esc(n)}</span>`;
 function nomeNps(r){
@@ -2621,13 +2624,14 @@ function renderNps(){
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>NPS</h2>
     <div class="sub">Nota que o mentorado dá à sessão, de 0 a 10. Planilha do formulário
-      lida a cada 6 h — resposta nova pode levar até lá para aparecer.</div></div></div>
+      lida a cada 6 h — resposta nova pode levar até lá para aparecer.
+      NPS = % de notas 9–10 menos % de notas 0–6.</div></div></div>
 
   ${NPS_ERRO?`<div class="panel"><div class="empty">Não foi possível carregar o NPS: ${esc(NPS_ERRO)}</div></div>`:!NPS.length?
   `<div class="panel"><div class="empty">Nenhuma resposta de NPS ainda.</div></div>`:`
   <div class="cards quiet" style="margin-bottom:20px">
-    <div class="card"><div class="k">Média geral</div><div class="v">${fmtMedia(mediaNps(NPS))}</div><div class="d">${NPS.length} resposta(s)</div></div>
-    ${mentores.map(m=>`<div class="card"><div class="k">${esc(m)}</div><div class="v">${fmtMedia(mediaNps(doMentor(m)))}</div><div class="d">${doMentor(m).length} resposta(s)</div></div>`).join("")}
+    <div class="card"><div class="k">Média geral</div><div class="v">${fmtMedia(mediaNps(NPS))}</div><div class="d">NPS ${fmtNps(scoreNps(NPS))} · ${NPS.length} resposta(s)</div></div>
+    ${mentores.map(m=>`<div class="card"><div class="k">${esc(m)}</div><div class="v">${fmtMedia(mediaNps(doMentor(m)))}</div><div class="d">NPS ${fmtNps(scoreNps(doMentor(m)))} · ${doMentor(m).length} resposta(s)</div></div>`).join("")}
   </div>
 
   <div class="panel">
@@ -2635,10 +2639,10 @@ function renderNps(){
       <h3 style="margin:0">Média por ${periodo==="mes"?"mês":"semana"}</h3>
       <div class="rowflex">${[["semana","Semana"],["mes","Mês"]].map(([v,rot])=>
         `<button class="btn sm${v===periodo?"":" ghost"}" aria-pressed="${v===periodo}" onclick="setNps('npsPeriodo','${v}')">${rot}</button>`).join("")}</div></div>
-    <div class="tw"><table><thead><tr><th>${periodo==="mes"?"Mês":"Semana"}</th><th class="num">Respostas</th><th class="num">Média</th>
+    <div class="tw"><table><thead><tr><th>${periodo==="mes"?"Mês":"Semana"}</th><th class="num">Respostas</th><th class="num">Média</th><th class="num">NPS</th>
       ${mentores.map(m=>`<th class="num">${esc(m)}</th>`).join("")}</tr></thead><tbody>
     ${pagPeriodos.itens.map(k=>{ const doPeriodo = NPS.filter(r=>chave(r)===k);
-      return `<tr><td>${esc(rotuloPeriodoNps(k, periodo))}</td><td class="num">${doPeriodo.length}</td><td class="num"><b>${fmtMedia(mediaNps(doPeriodo))}</b></td>
+      return `<tr><td>${esc(rotuloPeriodoNps(k, periodo))}</td><td class="num">${doPeriodo.length}</td><td class="num"><b>${fmtMedia(mediaNps(doPeriodo))}</b></td><td class="num">${fmtNps(scoreNps(doPeriodo))}</td>
       ${mentores.map(m=>{ const ls = doPeriodo.filter(r=>r.mentor===m);
         return `<td class="num">${ls.length?`${fmtMedia(mediaNps(ls))} <span class="hint">(${ls.length})</span>`:"—"}</td>`; }).join("")}</tr>`; }).join("")}
     </tbody></table></div>${pagPeriodos.controles}</div>

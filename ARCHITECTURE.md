@@ -650,7 +650,7 @@ anexa `-03:00`. Cabeçalho renomeado faz o nó falhar em vez de gravar vazio.
 digitado casa com um cadastro só (primeiro nome + duas palavras em comum). Na
 tela, nome vinculado vira link para a ficha; o resto mostra `nome_informado`.
 
-**Tela NPS:** média geral e por mentor, tabela de média por **semana**
+**Tela NPS:** média e NPS (% de 9–10 menos % de 0–6) geral e por mentor, tabela de média por **semana**
 (segunda a domingo, no fuso de Brasília) ou **mês** com uma coluna por mentor,
 e a lista de respostas, com o comentário, filtro por mentor e busca. As duas tabelas
 paginam no front (10 períodos, 20 respostas); trocar filtro volta para a página 1. Fechada por

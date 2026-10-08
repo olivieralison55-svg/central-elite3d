@@ -319,6 +319,9 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     nps.includes("<td>07/09 a 13/09</td><td class=\"num\">1</td><td class=\"num\"><b>10,0</b>")
     && nps.includes("<td>14/09 a 20/09</td><td class=\"num\">2</td><td class=\"num\"><b>6,5</b>"),
     nps.slice(nps.indexOf("Média por"), nps.indexOf("Média por") + 900));
+  t.ok("NPS geral: 2 promotores e 1 detrator em 4", nps.includes("NPS +25 · 4 resposta(s)"));
+  t.ok("NPS por mentor", nps.includes("NPS +67 · 3 resposta(s)") && nps.includes("NPS -100 · 1 resposta(s)"));
+  t.ok("NPS por semana", nps.includes("<b>6,5</b></td><td class=\"num\">-50</td>"));
   t.ok("mentor e mentorado escapados", escapado(nps));
   t.ok("resposta vinculada leva à ficha", nps.includes("openMentorado('m1')") && nps.includes(">Ana Clara</a>"));
   t.ok("comentário aparece na lista", nps.includes("<th>Comentário</th>") && nps.includes("Ótima &quot;&gt;&lt;img"));
