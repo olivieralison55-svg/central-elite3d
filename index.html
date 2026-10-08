@@ -581,6 +581,9 @@ let STLSELLER = [], STL_PEDIDOS = [], STL_PRODUTOS = [], STLSELLER_ERRO = null;
 /* NPS das sessoes (nps_respostas), gravado pela edge function nps-forms a partir
    da planilha do formulario. Mesmo recorte do STLSeller: admin e diretoria. */
 let NPS = [], NPS_ERRO = null;
+/* Pesquisa de Experiencia (anonima, sync-experiencia) e a ultima rodada do
+   analista de IA (nps-analista). Mesmo recorte: admin e diretoria. */
+let EXPERIENCIA = [], ANALISE = null, EXP_ERRO = null;
 let view = "dash";
 /* `q` e a busca da tela Mentorados; as outras telas tem a sua propria. O termo
    fica separado por tela de proposito: quem filtrou um nome em Sessoes nao
@@ -691,7 +694,7 @@ async function loadAll(){
     : Promise.resolve({data:[], error:null});
   const semNada = Promise.resolve({data:[], error:null});
   const verStl = pode("verFinanceiro");
-  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd,nps] = await Promise.all([
+  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd,nps,exp,ana] = await Promise.all([
     mentorQuery,
     parcelaQuery,
     cobrancaQuery,
@@ -707,6 +710,8 @@ async function loadAll(){
     verStl ? db.from("stlseller_pedidos_marketplace").select("*") : semNada,
     verStl ? paginado(()=>db.from("stlseller_produtos_vendidos").select("*").order("faturamento",{ascending:false})) : semNada,
     verStl ? paginado(()=>db.from("nps_respostas").select("*").order("respondido_em",{ascending:false})) : semNada,
+    verStl ? paginado(()=>db.from("experiencia_respostas").select("*").order("respondido_em",{ascending:false})) : semNada,
+    verStl ? db.from("nps_analises").select("*").order("gerado_em",{ascending:false}).limit(1) : semNada,
   ]);
   if(m.error||p.error||s.error){ toast((m.error||p.error||s.error).message, true); return; }
   M = m.data; P = p.data; S = s.data;
@@ -721,6 +726,10 @@ async function loadAll(){
   if(erroStl) console.error("[stlseller] load failed", erroStl);
   NPS = nps.data||[]; NPS_ERRO = nps.error ? nps.error.message : null;
   if(nps.error) console.error("[nps] load failed", nps.error);
+  const erroExp = exp.error || ana.error;
+  EXPERIENCIA = exp.data||[]; ANALISE = (ana.data||[])[0] || null;
+  EXP_ERRO = erroExp ? erroExp.message : null;
+  if(erroExp) console.error("[experiencia] load failed", erroExp);
   if(!rotaAtual && ROTAS.length) rotaAtual = ROTAS[0].slug;
   dadosProntos = true;
   render();
@@ -2607,6 +2616,52 @@ function paginaNps(lista, campo, tamanho){
 let NPS_MENTORES = [];
 window.setNpsMentor = function(i){ filtro.npsMentor = NPS_MENTORES[i] || ""; filtro.npsPagResp = 1; render(); };
 
+/* Grade da Pesquisa de Experiencia em 0-100: Muito ruim 0 ... Excelente 100. */
+const NIVEL_EXP = {"Muito ruim":0, "Ruim":25, "Regular":50, "Bom":75, "Excelente":100};
+const SEVERIDADE = {alta:["red","Alta"], media:["amber","Média"], baixa:["green","Baixa"]};
+
+function painelAnalise(){
+  if(EXP_ERRO) return `<div class="panel"><div class="empty">Não foi possível carregar a análise: ${esc(EXP_ERRO)}</div></div>`;
+  if(!ANALISE) return `<div class="panel"><h3>Análise da IA</h3><div class="empty">Nenhuma análise ainda. O analista roda todo dia às 8h, só quando chegou resposta nova.</div></div>`;
+  const alertas = Array.isArray(ANALISE.alertas) ? ANALISE.alertas : [];
+  return `<div class="panel attention"><h3>Análise da IA</h3>
+    <div class="hint" style="margin-bottom:10px">${fmtInstante(ANALISE.gerado_em)} · ${esc(ANALISE.respostas)} resposta(s) lidas · ${esc(ANALISE.modelo)} · visível só para admin e diretoria</div>
+    <p style="white-space:pre-line;margin:0 0 16px">${esc(ANALISE.resumo)}</p>
+    ${alertas.map(a=>{ const [cor,rot] = SEVERIDADE[a.severidade] || ["amber", a.severidade];
+      const quem = [a.mentor && `Mentor: ${a.mentor}`, a.mentorado && `Mentorado: ${a.mentorado}`].filter(Boolean).join(" · ");
+      return `<div style="border-top:1px solid var(--border);padding:12px 0">
+        <div class="rowflex" style="flex-wrap:wrap"><span class="pill ${cor}">${esc(rot)}</span> <b>${esc(a.titulo)}</b>
+          <span class="hint">${esc(a.tipo)}${quem?` · ${esc(quem)}`:""}</span></div>
+        <div style="margin-top:6px">${esc(a.detalhe)}</div>
+        <div class="hint" style="margin-top:6px;white-space:pre-line">Evidência: ${esc(a.evidencia)}</div>
+        <div style="margin-top:6px"><b>Ação sugerida:</b> ${esc(a.acao_sugerida)}</div></div>`; }).join("")
+      || `<div class="empty">Nenhum alerta nesta rodada.</div>`}</div>`;
+}
+
+function painelExperiencia(){
+  if(EXP_ERRO || !EXPERIENCIA.length) return EXP_ERRO ? "" :
+    `<div class="panel"><h3>Pesquisa de Experiência</h3><div class="empty">Nenhuma resposta ainda.</div></div>`;
+  const itens = {};
+  EXPERIENCIA.forEach(r=>Object.entries(r.itens||{}).forEach(([i,n])=>{ if(n in NIVEL_EXP) (itens[i] ??= []).push(NIVEL_EXP[n]); }));
+  const indice = Object.entries(itens).map(([i,v])=>[i, v.reduce((a,b)=>a+b,0)/v.length, v.length]).sort((a,b)=>a[1]-b[1]);
+  const clareza = c => EXPERIENCIA.filter(r=>r.clareza===c).length;
+  const pctSim = Math.round(100*clareza("Sim")/EXPERIENCIA.length);
+  return `<div class="panel"><h3>Pesquisa de Experiência &middot; anônima</h3>
+    <div class="cards quiet" style="margin-bottom:20px">
+      <div class="card"><div class="k">NPS da mentoria</div><div class="v">${fmtNps(scoreNps(EXPERIENCIA))}</div><div class="d">${EXPERIENCIA.length} resposta(s) · média ${fmtMedia(mediaNps(EXPERIENCIA))}</div></div>
+      <div class="card"><div class="k">Índice de experiência</div><div class="v">${indice.length?Math.round(indice.reduce((a,x)=>a+x[1],0)/indice.length):"—"}</div><div class="d">média da grade, 0 a 100</div></div>
+      <div class="card"><div class="k">Clareza dos próximos passos</div><div class="v">${pctSim}%</div><div class="d">Sim ${clareza("Sim")} · Parcial ${clareza("Parcialmente")} · Não ${clareza("Não")}</div></div>
+    </div>
+    <div class="tw"><table><thead><tr><th>Item da grade</th><th class="num">Índice (0–100)</th><th class="num">Respostas</th></tr></thead><tbody>
+    ${indice.map(([i,v,n])=>`<tr><td>${esc(i)}</td><td class="num"><span class="pill ${v>=75?"green":v>=50?"amber":"red"}">${Math.round(v)}</span></td><td class="num">${n}</td></tr>`).join("")}
+    </tbody></table></div>
+    <h3 style="margin-top:20px">Respostas</h3>
+    ${EXPERIENCIA.map(r=>`<details style="border-top:1px solid var(--border);padding:10px 0">
+      <summary>${fmtInstante(r.respondido_em)} · nota ${pillNota(r.nota)} · ${esc(r.geral||"—")} · clareza: ${esc(r.clareza||"—")}</summary>
+      ${Object.entries(r.textos||{}).map(([q,t])=>`<div style="margin-top:8px"><div class="hint">${esc(q)}</div><div style="white-space:pre-line">${esc(t)}</div></div>`).join("")}
+    </details>`).join("")}</div>`;
+}
+
 function renderNps(){
   const periodo = filtro.npsPeriodo, mentorSel = filtro.npsMentor;
   const mentores = NPS_MENTORES = [...new Set(NPS.map(r=>r.mentor))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
@@ -2623,9 +2678,10 @@ function renderNps(){
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>NPS</h2>
-    <div class="sub">Nota que o mentorado dá à sessão, de 0 a 10. Planilha do formulário
-      lida a cada 6 h — resposta nova pode levar até lá para aparecer.
-      NPS = % de notas 9–10 menos % de notas 0–6.</div></div></div>
+    <div class="sub">Nota que o mentorado dá à sessão e a Pesquisa de Experiência (anônima), lidas
+      das planilhas a cada 6 h. NPS = % de notas 9–10 menos % de notas 0–6.</div></div></div>
+
+  ${painelAnalise()}
 
   ${NPS_ERRO?`<div class="panel"><div class="empty">Não foi possível carregar o NPS: ${esc(NPS_ERRO)}</div></div>`:!NPS.length?
   `<div class="panel"><div class="empty">Nenhuma resposta de NPS ainda.</div></div>`:`
@@ -2660,7 +2716,9 @@ function renderNps(){
     ${pagResp.itens.map(r=>`<tr><td>${fmtInstante(r.respondido_em)}</td><td>${nomeNps(r)}</td><td>${esc(r.mentor)}</td><td class="num">${pillNota(r.nota)}</td>
       <td style="white-space:pre-line;min-width:260px">${esc(r.comentario||"—")}</td></tr>`).join("")
       || `<tr><td colspan="5"><div class="empty">Ninguém neste recorte.</div></td></tr>`}
-    </tbody></table></div>${pagResp.controles}</div>`}`;
+    </tbody></table></div>${pagResp.controles}</div>`}
+
+  ${painelExperiencia()}`;
 }
 
 /* ================= FICHA DO MENTORADO ================= */

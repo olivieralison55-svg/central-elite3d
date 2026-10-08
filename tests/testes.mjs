@@ -323,6 +323,13 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("NPS por mentor", nps.includes("NPS +67 · 3 resposta(s)") && nps.includes("NPS -100 · 1 resposta(s)"));
   t.ok("NPS por semana", nps.includes("<b>6,5</b></td><td class=\"num\">-50</td>"));
   t.ok("mentor e mentorado escapados", escapado(nps));
+  t.ok("análise da IA no topo, com severidade", nps.indexOf("Análise da IA") < nps.indexOf("Média geral")
+    && nps.includes("<span class=\"pill red\">Alta</span> <b>Nota caiu") && nps.includes("Ação sugerida:</b> Ligar hoje"));
+  t.ok("NPS da mentoria na Pesquisa de Experiência", nps.includes("NPS da mentoria</div><div class=\"v\">0</div><div class=\"d\">2 resposta(s) · média 7,5"));
+  t.ok("índice de experiência é a média da grade", nps.includes("Índice de experiência</div><div class=\"v\">50</div>"));
+  t.ok("clareza dos próximos passos", nps.includes("Clareza dos próximos passos</div><div class=\"v\">50%</div><div class=\"d\">Sim 1 · Parcial 0 · Não 1"));
+  t.ok("item pior da grade vem primeiro", nps.indexOf("Organização dos agendamentos") < nps.indexOf("Qualidade das sessões</td>")
+    && nps.includes("Organização dos agendamentos</td><td class=\"num\"><span class=\"pill red\">13</span>"));
   t.ok("resposta vinculada leva à ficha", nps.includes("openMentorado('m1')") && nps.includes(">Ana Clara</a>"));
   t.ok("comentário aparece na lista", nps.includes("<th>Comentário</th>") && nps.includes("Ótima &quot;&gt;&lt;img"));
   t.ok("nome de mentor não entra no onclick", !/onclick="[^"]*Petare/.test(nps));
@@ -343,7 +350,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   globalThis.setNps("npsPeriodo", "semana");
   const pg1 = app.tela();
   const linhasSemana = h => (h.slice(h.indexOf("Média por"), h.indexOf("Respostas &middot;")).match(/<td>\d\d\/\d\d a /g) || []).length;
-  const linhasResp = h => (h.slice(h.indexOf("Respostas &middot;")).match(/class="pill green"/g) || []).length;
+  const linhasResp = h => (h.slice(h.indexOf("Respostas &middot;"), h.indexOf("Pesquisa de Experiência &middot; anônima")).match(/class="pill green"/g) || []).length;
   t.ok("média por semana mostra 10 por página", linhasSemana(pg1) === 10 && pg1.includes("Página 1 de 2"), String(linhasSemana(pg1)));
   t.ok("lista de respostas mostra 20 por página", linhasResp(pg1) === 20 && pg1.includes("Página 1 de 2") && pg1.includes("Respostas &middot; 25"), String(linhasResp(pg1)));
   globalThis.setNpsPag("npsPagPeriodo", 2);
@@ -361,6 +368,16 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   mod.render();
   t.ok("falha de carga aparece na tela", app.tela().includes("Não foi possível carregar o NPS"));
   app.estado.NPS_ERRO = null;
+  const analiseFixa = app.estado.ANALISE;
+  app.estado.ANALISE = null;
+  mod.render();
+  t.ok("sem análise ainda", app.tela().includes("Nenhuma análise ainda"));
+  app.estado.ANALISE = analiseFixa;
+  app.estado.EXP_ERRO = "permission denied";
+  mod.render();
+  t.ok("falha da análise aparece na tela", app.tela().includes("Não foi possível carregar a análise") && !app.tela().includes("NPS da mentoria"));
+  app.estado.EXP_ERRO = null;
+  mod.render();
   globalThis.location.hash = "#/analise"; // o resto da seção segue na Análise
   globalThis.setAnalise("statusAnalise", "");
   const anTodos = app.tela();
