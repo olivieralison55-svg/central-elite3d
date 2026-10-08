@@ -36,7 +36,7 @@ policies permitirem, independente do que a tela mostra.
 | Front | HTML + CSS + JS sem framework, arquivo único |
 | Dependências | `@supabase/supabase-js@2` e `Chart.js@4.4.1`, ambas por CDN |
 | Banco / Auth | Supabase — Postgres 17, Auth por e-mail e senha |
-| Automação | 3 jobs `pg_cron` + Edge Functions (Deno) + 2 workflows n8n (STLSeller, NPS) |
+| Automação | 5 jobs `pg_cron` + Edge Functions (Deno) + 3 workflows n8n (STLSeller, NPS, Experiência) + analista de IA (Claude) |
 | Deploy | Vercel, automático no push para `main`. Sem etapa de build |
 | Projeto Supabase | `matgynpiscyoshnjzolo` (região `sa-east-1`) |
 | Testes | `tests/` — 132 asserções em Node puro, sem dependência. Nenhum lint |
@@ -663,6 +663,67 @@ Forçar uma rodada agora (devolve `{recebidas, gravadas, descartadas, vinculadas
 curl -H "X-Central-Token: <credencial n8n 'Central Elite3D - sync-nps'>" \
   https://n8n-ops.stlflix.com/webhook/central-elite3d-nps
 ```
+
+### Pesquisa de Experiência e analista de IA — `sync-experiencia` (6 h) e `nps-analista` (diário)
+
+Desde 08/10/2026. Decisão e medição em [docs/decisions/001](docs/decisions/001-analista-de-nps-so-com-claude.md).
+
+```
+Planilha "Pesquisa de Experiência Mentoria Elite 3D" (1XqsvW…), aba única "Experiência Mentoria"
+   │  ANÔNIMA: nota 0-10, satisfação geral, grade de 10 itens, clareza, 6 perguntas abertas
+   ▼
+n8n-ops · "[Central Elite3D] Experiência - planilha -> sync-experiencia" (oNudNeSFgwrAH8pW)
+   │  webhook GET, Header Auth X-Central-Token (credencial "Central Elite3D - sync-experiencia")
+   │  nó Google Drive (export xlsx, credencial @software) → Extract From File → Assemble payload
+   ▼
+edge function sync-experiencia ──upsert on origem_id──▶ experiencia_respostas
+   ▲ pg_cron sync-experiencia-6h (45 */6 UTC)
+
+nps_respostas + experiencia_respostas ──▶ edge function nps-analista ──▶ Claude (claude-opus-5-5)
+   ▲ pg_cron nps-analista-diario (0 11 UTC = 08:00 Brasília)      └──insert──▶ nps_analises
+```
+
+**Lida pelo Drive, não pelo nó Sheets.** A service account `@software`
+(`lucas-prodops@n8n-ops-503317`) é editora da planilha e mesmo assim o nó Google
+Sheets devolve 403 — com as quatro credenciais Google do n8n-ops. O export do
+Drive em xlsx funciona. Na exportação o carimbo vem como **número de série do
+Excel** em hora de Brasília; o `Assemble payload` converte e anexa `-03:00`.
+Como a pesquisa é anônima, o id é só o carimbo (`sheet:<ISO>`), e grade e
+perguntas abertas ficam em `jsonb` com o texto da planilha como chave — pergunta
+nova no Forms entra sem migration.
+
+**O analista só gasta quando há novidade.** `nps_analises.dados_ate` guarda o
+maior `created_at` que a rodada viu; o job diário compara com o maior
+`created_at` atual das duas tabelas e responde `{pulou: …}` sem chamar o Claude
+se nada entrou. O upsert preserva `created_at`, então ressincronizar não conta
+como novidade. Não existe modo "forçar": o job chama com a chave pública, então
+qualquer um com ela pode chamar a função, e sem novidade a chamada não custa
+nada. Para rodar de novo com os mesmos dados, apague a última linha de
+`nps_analises`.
+
+A rodada manda ao Claude os últimos 90 dias das duas pesquisas, as métricas já
+calculadas (NPS e média geral e por mentor, índice 0–100 por item da grade),
+quais respostas são novas e a análise anterior, para ele não repetir alerta.
+A saída é `{resumo, alertas[]}` por **structured output** (`output_config.format`),
+cada alerta com severidade, tipo (`mentorado`/`mentor`/`mentoria`), evidência
+literal e ação sugerida. `fallbacks: "default"` cobre recusa de classificador.
+A chave é o secret `ANTHROPIC_API_KEY` da função, a mesma ANTHROPIC_API_KEY da plataforma-product-ops.
+
+**Na tela NPS** (`#/nps`, admin e diretoria): o painel **Análise da IA** fica
+no topo; o bloco **Pesquisa de Experiência** fica no fim, com o NPS da mentoria,
+o índice de experiência (média da grade), a clareza dos próximos passos, o
+índice por item (pior primeiro) e as respostas abertas. **Nada vai para os
+mentores**: o RLS das duas tabelas novas só deixa admin e diretoria lerem.
+
+Rodar na mão (devolvem JSON):
+
+```bash
+K=sb_publishable_S7cckKfundDsqo-s_qL2-A_lgPkY9Yl
+curl -X POST -H "Authorization: Bearer $K" https://matgynpiscyoshnjzolo.supabase.co/functions/v1/sync-experiencia
+curl -X POST -H "Authorization: Bearer $K" https://matgynpiscyoshnjzolo.supabase.co/functions/v1/nps-analista
+```
+
+Redeploy: `npx supabase@latest functions deploy <sync-experiencia|nps-analista> --project-ref matgynpiscyoshnjzolo --use-api`.
 
 ### `promover_sessoes_vencidas()` — função Postgres
 
