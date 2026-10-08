@@ -323,13 +323,17 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("NPS por mentor", nps.includes("NPS +67 · 3 resposta(s)") && nps.includes("NPS -100 · 1 resposta(s)"));
   t.ok("NPS por semana", nps.includes("<b>6,5</b></td><td class=\"num\">-50</td>"));
   t.ok("mentor e mentorado escapados", escapado(nps));
-  t.ok("análise da IA no topo, com severidade", nps.indexOf("Análise da IA") < nps.indexOf("Média geral")
-    && nps.includes("<span class=\"pill red\">Alta</span> <b>Nota caiu") && nps.includes("Ação sugerida:</b> Ligar hoje"));
-  t.ok("NPS da mentoria na Pesquisa de Experiência", nps.includes("NPS da mentoria</div><div class=\"v\">0</div><div class=\"d\">2 resposta(s) · média 7,5"));
-  t.ok("índice de experiência é a média da grade", nps.includes("Índice de experiência</div><div class=\"v\">50</div>"));
-  t.ok("clareza dos próximos passos", nps.includes("Clareza dos próximos passos</div><div class=\"v\">50%</div><div class=\"d\">Sim 1 · Parcial 0 · Não 1"));
-  t.ok("item pior da grade vem primeiro", nps.indexOf("Organização dos agendamentos") < nps.indexOf("Qualidade das sessões</td>")
-    && nps.includes("Organização dos agendamentos</td><td class=\"num\"><span class=\"pill red\">13</span>"));
+t.ok("NPS abre nas sessões, sem a análise da IA", nps.includes("aria-pressed=\"true\" onclick=\"setNps('npsAba','sessoes')\"")
+    && !nps.includes("NPS da mentoria") && !nps.includes("Alertas &middot;"));
+  globalThis.setNps("npsAba", "experiencia");
+  const exp = app.tela();
+  t.ok("NPS da mentoria na Pesquisa de Experiência", exp.includes("NPS da mentoria</div><div class=\"v\">0</div><div class=\"d\">2 resposta(s) · média 7,5"));
+  t.ok("índice de experiência é a média da grade", exp.includes("Índice de experiência</div><div class=\"v\">50</div>"));
+  t.ok("clareza dos próximos passos", exp.includes("Clareza dos próximos passos</div><div class=\"v\">50%</div><div class=\"d\">Sim 1 · Parcial 0 · Não 1"));
+  t.ok("item pior da grade vem primeiro", exp.indexOf("Organização dos agendamentos") < exp.indexOf("Qualidade das sessões</td>")
+    && exp.includes("Organização dos agendamentos</td><td class=\"num\"><span class=\"pill red\">13</span>"));
+  t.ok("experiência escapada", escapado(exp) && !exp.includes("Média por"));
+  globalThis.setNps("npsAba", "sessoes");
   t.ok("resposta vinculada leva à ficha", nps.includes("openMentorado('m1')") && nps.includes(">Ana Clara</a>"));
   t.ok("comentário aparece na lista", nps.includes("<th>Comentário</th>") && nps.includes("Ótima &quot;&gt;&lt;img"));
   t.ok("nome de mentor não entra no onclick", !/onclick="[^"]*Petare/.test(nps));
@@ -368,6 +372,24 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   mod.render();
   t.ok("falha de carga aparece na tela", app.tela().includes("Não foi possível carregar o NPS"));
   app.estado.NPS_ERRO = null;
+  t.secao("Análise IA");
+  globalThis.location.hash = "#/ia";
+  const ia = app.tela();
+  t.ok("aba Análise IA desenha a visão geral", ia.includes("<h2>Análise IA</h2>") && ia.includes("Alertas &middot; 1") && semLixo(ia));
+  t.ok("alerta com severidade e ação", ia.includes("<span class=\"pill red\">Alta</span> <b>Nota caiu") && ia.includes("Ação sugerida:</b> Ligar hoje"));
+  t.ok("texto do modelo escapado", escapado(ia));
+  globalThis.setIa("iaAba", "mentores");
+  const iaM = app.tela();
+  t.ok("por mentor: números do NPS e leitura do modelo", /<div class="k">Diovani<\/div>\s*<div class="v">9,0<\/div>\s*<div class="d">NPS \+67 · 3 resposta\(s\)/.test(iaM)
+    && iaM.includes("Pontos de atenção") && iaM.includes("<li>Atrasa " ) && escapado(iaM));
+  globalThis.setIa("iaAba", "mentorados");
+  const iaD = app.tela();
+  t.ok("por mentorado: risco alto primeiro", iaD.indexOf("Ana Clara") < iaD.indexOf("Fulano") && iaD.includes("<span class=\"pill red\">Alto</span>"));
+  t.ok("mentorado vinculado leva à ficha, com a última nota", iaD.includes("openMentorado('m1')") && iaD.includes("<span class=\"pill green\">10</span> <span class=\"hint\">(1)</span>"));
+  t.ok("mentorado sem vínculo aparece pelo nome", iaD.includes("<td>Fulano</td>") && !iaD.includes("openMentorado('Fulano')"));
+  t.ok("id fora da base não vira link", !iaD.includes("openMentorado('inventado')"));
+  t.ok("mentorados escapados", escapado(iaD));
+  globalThis.setIa("iaAba", "geral");
   const analiseFixa = app.estado.ANALISE;
   app.estado.ANALISE = null;
   mod.render();
@@ -375,7 +397,7 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   app.estado.ANALISE = analiseFixa;
   app.estado.EXP_ERRO = "permission denied";
   mod.render();
-  t.ok("falha da análise aparece na tela", app.tela().includes("Não foi possível carregar a análise") && !app.tela().includes("NPS da mentoria"));
+  t.ok("falha da análise aparece na tela", app.tela().includes("Não foi possível carregar a análise"));
   app.estado.EXP_ERRO = null;
   mod.render();
   globalThis.location.hash = "#/analise"; // o resto da seção segue na Análise
@@ -548,6 +570,8 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   t.ok("link da análise não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>STLSeller</h2>"), app.endereco());
   globalThis.location.hash = "#/nps";
   t.ok("link do NPS não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>NPS</h2>"), app.endereco());
+  globalThis.location.hash = "#/ia";
+  t.ok("link da Análise IA não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>Análise IA</h2>"), app.endereco());
   globalThis.location.hash = "#/mentorado/m1/stlseller";
   t.ok("link da aba STLSeller cai nas sessões",
     app.tela().includes("Sessões 1:1 com mentores") && !app.tela().includes("Dados do STLSeller"),

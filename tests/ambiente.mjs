@@ -322,7 +322,12 @@ export function preparar(app, papel = "admin") {
   ];
   app.estado.ANALISE = {gerado_em:"2026-10-08T11:00:00Z", modelo:"claude-opus-5-5", respostas:6, resumo:"Resumo " + XSS,
     alertas:[{severidade:"alta", tipo:"mentorado", mentor:"Luan", mentorado:"Ana " + XSS, titulo:"Nota caiu " + XSS,
-      detalhe:"Detalhe", evidencia:"\"citação\"", acao_sugerida:"Ligar hoje"}]};
+      detalhe:"Detalhe", evidencia:"\"citação\"", acao_sugerida:"Ligar hoje"}],
+    mentores:[{mentor:"Diovani", leitura:"Leitura " + XSS, pontos_fortes:["Prático"], pontos_de_atencao:["Atrasa " + XSS]}],
+    mentorados:[
+      {mentorado_id:null, mentorado:"Fulano", mentor:"Petare", risco:"medio", leitura:"Morno", sinais:["Nota 5"], acao_sugerida:"Ligar"},
+      {mentorado_id:"m1", mentorado:"Ana Clara", mentor:"Diovani", risco:"alto", leitura:"Frustrada " + XSS, sinais:["\"" + XSS + "\""], acao_sugerida:"CS hoje"},
+      {mentorado_id:"inventado", mentorado:"Outro " + XSS, mentor:"Luan", risco:"baixo", leitura:"Ok", sinais:[], acao_sugerida:"Manter"}]};
   app.estado.rotas(...rotas);
   /* Trilha de rotas já com um marco expandido: é onde vivem o teste de
      passagem e o botão de salvar, e a varredura de permissões só os enxerga
