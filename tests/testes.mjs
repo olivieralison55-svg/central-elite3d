@@ -198,6 +198,13 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     dash.includes('>1</div><div class="d">2 presença(s)'),
     dash.slice(dash.indexOf("Encontros em grupo"), dash.indexOf("Encontros em grupo") + 200));
   t.ok("matriz por mentor tem coluna Grupo", dash.includes(">Grupo</th>"));
+  globalThis.location.hash = "#/acompanhamento";
+  const acomp = app.tela();
+  t.ok("Acompanhamento (admin): só a atenção e as listas, sem números gerais nem matriz",
+    acomp.includes("<h2>Acompanhamento</h2>") && acomp.includes("Precisa de atenção agora") && acomp.includes('id="risco"')
+    && !acomp.includes("Números gerais") && !acomp.includes(">Grupo</th>") && semLixo(acomp));
+  t.ok("Dashboard mantém a atenção", dash.includes("Precisa de atenção agora"));
+  globalThis.location.hash = "#/dash";
   {
     /* Pesquisas pendentes: só sessão desde o início da cobrança e realizada há
        2+ dias (prazo de resposta). m1: sessão antiga (fora) e uma de 3 dias sem
@@ -614,6 +621,11 @@ t.ok("NPS abre nas sessões, sem a análise da IA", nps.includes("aria-pressed=\
   const {mod} = app;
 
   t.secao("Papel mentor");
+  globalThis.location.hash = "#/acompanhamento";
+  const acM = app.tela();
+  t.ok("Acompanhamento abre para o mentor, sem itens financeiros", acM.includes("<h2>Acompanhamento</h2>")
+    && !acM.includes("Parcelas vencidas") && !acM.includes("Pesquisa de satisfação da sessão") && semLixo(acM));
+  globalThis.location.hash = "#/dash";
   app.estado.ADESAO_EXP = {respostas: 2, mentorados_com_sessao: 10};
   mod.renderDash();
   const dAd = app.tela();

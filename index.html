@@ -463,6 +463,7 @@ tr.an-zero td{color:var(--subtle-foreground)}
   </div>
   <nav class="nav">
     <button data-view="dash" class="active"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3h7v8H3zM14 3h7v5h-7zM14 11h7v10h-7zM3 14h7v7H3z"/></svg></span> Dashboard</button>
+    <button data-view="acompanhamento"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg></span> Acompanhamento</button>
     <button data-view="mentorados"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Mentorados</button>
     <button data-view="sessoes"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span> Sessões</button>
     <button data-view="rotas"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="5.5" r="2.5"/><path d="M8 18.5h6a4.5 4.5 0 0 0 0-9H10a4.5 4.5 0 0 1 0-9"/></svg></span> Rotas</button>
@@ -482,6 +483,7 @@ tr.an-zero td{color:var(--subtle-foreground)}
 <main>
   <div class="mobilenav">
     <button data-view="dash" class="active">Dashboard</button>
+    <button data-view="acompanhamento">Acompanhamento</button>
     <button data-view="mentorados">Mentorados</button>
     <button data-view="sessoes">Sessões</button>
     <button data-view="rotas">Rotas</button>
@@ -1307,8 +1309,8 @@ function btnNovoMentorado(secundario){
 
    Hash e não caminho porque o deploy é estático na Vercel, sem build nem
    servidor: `/mentorado/<id>` pedido direto devolveria 404 antes de o JS rodar. */
-const TELAS = ["dash","mentorados","sessoes","rotas","analise","nps","ia","financeiro"];
-const ROTULO_TELA = {"#/dash":"Dashboard", "#/mentorados":"Mentorados",
+const TELAS = ["dash","acompanhamento","mentorados","sessoes","rotas","analise","nps","ia","financeiro"];
+const ROTULO_TELA = {"#/dash":"Dashboard", "#/acompanhamento":"Acompanhamento", "#/mentorados":"Mentorados",
   "#/sessoes":"Sessões", "#/rotas":"Rotas", "#/analise":"STLSeller", "#/nps":"NPS", "#/ia":"Análise IA", "#/financeiro":"Financeiro"};
 let fichaId = null, fichaAba = "cadastro";
 /* Antes do primeiro loadAll não há o que desenhar, e o roteador pode pedir um
@@ -1359,6 +1361,7 @@ function render(){
   dpClose(); // calendário aberto não sobrevive a um re-render da tela
   if(view==="mentorado") renderFicha();
   else if(view==="dash") renderDash();
+  else if(view==="acompanhamento") renderDash(true);
   else if(view==="mentorados") renderMentorados();
   else if(view==="sessoes") renderSessoes();
   else if(view==="rotas") renderRotas();
@@ -1424,7 +1427,10 @@ function reunioesConcluidas1a1(){
 /* Seletor de mes da matriz de mentores. Handler em window, como os outros: e o
    que o onchange inline alcanca, e e por onde a suite mexe no recorte. */
 window.setMesMatriz = function(v){ mesMatriz = v; renderDash(); };
-function renderDash(){
+/* `acomp`: a tela Acompanhamento é o mesmo calculo do Dashboard mostrando so o
+   "Precisa de atencao agora" e as listas que ele aponta, sem numeros gerais,
+   matriz nem proximas sessoes. Uma fonte so: os dois nunca discordam. */
+function renderDash(acomp=false){
   GRUPO_REG.length = 0;
   const ativos = M.filter(ehAtivo);
   /* Sessões 1:1 e em grupo contadas separadamente: somar as duas inflaria o
@@ -1639,7 +1645,7 @@ function renderDash(){
     : "";
 
   $("#app").innerHTML = `
-  <div class="topbar"><div><h2>Dashboard</h2><div class="sub">Visão geral da operação · ${ativos.length} mentorados ativos</div></div>
+  <div class="topbar"><div><h2>${acomp?"Acompanhamento":"Dashboard"}</h2><div class="sub">${acomp?"O que precisa de atenção agora, com as listas de cada alerta":"Visão geral da operação"} · ${ativos.length} mentorados ativos</div></div>
   ${btnNovoMentorado()}</div>
 
   <div class="filters">
@@ -1660,6 +1666,7 @@ function renderDash(){
     </div>`).join("")}
   </div>
 
+  ${acomp?"":`
   <div class="section-label">Números gerais</div>
   <div class="cards quiet">
     <div class="card"><div class="k">Mentorados ativos</div><div class="v">${ativos.length}</div><div class="d">${M.filter(m=>situacaoDe(m)==="pausado").length} pausado(s) &middot; ${M.filter(m=>situacaoDe(m)==="cancelado").length} cancelado(s)</div></div>
@@ -1715,6 +1722,7 @@ function renderDash(){
       </div>
     </div>
   </div>
+`}
   ${ORFAS.length?`<div class="panel detail" id="orfas"><h3>Sessões sem evento no Google Agenda</h3>
   <div class="sub" style="color:var(--mut);font-size:13px;margin:-8px 0 14px">O evento foi apagado, renomeado ou saiu da janela de sincronização. Estes registros pararam de receber atualização e precisam de conferência manual.</div>
   ${orfasVis.length?`<div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Mentorado</th><th>Etapa</th><th>Mentor</th><th>Status</th></tr></thead><tbody>

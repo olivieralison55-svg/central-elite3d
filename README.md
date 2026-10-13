@@ -80,6 +80,14 @@ Duas coisas se repetem em todas elas:
   de criar (administrador e diretoria). Nas telas que já têm uma ação própria —
   Sessões, com o encontro em grupo — ele aparece como botão secundário.
 
+### Acompanhamento
+
+Item próprio na barra lateral, para mentores, admin e diretoria. Mostra só o
+**"Precisa de atenção agora"** e as listas de cada alerta (sem sessão há +30 dias,
+sem subir de marco, sem sessão de implementação etc.), sem os números gerais e a
+matriz do fechamento. É o mesmo cálculo do Dashboard, que continua com o bloco no
+topo: os dois nunca discordam. Cada papel vê os itens que já via no Dashboard.
+
 ### Dashboard
 
 É a tela inicial e responde "como está o programa hoje".
