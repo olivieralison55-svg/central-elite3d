@@ -198,6 +198,50 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     dash.includes('>1</div><div class="d">2 presença(s)'),
     dash.slice(dash.indexOf("Encontros em grupo"), dash.indexOf("Encontros em grupo") + 200));
   t.ok("matriz por mentor tem coluna Grupo", dash.includes(">Grupo</th>"));
+  {
+    /* Pesquisas pendentes: só sessão desde o início da cobrança e realizada há
+       2+ dias (prazo de resposta). m1: sessão antiga (fora) e uma de 3 dias sem
+       resposta (pendente). m2: respondeu a de 3 dias; a de ontem está no prazo. */
+    const dia = n => new Date(Date.now() + n * 864e5).toLocaleDateString("sv-SE", {timeZone: "America/Sao_Paulo"});
+    const S0 = app.estado.S, N0 = app.estado.NPS, E0 = app.estado.EXPERIENCIA;
+    app.estado.INICIO_COBRANCA_NPS = dia(-10);
+    app.estado.S = [...S0,
+      {id:"n0", mentorado_id:"m1", etapa:"Checkup 1", ordem:3, status:"Concluída", mentor:"Luan", data:dia(-20), hora:"10:00:00"},
+      {id:"n1", mentorado_id:"m1", etapa:"Checkup 2", ordem:4, status:"Concluída", mentor:"Luan", data:dia(-3), hora:"10:00:00"},
+      {id:"n2", mentorado_id:"m2", etapa:"Checkup 1", ordem:3, status:"Concluída", mentor:"Luan", data:dia(-3), hora:"10:00:00"},
+      {id:"n3", mentorado_id:"m2", etapa:"Checkup 2", ordem:4, status:"Concluída", mentor:"Luan", data:dia(-1), hora:"10:00:00"}];
+    app.estado.NPS = [{mentorado_id:"m2", respondido_em:dia(-2) + "T20:00:00Z", nota:9, mentor:"Luan"},
+      {mentorado_id:"m1", respondido_em:dia(-19) + "T12:00:00Z", nota:10, mentor:"Luan"}];
+    app.estado.EXPERIENCIA = [{respondido_em:dia(-1) + "T12:00:00Z", nota:8}, {respondido_em:dia(-15) + "T12:00:00Z", nota:3}];
+    app.estado.ADESAO_EXP = {respostas: 0, mentorados_com_sessao: 10};
+    mod.renderDash();
+    const d = app.tela();
+    t.ok("admin não vê o aviso do mentor (tem o totalizador)", !d.includes("Poucas respostas"));
+    app.estado.ADESAO_EXP = null;
+    const sec = d.slice(d.indexOf('id="nps-pend"'));
+    t.ok("pesquisa da sessão pendente: só quem não respondeu depois da última sessão",
+      d.includes("Pesquisa de satisfação pendente &middot; 1") && sec.includes("Ana Clara") && !sec.includes("Bruno Dias") && sec.includes(dia(-3).split("-").reverse().join("/")), sec.slice(0, 400));
+    t.ok("experiência: totalizador anônimo conta só respostas do período",
+      d.includes("anônima: 1 resposta(s) de 2 mentorado(s) com sessão") && semLixo(d));
+    app.estado.S = S0; app.estado.NPS = N0; app.estado.EXPERIENCIA = E0; app.estado.INICIO_COBRANCA_NPS = "2026-10-13";
+    mod.renderDash();
+  }
+  {
+    /* Sem subir de marco há +30 dias: só contrato assinado, retroativo.
+       m1 subiu há 40 dias (travou); m2 não assinou (fora); m3 nunca subiu e
+       fechou em 2025 (nunca subiu). */
+    const dia = n => new Date(Date.now() + n * 864e5).toLocaleDateString("sv-SE", {timeZone: "America/Sao_Paulo"});
+    app.estado.rotas([{id:"r1", slug:"mkt", nome:"Marketplace", ordem:1}], [{id:"k1", rota_id:"r1", ordem:1, nome:"Marco 01"}],
+      [{mentorado_id:"m1", marco_id:"k1", status:"CONCLUIDO", data:dia(-40), updated_at:dia(-1) + "T10:00:00Z"},
+       {mentorado_id:"m2", marco_id:"k1", status:"NAO_INICIADO", data:null, updated_at:dia(-1) + "T10:00:00Z"}], [], [], []);
+    mod.renderDash();
+    const d = app.tela(), sec = d.slice(d.indexOf('id="sem-subida"'));
+    t.ok("sem subir de marco: travou e nunca subiu, só contrato assinado",
+      sec.includes("Sem subir de marco há +30 dias &middot; 2") && sec.includes("Ana Clara") && sec.includes("Marco 01 · Marketplace")
+      && sec.includes(">40</td>") && sec.includes("Nunca subiu") && !sec.includes("Bruno Dias") && escapado(sec), sec.slice(0, 500));
+    app.estado.rotas(...fixtures().rotas);
+    mod.renderDash();
+  }
   t.ok("matriz separa 1:1 de grupo em vez de somar",
     dash.includes(">1:1</th>") && !dash.includes('<th class="num">Total</th>'));
   t.ok("próximas mostra o encontro agregado",
@@ -380,15 +424,26 @@ t.ok("NPS abre nas sessões, sem a análise da IA", nps.includes("aria-pressed=\
   t.ok("texto do modelo escapado", escapado(ia));
   globalThis.setIa("iaAba", "mentores");
   const iaM = app.tela();
-  t.ok("por mentor: números do NPS e leitura do modelo", /<div class="k">Diovani<\/div>\s*<div class="v">9,0<\/div>\s*<div class="d">NPS \+67 · 3 resposta\(s\)/.test(iaM)
-    && iaM.includes("Pontos de atenção") && iaM.includes("<li>Atrasa " ) && escapado(iaM));
+  t.ok("por mentor: lista com números do NPS", /<a class="lk-nome">Diovani<\/a><\/td>\s*<td class="num">9,0<\/td><td class="num">\+67<\/td>/.test(iaM) && semLixo(iaM));
+  globalThis.abrirIa("mentor:Diovani");
+  const iaM1 = app.tela();
+  t.ok("clique no mentor abre a tela dele com prós e contras (formato antigo)", iaM1.includes("Voltar à lista") && iaM1.includes("Prós</span> 1")
+    && iaM1.includes("Contras</span> 1") && iaM1.includes("Atrasa ") && iaM1.includes("Respostas de NPS &middot; 3") && escapado(iaM1));
   globalThis.setIa("iaAba", "mentorados");
   const iaD = app.tela();
+  t.ok("trocar de aba volta para a lista", !iaD.includes("Voltar à lista"));
   t.ok("por mentorado: risco alto primeiro", iaD.indexOf("Ana Clara") < iaD.indexOf("Fulano") && iaD.includes("<span class=\"pill red\">Alto</span>"));
-  t.ok("mentorado vinculado leva à ficha, com a última nota", iaD.includes("openMentorado('m1')") && iaD.includes("<span class=\"pill green\">10</span> <span class=\"hint\">(1)</span>"));
-  t.ok("mentorado sem vínculo aparece pelo nome", iaD.includes("<td>Fulano</td>") && !iaD.includes("openMentorado('Fulano')"));
-  t.ok("id fora da base não vira link", !iaD.includes("openMentorado('inventado')"));
+  t.ok("lista mostra a última nota", iaD.includes("<span class=\"pill green\">10</span> <span class=\"hint\">(1)</span>"));
   t.ok("mentorados escapados", escapado(iaD));
+  globalThis.abrirIa("mentorado:m1");
+  const iaD1 = app.tela();
+  t.ok("mentorado vinculado: tela com link para a ficha, prós, contras e pauta", iaD1.includes("openMentorado('m1')") && iaD1.includes("Vendeu na feira")
+    && iaD1.includes("Pauta para a conversa") && iaD1.includes("Próximo passo:</b> CS hoje") && escapado(iaD1));
+  globalThis.abrirIa("mentorado:nome:Fulano");
+  const iaD2 = app.tela();
+  t.ok("mentorado sem vínculo abre pelo nome, sem link", iaD2.includes("<h3>Fulano</h3>") && iaD2.includes("Sinais: Nota 5") && iaD2.includes("Contras</span> 0") && !iaD2.includes("openMentorado('Fulano')"));
+  globalThis.abrirIa("mentorado:inventado");
+  t.ok("id fora da base não vira link", !app.tela().includes("openMentorado('inventado')"));
   globalThis.setIa("iaAba", "geral");
   const analiseFixa = app.estado.ANALISE;
   app.estado.ANALISE = null;
@@ -533,6 +588,18 @@ t.ok("NPS abre nas sessões, sem a análise da IA", nps.includes("aria-pressed=\
   const {mod} = app;
 
   t.secao("Papel mentor");
+  app.estado.ADESAO_EXP = {respostas: 2, mentorados_com_sessao: 10};
+  mod.renderDash();
+  const dAd = app.tela();
+  t.ok("adesão abaixo da meta: mentor vê o aviso com o número e o link, sem conteúdo",
+    dAd.includes("Poucas respostas na Pesquisa de Experiência") && dAd.includes("2 resposta(s) para 10 mentorado(s) com sessão")
+    && dAd.includes("(20%, a meta é 70%)") && dAd.includes("docs.google.com/forms") && semLixo(dAd));
+  app.estado.ADESAO_EXP = {respostas: 7, mentorados_com_sessao: 10};
+  mod.renderDash();
+  t.ok("adesão na meta: sem aviso", !app.tela().includes("Poucas respostas"));
+  app.estado.ADESAO_EXP = null;
+  mod.renderDash();
+  t.ok("RPC indisponível: dashboard sem aviso e sem lixo", !app.tela().includes("Poucas respostas") && semLixo(app.tela()));
   mod.renderSessoes();
   const sess = app.tela();
   t.ok("Sessões sem lixo", semLixo(sess), sess.slice(0, 300));

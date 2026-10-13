@@ -145,7 +145,7 @@ export function carregarApp() {
         set STLSELLER(v){ STLSELLER = v }, set STLSELLER_ERRO(v){ STLSELLER_ERRO = v },
         set STL_PEDIDOS(v){ STL_PEDIDOS = v }, set STL_PRODUTOS(v){ STL_PRODUTOS = v },
         get NPS(){ return NPS }, set NPS(v){ NPS = v }, set NPS_ERRO(v){ NPS_ERRO = v },
-        set EXPERIENCIA(v){ EXPERIENCIA = v }, set ANALISE(v){ ANALISE = v }, set EXP_ERRO(v){ EXP_ERRO = v },
+        get EXPERIENCIA(){ return EXPERIENCIA }, set EXPERIENCIA(v){ EXPERIENCIA = v }, set ANALISE(v){ ANALISE = v }, set ADESAO_EXP(v){ ADESAO_EXP = v }, set INICIO_COBRANCA_NPS(v){ INICIO_COBRANCA_NPS = v }, set EXP_ERRO(v){ EXP_ERRO = v },
         set papel(v){ myRole = v; myProfile = {nome:"Teste", email:"teste@exemplo.com", role:v} },
         rotas(r, mk, mm, cn, mc, f){ ROTAS=r; MARCOS=mk; MM=mm; CANAIS_DB=cn; MC=mc; FAT=f;
           rotaAtual = r[0] && r[0].slug },
@@ -326,7 +326,7 @@ export function preparar(app, papel = "admin") {
     mentores:[{mentor:"Diovani", leitura:"Leitura " + XSS, pontos_fortes:["Prático"], pontos_de_atencao:["Atrasa " + XSS]}],
     mentorados:[
       {mentorado_id:null, mentorado:"Fulano", mentor:"Petare", risco:"medio", leitura:"Morno", sinais:["Nota 5"], acao_sugerida:"Ligar"},
-      {mentorado_id:"m1", mentorado:"Ana Clara", mentor:"Diovani", risco:"alto", leitura:"Frustrada " + XSS, sinais:["\"" + XSS + "\""], acao_sugerida:"CS hoje"},
+      {mentorado_id:"m1", mentorado:"Ana Clara", mentor:"Diovani", risco:"alto", leitura:"Frustrada " + XSS, pros:["Vendeu na feira"], contras:["\"" + XSS + "\""], pauta:["O que travou? " + XSS], acao_sugerida:"CS hoje"},
       {mentorado_id:"inventado", mentorado:"Outro " + XSS, mentor:"Luan", risco:"baixo", leitura:"Ok", sinais:[], acao_sugerida:"Manter"}]};
   app.estado.rotas(...rotas);
   /* Trilha de rotas já com um marco expandido: é onde vivem o teste de

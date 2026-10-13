@@ -586,11 +586,17 @@ let NPS = [], NPS_ERRO = null;
 /* Pesquisa de Experiencia (anonima, sync-experiencia) e a ultima rodada do
    analista de IA (nps-analista). Mesmo recorte: admin e diretoria. */
 let EXPERIENCIA = [], ANALISE = null, EXP_ERRO = null;
+/* Adesao a Pesquisa de Experiencia ({respostas, mentorados_com_sessao}) desde
+   INICIO_COBRANCA_NPS, pela RPC experiencia_adesao: so numeros, para o mentor (AD-002). */
+let ADESAO_EXP = null;
+// ponytail: meta fixa de 70%; virar configuracao se a gestao quiser ajustar sem deploy.
+const META_ADESAO_EXP = 0.7;
+const LINK_PESQUISA_EXP = "https://docs.google.com/forms/d/e/1FAIpQLSeZ5JLebJ2RdsDWDiBcPSzysWu4XqLKuQuyHppPxIYESsljWw/viewform";
 let view = "dash";
 /* `q` e a busca da tela Mentorados; as outras telas tem a sua propria. O termo
    fica separado por tela de proposito: quem filtrou um nome em Sessoes nao
    espera abrir o Financeiro e encontrar a tela recortada pelo mesmo nome. */
-let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:"", qAnalise:"", qNps:"", npsPeriodo:"semana", npsMentor:"", npsPagPeriodo:1, npsPagResp:1, npsAba:"sessoes", iaAba:"geral"};
+let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:"", qAnalise:"", qNps:"", npsPeriodo:"semana", npsMentor:"", npsPagPeriodo:1, npsPagResp:1, npsAba:"sessoes", iaAba:"geral", iaSel:""};
 /* Mes selecionado na matriz de sessoes por mentor ("YYYY-MM"), ou "" para o
    historico inteiro. `null` significa "ainda no padrao": quem resolve e o
    renderDash, que sabe quais meses tem sessao. */
@@ -698,7 +704,7 @@ async function loadAll(){
     : Promise.resolve({data:[], error:null});
   const semNada = Promise.resolve({data:[], error:null});
   const verStl = pode("verFinanceiro");
-  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd,nps,exp,ana] = await Promise.all([
+  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd,nps,exp,ana,ades] = await Promise.all([
     mentorQuery,
     parcelaQuery,
     cobrancaQuery,
@@ -716,6 +722,7 @@ async function loadAll(){
     verStl ? paginado(()=>db.from("nps_respostas").select("*").order("respondido_em",{ascending:false})) : semNada,
     verStl ? paginado(()=>db.from("experiencia_respostas").select("*").order("respondido_em",{ascending:false})) : semNada,
     verStl ? db.from("nps_analises").select("*").order("gerado_em",{ascending:false}).limit(1) : semNada,
+    db.rpc("experiencia_adesao", {p_desde: INICIO_COBRANCA_NPS, p_prazo_dias: PRAZO_RESPOSTA_DIAS}),
   ]);
   if(m.error||p.error||s.error){ toast((m.error||p.error||s.error).message, true); return; }
   M = m.data; P = p.data; S = s.data;
@@ -732,6 +739,9 @@ async function loadAll(){
   if(nps.error) console.error("[nps] load failed", nps.error);
   const erroExp = exp.error || ana.error;
   EXPERIENCIA = exp.data||[]; ANALISE = (ana.data||[])[0] || null;
+  // Aviso de adesao nao trava a aplicacao: sem ele o dashboard so nao mostra o painel.
+  if(ades.error) console.error("[experiencia_adesao]", ades.error);
+  ADESAO_EXP = ades.error ? null : (ades.data||[])[0] || null;
   EXP_ERRO = erroExp ? erroExp.message : null;
   if(erroExp) console.error("[experiencia] load failed", erroExp);
   if(!rotaAtual && ROTAS.length) rotaAtual = ROTAS[0].slug;
@@ -743,6 +753,11 @@ const sessoesDe  = id => S.filter(x=>x.mentorado_id===id).sort((a,b)=>a.ordem-b.
 /* A trilha de 12 etapas e os encontros coletivos vivem na mesma tabela, mas
    nunca devem ser somados: separe sempre pelo tipo antes de contar. */
 const sessoes1a1De   = id => sessoesDe(id).filter(eh1a1);
+// Cobranca dos formularios de NPS vale daqui pra frente: sessoes anteriores nao entram.
+// `let` so para os testes moverem o inicio junto com a data de hoje.
+let INICIO_COBRANCA_NPS = "2026-10-13";
+// Prazo padrao de resposta: a sessao so cobra a pesquisa 2 dias depois de realizada.
+const PRAZO_RESPOSTA_DIAS = 2;
 const sessoesGrupoDe = id => sessoesDe(id).filter(ehGrupo);
 const nome = id => (M.find(x=>x.id===id)||{}).nome || "—";
 
@@ -1427,6 +1442,24 @@ function renderDash(){
      mais grave: contrato fechado há meses e a mentoria nunca começou. */
   const ultimaConcluida = mid => sessoes1a1De(mid)
     .filter(s=>s.status==="Concluída"&&s.data).map(s=>s.data).sort().pop() || null;
+  /* Sem subir de marco ha +30 dias: todo ativo com contrato assinado, sem data
+     de corte (vale retroativo). Subida = marco CONCLUIDO (rota rica) ou "passou"
+     (rota simples); a data e a do marco, ou updated_at se ela estiver vazia.
+     Quem nunca subiu conta do fechamento e fica marcado a parte: travar depois
+     de subir e nunca ter comecado pedem conversas diferentes. */
+  const ultimaSubida = mid => MM.filter(x=>x.mentorado_id===mid && (x.status==="CONCLUIDO" || x.status==="passou"))
+    .map(x=>({x, quando:(x.data || x.updated_at || "").slice(0,10)})).filter(o=>o.quando)
+    .sort((a,b)=>a.quando<b.quando?-1:1).pop() || null;
+  const semSubida30 = ativos.filter(m=>m.contrato_status==="Assinado").flatMap(m=>{
+    const sub = ultimaSubida(m.id);
+    const ref = sub ? sub.quando : m.data_fechamento;
+    if(!ref) return [];
+    const dias = Math.floor((new Date(HOJE)-new Date(ref))/864e5);
+    if(dias <= 30) return [];
+    const marco = sub && MARCOS.find(d=>d.id===sub.x.marco_id);
+    const rota = marco && ROTAS.find(r=>r.id===marco.rota_id);
+    return [{m, sub, ref, dias, marco, rota}];
+  }).sort((a,b)=>b.dias-a.dias);
   const semSessao30 = ativos.filter(m=>{
     if(sessoes1a1De(m.id).some(s=>s.status==="Agendada")) return false;
     const ref = ultimaConcluida(m.id) || m.data_fechamento;
@@ -1532,6 +1565,25 @@ function renderDash(){
 
   const verFin = pode("verFinanceiro");
 
+  /* Formularios de NPS pendentes, a partir da ultima sessao 1:1 concluida de
+     cada mentorado ativo. So conta sessao a partir de INICIO_COBRANCA_NPS: as
+     anteriores nunca foram cobradas, e entrariam todas de uma vez.
+     Satisfacao da sessao: pendente se nao ha resposta vinculada a ficha com dia
+     >= o da sessao (resposta sem vinculo com a ficha conta como pendente).
+     Experiencia: e anonima, entao so ha o totalizador -- respostas desde o
+     inicio contra mentorados com sessao no periodo, nunca o nome de quem falta. */
+  const limiteResposta = new Date(new Date(HOJE+"T12:00:00Z").getTime() - PRAZO_RESPOSTA_DIAS*864e5).toISOString().slice(0,10);
+  const concluidaNoPeriodo = x => x.status==="Concluída" && x.data && x.data>=INICIO_COBRANCA_NPS && x.data<=limiteResposta;
+  const npsPend = verFin ? ativos.flatMap(m=>{
+    const ult = sessoes1a1De(m.id).filter(concluidaNoPeriodo).sort((a,b)=>a.data<b.data?-1:1).pop();
+    if(!ult) return [];
+    const respondeu = NPS.some(r=>r.mentorado_id===m.id && diaSP(r.respondido_em)>=ult.data);
+    return respondeu ? [] : [{m, sessao:ult}];
+  }) : [];
+  const comSessaoNoPeriodo = ativos.filter(m=>sessoes1a1De(m.id).some(concluidaNoPeriodo)).length;
+  const expNoPeriodo = EXPERIENCIA.filter(r=>diaSP(r.respondido_em)>=INICIO_COBRANCA_NPS).length;
+  const expPend = Math.max(0, comSessaoNoPeriodo - expNoPeriodo);
+
   // Progressão por faturamento: só entra quem tem faturamento real registrado.
   // Nada é inventado — mentorado sem registro simplesmente não aparece na seção.
   const comFaturamento = ativos
@@ -1551,6 +1603,7 @@ function renderDash(){
     verFin ? {label:"Parcelas vencidas em aberto", count:vencidas.length, view:"financeiro"} : null,
     {label:"Mentorados criados pela Lia, sem cadastro completo", count:incompletos.length, view:"mentorados", filtro:"incompletos"},
     {label:"Mentorados sem sessão há +30 dias", count:semSessao30.length, view:null, anchor:"risco"},
+    {label:"Mentorados sem subir de marco há +30 dias", count:semSubida30.length, view:null, anchor:"sem-subida"},
     aguardConf ? {label:"Sessões aguardando confirmação", count:aguardConf, view:"sessoes"} : null,
     ORFAS.length ? {label:"Sessões sem evento no Google Agenda", count:ORFAS.length, anchor:"orfas"} : null,
     /* Só para quem vê financeiro: é dinheiro recebido que a aplicação ainda não
@@ -1559,8 +1612,21 @@ function renderDash(){
     verFin && cobrancasOrfas().length
       ? {label:"Cobranças da Lia sem mentorado identificado", count:cobrancasOrfas().length, view:"financeiro"}
       : null,
+    verFin ? {label:"Pesquisa de satisfação da sessão não respondida", count:npsPend.length, anchor:"nps-pend"} : null,
+    verFin ? {label:`Pesquisa de Experiência não respondida (anônima: ${expNoPeriodo} resposta(s) de ${comSessaoNoPeriodo} mentorado(s) com sessão)`, count:expPend, view:null} : null,
   ].filter(Boolean);
   const temAtencao = attnItems.some(i=>i.count>0);
+  /* Para o mentor: so o numero agregado, sem conteudo nem nome (a pesquisa e
+     anonima). Aparece quando a adesao fica abaixo da meta, para ele reforcar o
+     convite com os mentorados dele (AD-002). */
+  const ad = ADESAO_EXP, adTotal = ad ? Number(ad.mentorados_com_sessao) : 0;
+  const adTaxa = adTotal ? Number(ad.respostas)/adTotal : 1;
+  const avisoAdesao = !verFin && adTotal && adTaxa < META_ADESAO_EXP
+    ? `<div class="panel attention"><h3>⚠ Poucas respostas na Pesquisa de Experiência</h3>
+      <p style="margin:0">Desde ${fmtD(INICIO_COBRANCA_NPS)}, ${Number(ad.respostas)} resposta(s) para ${adTotal} mentorado(s) com sessão
+      (${Math.round(100*adTaxa)}%, a meta é ${Math.round(100*META_ADESAO_EXP)}%). Reforce o convite ao fim das suas sessões — a pesquisa é anônima e leva poucos minutos.</p>
+      <div style="margin-top:8px"><a href="${LINK_PESQUISA_EXP}" target="_blank" rel="noopener">Link da pesquisa para enviar</a></div></div>`
+    : "";
 
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Dashboard</h2><div class="sub">Visão geral da operação · ${ativos.length} mentorados ativos</div></div>
@@ -1571,6 +1637,7 @@ function renderDash(){
     ${filtro.qDash?seloBusca("qDash", ativos.filter(m=>casaBusca(filtro.qDash, m.nome)).length, ativos.length, "mentorado(s) ativo(s) · os totais continuam da operação inteira"):`<span style="align-self:center;color:var(--dim);font-size:13px">filtra as listas de mentorados abaixo — os totais continuam da operação inteira</span>`}
   </div>
 
+  ${avisoAdesao}
   <div class="panel ${temAtencao?"attention":""}">
     <h3>${temAtencao?"⚠ Precisa de atenção agora":"✓ Tudo em ordem"}</h3>
     ${attnItems.map(i=>`<div class="attn-item ${i.count?"":"ok"}">
@@ -1654,7 +1721,18 @@ function renderDash(){
           ? `<td class="mono">${fmtD(last)}</td><td><span class="pill amber">Contatar</span></td>`
           : `<td class="mono">nunca · fechou ${fmtD(m.data_fechamento)}</td><td><span class="pill red">Nunca começou</span></td>`)
       + `</tr>`;
-  }).join("")}</tbody></table></div>`:`<div class="empty">Nenhum dos ${semSessao30.length} mentorados sem sessão casa com a busca.</div>`}</div>`:""}`;
+  }).join("")}</tbody></table></div>`:`<div class="empty">Nenhum dos ${semSessao30.length} mentorados sem sessão casa com a busca.</div>`}</div>`:""}
+  ${semSubida30.length?`<div class="panel detail" id="sem-subida"><h3>Sem subir de marco há +30 dias &middot; ${semSubida30.length}</h3>
+  <div class="hint" style="margin-bottom:8px">Contrato assinado. Conta da última subida de marco; quem nunca subiu, do fechamento.</div>
+  <div style="overflow-x:auto"><table><thead><tr><th>Mentorado</th><th>Última subida</th><th class="num">Dias</th><th></th></tr></thead><tbody>
+  ${semSubida30.filter(x=>casaBusca(filtro.qDash, x.m.nome)).map(({m,sub,ref,dias,marco,rota})=>`<tr class="click" onclick="openMentorado('${m.id}')"><td>${esc(m.nome)}</td>
+    <td>${sub ? `${esc(marco?marco.nome:"marco")}${rota?` · ${esc(rota.nome)}`:""} <span class="mono">${fmtD(ref)}</span>` : `<span class="mono">nunca · fechou ${fmtD(ref)}</span>`}</td>
+    <td class="num">${dias}</td><td>${sub?'<span class="pill amber">Travou</span>':'<span class="pill red">Nunca subiu</span>'}</td></tr>`).join("")}</tbody></table></div></div>`:""}
+  ${npsPend.length?`<div class="panel detail" id="nps-pend"><h3>Pesquisa de satisfação pendente &middot; ${npsPend.length}</h3>
+  <div class="hint" style="margin-bottom:8px">Última sessão 1:1 concluída desde ${fmtD(INICIO_COBRANCA_NPS)}, há ${PRAZO_RESPOSTA_DIAS}+ dias, sem resposta do mentorado.</div>
+  <div style="overflow-x:auto"><table><thead><tr><th>Mentorado</th><th>Última sessão</th><th>Etapa</th><th>Mentor</th></tr></thead><tbody>
+  ${npsPend.filter(x=>casaBusca(filtro.qDash, x.m.nome)).map(({m,sessao})=>`<tr class="click" onclick="openMentorado('${m.id}','sessoes')"><td>${esc(m.nome)}</td>
+    <td class="mono">${fmtD(sessao.data)}</td><td>${esc(sessao.etapa)}</td><td>${esc(sessao.mentor)}</td></tr>`).join("")}</tbody></table></div></div>`:""}`;
 }
 
 /* ================= MENTORADOS ================= */
@@ -2635,7 +2713,7 @@ const abas = (setter, campo, atual, opcoes) => `<div class="rowflex" style="flex
    alertas, uma leitura por mentor e uma por mentorado. Os numeros dos cards
    vem do NPS carregado, nao do modelo; o texto vem de nps_analises. */
 const RISCO = {alto:["red","Alto",0], medio:["amber","Médio",1], baixo:["green","Baixo",2]};
-window.setIa = function(campo, v){ filtro[campo] = v; render(); };
+window.setIa = function(campo, v){ filtro[campo] = v; filtro.iaSel = ""; render(); };
 const lista_ = v => Array.isArray(v) ? v : [];
 
 function iaGeral(){
@@ -2654,38 +2732,72 @@ function iaGeral(){
       || `<div class="empty">Nenhum alerta nesta rodada.</div>`}</div>`;
 }
 
-const listaPontos = (titulo, itens) => itens.length ? `<div style="margin-top:10px"><div class="hint">${titulo}</div>
-  <ul style="margin:4px 0 0 18px">${itens.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>` : "";
+/* Por mentor / por mentorado: lista de integrantes; o clique abre a tela unica
+   da pessoa, com pros, contras e a pauta para conversar com ela. Analises
+   antigas (pontos_fortes/pontos_de_atencao/sinais) caem nos mesmos blocos. */
+window.abrirIa = function(chave){ filtro.iaSel = chave; render(); };
+const prosDe = l => lista_(l.pros ?? l.pontos_fortes);
+// "sinais" (formato antigo) e evidencia neutra, boa ou ruim: aparece sob a leitura, nunca como contra.
+const contrasDe = l => lista_(l.contras ?? l.pontos_de_atencao);
+const chaveMentorado = l => l.mentorado_id || `nome:${l.mentorado}`;
+const npsDoMentorado = l => NPS.filter(r=>l.mentorado_id ? r.mentorado_id===l.mentorado_id : !r.mentorado_id && (r.nome_informado||"")===l.mentorado)
+  .sort((a,b)=>String(b.respondido_em).localeCompare(String(a.respondido_em)));
+
+const colunaPC = (titulo, cor, itens) => `<div class="panel" style="margin:0"><h3><span class="pill ${cor}">${titulo}</span> ${itens.length}</h3>
+  ${itens.length ? `<ul style="margin:0 0 0 18px">${itens.map(t=>`<li style="margin-bottom:6px">${esc(t)}</li>`).join("")}</ul>` : `<div class="empty">Nada nos dados desta rodada.</div>`}</div>`;
+
+function telaPessoa(nome, sub, l, respostas, extra){
+  const pauta = lista_(l.pauta);
+  return `<button class="btn sm ghost" onclick="abrirIa('')">&larr; Voltar à lista</button>
+  <div class="panel" style="margin-top:12px"><h3>${nome}</h3><div class="hint">${sub}</div>
+    <p style="margin:12px 0 0">${esc(l.leitura)}</p>
+    ${lista_(l.sinais).length?`<div class="hint" style="margin-top:6px">Sinais: ${lista_(l.sinais).map(esc).join(" · ")}</div>`:""}${extra||""}</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px">
+    ${colunaPC("Prós","green",prosDe(l))}${colunaPC("Contras","red",contrasDe(l))}</div>
+  ${pauta.length ? `<div class="panel"><h3>Pauta para a conversa</h3><ol style="margin:0 0 0 18px">${pauta.map(t=>`<li style="margin-bottom:6px">${esc(t)}</li>`).join("")}</ol></div>` : ""}
+  <div class="panel"><h3>Respostas de NPS &middot; ${respostas.length}</h3>
+    ${respostas.map(r=>`<div style="border-top:1px solid var(--border);padding:10px 0">${fmtInstante(r.respondido_em)} · ${pillNota(r.nota)}
+      <span class="hint">${esc(r.mentor)} · ${esc((M.find(x=>x.id===r.mentorado_id)||{}).nome || r.nome_informado || "—")}</span>
+      ${r.comentario?`<div style="margin-top:4px;white-space:pre-line">${esc(r.comentario)}</div>`:""}</div>`).join("") || `<div class="empty">Sem respostas na base.</div>`}</div>`;
+}
 
 function iaMentores(){
-  const leituras = lista_(ANALISE.mentores);
+  const leituras = lista_(ANALISE.mentores).slice().sort((a,b)=>String(a.mentor).localeCompare(String(b.mentor),"pt-BR"));
   if(!leituras.length) return `<div class="panel"><div class="empty">Sem leitura por mentor nesta rodada.</div></div>`;
-  return `<div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">${leituras.map(l=>{
-    const ls = NPS.filter(r=>r.mentor===l.mentor);
-    return `<div class="card"><div class="k">${esc(l.mentor)}</div>
-      <div class="v">${ls.length?fmtMedia(mediaNps(ls)):"—"}</div>
-      <div class="d">NPS ${fmtNps(scoreNps(ls))} · ${ls.length} resposta(s)</div>
-      <p style="margin:12px 0 0">${esc(l.leitura)}</p>
-      ${listaPontos("Pontos fortes", lista_(l.pontos_fortes))}${listaPontos("Pontos de atenção", lista_(l.pontos_de_atencao))}</div>`;
-  }).join("")}</div>`;
+  const sel = leituras.find(l=>`mentor:${l.mentor}`===filtro.iaSel);
+  if(sel){
+    const ls = NPS.filter(r=>r.mentor===sel.mentor).sort((a,b)=>String(b.respondido_em).localeCompare(String(a.respondido_em)));
+    return telaPessoa(esc(sel.mentor), `Mentor · média ${ls.length?fmtMedia(mediaNps(ls)):"—"} · NPS ${fmtNps(scoreNps(ls))} · ${ls.length} resposta(s)`, sel, ls);
+  }
+  return `<div class="panel"><h3>Mentores &middot; ${leituras.length}</h3>
+    <div class="tw"><table><thead><tr><th>Mentor</th><th class="num">Média</th><th class="num">NPS</th><th class="num">Prós</th><th class="num">Contras</th></tr></thead><tbody>
+    ${leituras.map(l=>{ const ls = NPS.filter(r=>r.mentor===l.mentor);
+      return `<tr style="cursor:pointer" onclick="abrirIa(${esc(JSON.stringify(`mentor:${l.mentor}`))})"><td><a class="lk-nome">${esc(l.mentor)}</a></td>
+        <td class="num">${ls.length?fmtMedia(mediaNps(ls)):"—"}</td><td class="num">${fmtNps(scoreNps(ls))}</td>
+        <td class="num">${prosDe(l).length}</td><td class="num">${contrasDe(l).length}</td></tr>`; }).join("")}
+    </tbody></table></div></div>`;
 }
 
 function iaMentorados(){
   const leituras = lista_(ANALISE.mentorados).slice()
     .sort((a,b)=>((RISCO[a.risco]||[])[2]??3)-((RISCO[b.risco]||[])[2]??3) || String(a.mentorado).localeCompare(String(b.mentorado),"pt-BR"));
   if(!leituras.length) return `<div class="panel"><div class="empty">Sem leitura por mentorado nesta rodada.</div></div>`;
+  const sel = leituras.find(l=>`mentorado:${chaveMentorado(l)}`===filtro.iaSel);
+  if(sel){
+    const m = sel.mentorado_id && M.find(x=>x.id===sel.mentorado_id);
+    const [cor,rot] = RISCO[sel.risco] || ["amber", sel.risco];
+    const nome = m ? `<a class="lk-nome" onclick="openMentorado('${m.id}')">${esc(m.nome)}</a>` : esc(sel.mentorado);
+    return telaPessoa(nome, `Mentorado · mentor ${esc(sel.mentor)} · risco <span class="pill ${cor}">${esc(rot)}</span>`, sel, npsDoMentorado(sel),
+      sel.acao_sugerida ? `<div style="margin-top:10px"><b>Próximo passo:</b> ${esc(sel.acao_sugerida)}</div>` : "");
+  }
   const conta = r => leituras.filter(l=>l.risco===r).length;
   return `<div class="panel"><h3>Mentorados &middot; ${leituras.length} · risco alto ${conta("alto")} · médio ${conta("medio")} · baixo ${conta("baixo")}</h3>
-    <div class="tw"><table><thead><tr><th>Mentorado</th><th>Mentor</th><th class="num">Última nota</th><th>Risco</th><th>Leitura</th><th>Ação sugerida</th></tr></thead><tbody>
-    ${leituras.map(l=>{ const m = l.mentorado_id && M.find(x=>x.id===l.mentorado_id);
-      const ls = NPS.filter(r=>l.mentorado_id ? r.mentorado_id===l.mentorado_id : !r.mentorado_id && (r.nome_informado||"")===l.mentorado)
-        .sort((a,b)=>String(b.respondido_em).localeCompare(String(a.respondido_em)));
+    <div class="tw"><table><thead><tr><th>Mentorado</th><th>Mentor</th><th class="num">Última nota</th><th>Risco</th><th class="num">Prós</th><th class="num">Contras</th></tr></thead><tbody>
+    ${leituras.map(l=>{ const m = l.mentorado_id && M.find(x=>x.id===l.mentorado_id); const ls = npsDoMentorado(l);
       const [cor,rot] = RISCO[l.risco] || ["amber", l.risco];
-      return `<tr><td>${m?`<a class="lk-nome" onclick="openMentorado('${m.id}')">${esc(m.nome)}</a>`:esc(l.mentorado)}</td>
+      return `<tr style="cursor:pointer" onclick="abrirIa(${esc(JSON.stringify(`mentorado:${chaveMentorado(l)}`))})"><td><a class="lk-nome">${esc(m?m.nome:l.mentorado)}</a></td>
         <td>${esc(l.mentor)}</td><td class="num">${ls.length?`${pillNota(ls[0].nota)} <span class="hint">(${ls.length})</span>`:"—"}</td>
-        <td><span class="pill ${cor}">${esc(rot)}</span></td>
-        <td style="min-width:260px">${esc(l.leitura)}${lista_(l.sinais).length?`<div class="hint" style="margin-top:4px">${lista_(l.sinais).map(esc).join(" · ")}</div>`:""}</td>
-        <td style="min-width:200px">${esc(l.acao_sugerida)}</td></tr>`; }).join("")}
+        <td><span class="pill ${cor}">${esc(rot)}</span></td><td class="num">${prosDe(l).length}</td><td class="num">${contrasDe(l).length}</td></tr>`; }).join("")}
     </tbody></table></div></div>`;
 }
 
