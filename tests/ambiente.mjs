@@ -67,7 +67,7 @@ export function carregarApp() {
       select: () => q, order: () => q, eq: () => q, in: (_c, v) => { q._ids = v; return q; },
       is: () => q, single: () => q, maybeSingle: () => q,
       // O cliente real tem .range() -- paginado() em loadAll depende dele.
-      range: () => q,
+      range: () => q, limit: () => q,
       insert(v) { escritas.push({tabela, op: "insert", dados: v}); return q; },
       update(v) { escritas.push({tabela, op: "update", dados: v, get ids() { return q._ids; }}); return q; },
       upsert(v) { escritas.push({tabela, op: "upsert", dados: v}); return q; },
@@ -145,6 +145,7 @@ export function carregarApp() {
         set STLSELLER(v){ STLSELLER = v }, set STLSELLER_ERRO(v){ STLSELLER_ERRO = v },
         set STL_PEDIDOS(v){ STL_PEDIDOS = v }, set STL_PRODUTOS(v){ STL_PRODUTOS = v },
         get NPS(){ return NPS }, set NPS(v){ NPS = v }, set NPS_ERRO(v){ NPS_ERRO = v },
+        get EXPERIENCIA(){ return EXPERIENCIA }, set EXPERIENCIA(v){ EXPERIENCIA = v }, set ANALISE(v){ ANALISE = v }, set ADESAO_EXP(v){ ADESAO_EXP = v }, set INICIO_COBRANCA_NPS(v){ INICIO_COBRANCA_NPS = v }, set EXP_ERRO(v){ EXP_ERRO = v },
         set papel(v){ myRole = v; myProfile = {nome:"Teste", email:"teste@exemplo.com", role:v} },
         rotas(r, mk, mm, cn, mc, f){ ROTAS=r; MARCOS=mk; MM=mm; CANAIS_DB=cn; MC=mc; FAT=f;
           rotaAtual = r[0] && r[0].slug },
@@ -309,6 +310,24 @@ export function preparar(app, papel = "admin") {
     {id:"n3", mentor:"Petare " + XSS, nota:5, respondido_em:"2026-09-17T13:00:00Z", mentorado_id:null, nome_informado:"Fulano", created_at:"2026-09-23T19:00:00Z"},
     {id:"n4", mentor:"Diovani", nota:9,  respondido_em:"2026-08-20T13:00:00Z", mentorado_id:null, nome_informado:"Beltrano", created_at:"2026-09-23T19:00:00Z"},
   ];
+  /* Pesquisa de Experiência: um promotor e um detrator (NPS 0), dois itens da
+     grade com índices 87,5 e 12,5 (média 50), e texto com XSS. A análise da
+     IA traz XSS no resumo e no alerta: tudo que vem do modelo é escapado. */
+  app.estado.EXP_ERRO = null;
+  app.estado.EXPERIENCIA = [
+    {origem_id:"sheet:a", respondido_em:"2026-10-01T14:00:00Z", nota:10, geral:"Muito Satisfeito", clareza:"Sim",
+     itens:{"Qualidade das sessões":"Excelente", "Organização dos agendamentos":"Ruim"}, textos:{"O que mais gera valor?":"Sessões " + XSS}},
+    {origem_id:"sheet:b", respondido_em:"2026-10-01T15:00:00Z", nota:5, geral:"Neutro", clareza:"Não",
+     itens:{"Qualidade das sessões":"Bom", "Organização dos agendamentos":"Muito ruim"}, textos:{}},
+  ];
+  app.estado.ANALISE = {gerado_em:"2026-10-08T11:00:00Z", modelo:"claude-opus-5-5", respostas:6, resumo:"Resumo " + XSS,
+    alertas:[{severidade:"alta", tipo:"mentorado", mentor:"Luan", mentorado:"Ana " + XSS, titulo:"Nota caiu " + XSS,
+      detalhe:"Detalhe", evidencia:"\"citação\"", acao_sugerida:"Ligar hoje"}],
+    mentores:[{mentor:"Diovani", leitura:"Leitura " + XSS, pontos_fortes:["Prático"], pontos_de_atencao:["Atrasa " + XSS]}],
+    mentorados:[
+      {mentorado_id:null, mentorado:"Fulano", mentor:"Petare", risco:"medio", leitura:"Morno", sinais:["Nota 5"], acao_sugerida:"Ligar"},
+      {mentorado_id:"m1", mentorado:"Ana Clara", mentor:"Diovani", risco:"alto", leitura:"Frustrada " + XSS, pros:["Vendeu na feira"], contras:["\"" + XSS + "\""], pauta:["O que travou? " + XSS], acao_sugerida:"CS hoje"},
+      {mentorado_id:"inventado", mentorado:"Outro " + XSS, mentor:"Luan", risco:"baixo", leitura:"Ok", sinais:[], acao_sugerida:"Manter"}]};
   app.estado.rotas(...rotas);
   /* Trilha de rotas já com um marco expandido: é onde vivem o teste de
      passagem e o botão de salvar, e a varredura de permissões só os enxerga
