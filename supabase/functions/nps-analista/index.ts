@@ -10,6 +10,11 @@
 // visto). Sem modo "forçar" de propósito: o job chama com a chave pública, então
 // qualquer um com ela pode chamar a função — e sem novidade ela não gasta nada.
 //
+// Desde 13/10/2026 também lê, por mentorado, o dossiê das transcrições das calls
+// (`mentorado_dossies`, AD-003) e a presença nos encontros em grupo (`sessoes`
+// de ordem >= 90 concluídas: lives do Circle via `circle-presenca` e registro manual),
+// esta só para quem já está na leitura por nota ou dossiê.
+//
 // Só LLM, sem JEV: medido em 08/10/2026 os dois empatam (12/14) e o JEV não
 // escreve o alerta (docs/decisions/001).
 
@@ -33,6 +38,9 @@ type Alerta = { severidade: "alta" | "media" | "baixa"; tipo: "mentorado" | "men
 type LeituraMentor = { mentor: string; leitura: string; pros: string[]; contras: string[]; pauta: string[] };
 type LeituraMentorado = { mentorado_id: string | null; mentorado: string; mentor: string; risco: "alto" | "medio" | "baixo";
   leitura: string; pros: string[]; contras: string[]; pauta: string[]; acao_sugerida: string };
+type Dossie = { mentorado_id: string; atualizado_em: string; mentorados: { nome: string } | null;
+  estrutura: { objetivos?: string[]; pendencias?: string[]; pontos_de_atencao?: string[]; ultima_mentoria?: unknown } };
+type Presenca = { mentorado_id: string; etapa: string; data: string; mentorados: { nome: string } | null };
 type Analise = { resumo: string; alertas: Alerta[]; mentores: LeituraMentor[]; mentorados: LeituraMentorado[] };
 
 const anulavel = { anyOf: [{ type: "string" }, { type: "null" }] };
@@ -92,6 +100,10 @@ Leituras individuais ("mentores" e "mentorados"): a gestão vai abrir cada uma n
 
 "mentores": uma entrada para CADA mentor que aparece em "por_mentor", com o nome exatamente como nos dados. "leitura": 2 a 3 frases sobre como os mentorados percebem as sessões dele e a tendência da nota. Não atribua a um mentor nada da Pesquisa de Experiência: ela é anônima e não diz quem foi o mentor.
 "mentorados": uma entrada para CADA mentorado de "por_mentorado", copiando "mentorado_id" e o nome exatamente como nos dados ("mentor" = o da sessão mais recente). "risco": "alto" se a última nota for até 6, se caiu 3+ pontos ou se o texto mostra frustração ou intenção de sair; "medio" se a nota for 7-8 ou houver crítica pontual; "baixo" se as notas forem 9-10 sem crítica. "leitura": 1 a 2 frases sobre a jornada dele. "acao_sugerida": o próximo passo concreto para o mentor ou o CS; para risco baixo, algo simples como manter o ritmo ou pedir depoimento.
+Contexto por mentorado em "por_mentorado" (além das notas):
+- "dossie": resumo vivo das calls 1:1, escrito a partir das transcrições: objetivos, pendências em aberto, pontos de atenção e a última mentoria (tema, decisões, próximos passos, confiabilidade da transcrição). É a melhor fonte para a pauta: pergunte pelas pendências e pelos próximos passos combinados. Trate "confiabilidade": "baixa" como indício, não como fato. Ponto de atenção do dossiê é contra e pode elevar o risco; nunca cite trecho longo da call.
+- "encontros_em_grupo": presença nos plantões de dúvida e sessões de implementação na janela (total e data da última). Frequência é pró; sumiço dos encontros, somado a nota caindo ou pendência parada, é contra. Ausência de presença sem outro sinal não é alerta: muitos mentorados não vão a plantão.
+- Mentorado que tem dossiê, mas nenhuma nota na janela, também entra em "mentorados" (use o mentor da última mentoria do dossiê). O risco dele vem só do dossiê e da presença.
 Respostas marcadas como novas são as que chegaram depois da última análise: priorize-as, mas use o histórico para achar tendência. Não repita um alerta da análise anterior se nada novo o reforçou.`;
 
 function resposta(body: Record<string, unknown>, status = 200): Response {
@@ -104,17 +116,40 @@ const nps = (notas: number[]) => notas.length
 const media = (v: number[]) => v.length ? Math.round(10 * v.reduce((a, b) => a + b, 0) / v.length) / 10 : null;
 const NIVEL: Record<string, number> = { "Muito ruim": 0, "Ruim": 25, "Regular": 50, "Bom": 75, "Excelente": 100 };
 
-function montarDados(sessoes: Sessao[], exps: Experiencia[], desde: string | null, anterior: Analise | null) {
+type PorMentorado = { mentorado_id: string | null; mentorado: string; sessoes: { data: string; mentor: string; nota: number }[];
+  dossie?: Record<string, unknown>; encontros_em_grupo?: { total: number; ultima: string; por_tipo: Record<string, number> } };
+
+function montarDados(sessoes: Sessao[], exps: Experiencia[], desde: string | null, anterior: Analise | null,
+  dossies: Dossie[] = [], presencas: Presenca[] = []) {
   const nova = (created_at: string) => !desde || created_at > desde;
   const porMentor: Record<string, number[]> = {};
   for (const s of sessoes) (porMentor[s.mentor] ??= []).push(s.nota);
   // Mentorado sem vínculo com a ficha é agrupado pelo nome digitado (sem id).
-  const porMentorado = new Map<string, { mentorado_id: string | null; mentorado: string; sessoes: { data: string; mentor: string; nota: number }[] }>();
+  const porMentorado = new Map<string, PorMentorado>();
   for (const s of sessoes) {
     const nome = s.mentorados?.nome ?? s.nome_informado ?? "—";
     const chave = s.mentorado_id ?? `nome:${nome.toLowerCase()}`;
     if (!porMentorado.has(chave)) porMentorado.set(chave, { mentorado_id: s.mentorado_id, mentorado: nome, sessoes: [] });
     porMentorado.get(chave)!.sessoes.push({ data: s.respondido_em.slice(0, 10), mentor: s.mentor, nota: s.nota });
+  }
+  const doMentorado = (id: string, nome: string | undefined) => {
+    if (!porMentorado.has(id)) porMentorado.set(id, { mentorado_id: id, mentorado: nome ?? "—", sessoes: [] });
+    return porMentorado.get(id)!;
+  };
+  for (const d of dossies) {
+    const { objetivos, pendencias, pontos_de_atencao, ultima_mentoria } = d.estrutura;
+    doMentorado(d.mentorado_id, d.mentorados?.nome).dossie = { atualizado_em: d.atualizado_em.slice(0, 10),
+      novo: nova(d.atualizado_em), objetivos, pendencias, pontos_de_atencao, ultima_mentoria };
+  }
+  // Presence only enriches mentees already in the reading: 32 of 42 had presence
+  // and nothing else (13/10/2026), which quadrupled the output past the 150 s wall clock.
+  for (const p of presencas) {
+    const m = porMentorado.get(p.mentorado_id);
+    if (!m) continue;
+    const g = m.encontros_em_grupo ??= { total: 0, ultima: p.data, por_tipo: {} };
+    g.total++;
+    g.por_tipo[p.etapa] = (g.por_tipo[p.etapa] ?? 0) + 1;
+    if (p.data > g.ultima) g.ultima = p.data;
   }
   const itens: Record<string, number[]> = {};
   for (const e of exps) for (const [item, nivel] of Object.entries(e.itens)) {
@@ -160,47 +195,60 @@ Deno.serve(async () => {
     const db = createClient(SUPABASE_URL, SERVICE_KEY);
     const desdeJanela = new Date(Date.now() - JANELA_DIAS * 86400_000).toISOString();
 
-    const [ses, exp, ult] = await Promise.all([
+    const [ses, exp, ult, dos, pre] = await Promise.all([
       db.from("nps_respostas").select("respondido_em,created_at,mentor,nota,comentario,clareza,direcionamento,apoio,mentorado_id,nome_informado,mentorados(nome)")
         .gte("respondido_em", desdeJanela).order("respondido_em"),
       db.from("experiencia_respostas").select("respondido_em,created_at,nota,geral,itens,clareza,textos")
         .gte("respondido_em", desdeJanela).order("respondido_em"),
       db.from("nps_analises").select("dados_ate,resumo,alertas,mentores,mentorados").order("gerado_em", { ascending: false }).limit(1).maybeSingle(),
+      db.from("mentorado_dossies").select("mentorado_id,atualizado_em,estrutura,mentorados(nome)").gte("ultima_mentoria_em", desdeJanela),
+      db.from("sessoes").select("mentorado_id,etapa,data,mentorados(nome)").gte("ordem", 90).eq("status", "Concluída")
+        .not("mentorado_id", "is", null).gte("data", desdeJanela.slice(0, 10)),
     ]);
-    for (const r of [ses, exp, ult]) if (r.error) throw new Error(`leitura: ${r.error.message}`);
+    for (const r of [ses, exp, ult, dos, pre]) if (r.error) throw new Error(`leitura: ${r.error.message}`);
     const sessoes = (ses.data ?? []) as unknown as Sessao[];
     const exps = (exp.data ?? []) as Experiencia[];
+    const dossies = (dos.data ?? []) as unknown as Dossie[];
+    const presencas = (pre.data ?? []) as unknown as Presenca[];
     const ultima = ult.data as (Analise & { dados_ate: string }) | null;
 
     // A marca d'água olha a tabela inteira, não só a janela: resposta antiga
     // reimportada não conta como novidade porque o upsert preserva created_at.
-    const [mS, mE] = await Promise.all([
+    // Dossiê reescrito e presença nova no Circle também contam como novidade.
+    // ponytail: presença em grupo registrada à mão não tem carimbo e só entra na próxima rodada que tiver outra novidade.
+    const [mS, mE, mD, mC] = await Promise.all([
       db.from("nps_respostas").select("created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
       db.from("experiencia_respostas").select("created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      db.from("mentorado_dossies").select("atualizado_em").order("atualizado_em", { ascending: false }).limit(1).maybeSingle(),
+      db.from("circle_presencas").select("recebido_em").order("recebido_em", { ascending: false }).limit(1).maybeSingle(),
     ]);
-    for (const r of [mS, mE]) if (r.error) throw new Error(`marca d'água: ${r.error.message}`);
-    const dadosAte = [mS.data?.created_at, mE.data?.created_at].filter(Boolean).sort().pop() as string | undefined;
+    for (const r of [mS, mE, mD, mC]) if (r.error) throw new Error(`marca d'água: ${r.error.message}`);
+    const dadosAte = [mS.data?.created_at, mE.data?.created_at, mD.data?.atualizado_em, mC.data?.recebido_em]
+      .filter(Boolean).map((t) => new Date(t as string).toISOString()).sort().pop();
     if (!dadosAte) return resposta({ ok: true, pulou: "nenhuma resposta ainda" });
     const desde = ultima ? new Date(ultima.dados_ate).toISOString() : null;
     if (desde && new Date(dadosAte).toISOString() <= desde) {
       return resposta({ ok: true, pulou: "sem resposta nova desde a última análise", dados_ate: desde });
     }
 
-    const dados = montarDados(sessoes, exps, desde, ultima ? { resumo: ultima.resumo, alertas: ultima.alertas, mentores: ultima.mentores, mentorados: ultima.mentorados } : null);
+    const dados = montarDados(sessoes, exps, desde, ultima ? { resumo: ultima.resumo, alertas: ultima.alertas, mentores: ultima.mentores, mentorados: ultima.mentorados } : null, dossies, presencas);
     const claude = new Anthropic({ apiKey: ANTHROPIC_KEY });
-    const msg = await claude.beta.messages.create({
+    // Stream: with 32k max_tokens the SDK refuses a non-streaming call (may exceed 10 min).
+    const msg = await claude.beta.messages.stream({
       model: MODELO,
-      max_tokens: 16000,
+      // 32k: dossiê e presença em grupo puseram mais mentorados na leitura; 16k estourou em 13/10/2026.
+      max_tokens: 32000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "high", format: { type: "json_schema", schema: SCHEMA } },
       system: SISTEMA,
       messages: [{ role: "user", content: `Dados das pesquisas (JSON):\n${JSON.stringify(dados)}` }],
-    });
+    }).finalMessage();
     if (msg.stop_reason === "refusal") throw new Error(`Claude recusou: ${JSON.stringify(msg.stop_details)}`);
     if (msg.stop_reason === "max_tokens") throw new Error("Claude parou em max_tokens");
     const texto = msg.content.flatMap((b) => b.type === "text" ? [b.text] : []).join("");
-    const ids = new Set(sessoes.flatMap((x) => x.mentorado_id ? [x.mentorado_id] : []));
+    const ids = new Set([...sessoes.flatMap((x) => x.mentorado_id ? [x.mentorado_id] : []),
+      ...dossies.map((d) => d.mentorado_id)]);
     const analise = validar(JSON.parse(texto), ids);
 
     const { error } = await db.from("nps_analises").insert({
