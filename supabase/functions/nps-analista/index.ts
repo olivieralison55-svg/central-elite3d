@@ -29,27 +29,27 @@ type Experiencia = { respondido_em: string; created_at: string; nota: number; ge
   itens: Record<string, string>; clareza: string | null; textos: Record<string, string> };
 type Alerta = { severidade: "alta" | "media" | "baixa"; tipo: "mentorado" | "mentor" | "mentoria";
   mentor: string | null; mentorado: string | null; titulo: string; detalhe: string; evidencia: string; acao_sugerida: string };
-type LeituraMentor = { mentor: string; leitura: string; pontos_fortes: string[]; pontos_de_atencao: string[] };
+type LeituraMentor = { mentor: string; leitura: string; pros: string[]; contras: string[]; pauta: string[] };
 type LeituraMentorado = { mentorado_id: string | null; mentorado: string; mentor: string; risco: "alto" | "medio" | "baixo";
-  leitura: string; sinais: string[]; acao_sugerida: string };
+  leitura: string; pros: string[]; contras: string[]; pauta: string[]; acao_sugerida: string };
 type Analise = { resumo: string; alertas: Alerta[]; mentores: LeituraMentor[]; mentorados: LeituraMentorado[] };
 
 const anulavel = { anyOf: [{ type: "string" }, { type: "null" }] };
+const textos = { type: "array", items: { type: "string" } };
 const SCHEMA = {
   type: "object", additionalProperties: false, required: ["resumo", "alertas", "mentores", "mentorados"],
   properties: {
     resumo: { type: "string" },
     mentores: { type: "array", items: {
-      type: "object", additionalProperties: false, required: ["mentor", "leitura", "pontos_fortes", "pontos_de_atencao"],
-      properties: { mentor: { type: "string" }, leitura: { type: "string" },
-        pontos_fortes: { type: "array", items: { type: "string" } }, pontos_de_atencao: { type: "array", items: { type: "string" } } },
+      type: "object", additionalProperties: false, required: ["mentor", "leitura", "pros", "contras", "pauta"],
+      properties: { mentor: { type: "string" }, leitura: { type: "string" }, pros: textos, contras: textos, pauta: textos },
     } },
     mentorados: { type: "array", items: {
       type: "object", additionalProperties: false,
-      required: ["mentorado_id", "mentorado", "mentor", "risco", "leitura", "sinais", "acao_sugerida"],
+      required: ["mentorado_id", "mentorado", "mentor", "risco", "leitura", "pros", "contras", "pauta", "acao_sugerida"],
       properties: { mentorado_id: anulavel, mentorado: { type: "string" }, mentor: { type: "string" },
         risco: { type: "string", enum: ["alto", "medio", "baixo"] }, leitura: { type: "string" },
-        sinais: { type: "array", items: { type: "string" } }, acao_sugerida: { type: "string" } },
+        pros: textos, contras: textos, pauta: textos, acao_sugerida: { type: "string" } },
     } },
     alertas: { type: "array", items: {
       type: "object", additionalProperties: false,
@@ -83,9 +83,13 @@ Escreva em português do Brasil, direto, sem jargão.
 O que NÃO vira alerta: elogio, nota 9-10 sem crítica no texto, e uma única resposta anônima sem padrão (cite-a no resumo, não como alerta). Se nada pede ação, devolva "alertas": [].
 Severidade: "alta" = risco de perder o mentorado ou problema que se repete; "media" = tendência a acompanhar; "baixa" = melhoria pontual.
 
-"mentores": uma entrada para CADA mentor que aparece em "por_mentor", com o nome exatamente como nos dados. "leitura": 2 a 3 frases sobre como os mentorados percebem as sessões dele (o que elogiam, o que criticam, tendência da nota). "pontos_fortes" e "pontos_de_atencao": itens curtos, cada um sustentado por comentário ou número dos dados; lista vazia se não houver base. Não atribua a um mentor nada da Pesquisa de Experiência: ela é anônima e não diz quem foi o mentor.
+Leituras individuais ("mentores" e "mentorados"): a gestão vai abrir cada uma numa conversa com a própria pessoa, então escreva algo que possa ser lido junto com ela — respeitoso, específico e equilibrado, sem rótulo ("problemático", "fraco") e sem nada que exponha outro mentorado. Cada item de "pros" e "contras" é uma frase curta com a evidência entre parênteses (nota, data ou trecho literal do comentário); sem base nos dados, lista vazia — nunca invente para equilibrar.
+- "pros": o que está indo bem — elogios recebidos, evolução da nota, constância, conquistas citadas no comentário.
+- "contras": o que merece atenção — queda de nota, crítica, frustração, sessões que sumiram, saída da rota que o próprio comentário indica.
+- "pauta": 2 a 4 perguntas abertas para conduzir a conversa com essa pessoa a partir dos prós e contras (ex.: "O que mudou entre a sessão de 12/09 e a de 26/09?").
 
-"mentorados": uma entrada para CADA mentorado de "por_mentorado", copiando "mentorado_id" e o nome exatamente como nos dados ("mentor" = o da sessão mais recente). "risco": "alto" se a última nota for até 6, se caiu 3+ pontos ou se o texto mostra frustração ou intenção de sair; "medio" se a nota for 7-8 ou houver crítica pontual; "baixo" se as notas forem 9-10 sem crítica. "leitura": 1 a 2 frases. "sinais": evidências curtas (nota, queda, trecho do comentário). "acao_sugerida": o próximo passo concreto para o mentor ou o CS; para risco baixo, algo simples como manter o ritmo ou pedir depoimento.
+"mentores": uma entrada para CADA mentor que aparece em "por_mentor", com o nome exatamente como nos dados. "leitura": 2 a 3 frases sobre como os mentorados percebem as sessões dele e a tendência da nota. Não atribua a um mentor nada da Pesquisa de Experiência: ela é anônima e não diz quem foi o mentor.
+"mentorados": uma entrada para CADA mentorado de "por_mentorado", copiando "mentorado_id" e o nome exatamente como nos dados ("mentor" = o da sessão mais recente). "risco": "alto" se a última nota for até 6, se caiu 3+ pontos ou se o texto mostra frustração ou intenção de sair; "medio" se a nota for 7-8 ou houver crítica pontual; "baixo" se as notas forem 9-10 sem crítica. "leitura": 1 a 2 frases sobre a jornada dele. "acao_sugerida": o próximo passo concreto para o mentor ou o CS; para risco baixo, algo simples como manter o ritmo ou pedir depoimento.
 Respostas marcadas como novas são as que chegaram depois da última análise: priorize-as, mas use o histórico para achar tendência. Não repita um alerta da análise anterior se nada novo o reforçou.`;
 
 function resposta(body: Record<string, unknown>, status = 200): Response {
