@@ -738,6 +738,13 @@ totalizador anônimo da Pesquisa de Experiência. O mentor vê só a adesão
 agregada, pela RPC `experiencia_adesao(p_desde, p_prazo_dias)`, quando fica
 abaixo de `META_ADESAO_EXP` (70%) — ver docs/decisions/002.
 
+**Perguntas novas da Pesquisa de Satisfação** (13/10/2026): `nps_respostas`
+ganhou `clareza`, `direcionamento` e `apoio` (nulos antes disso). O workflow do
+n8n acha as colunas pelo prefixo do cabeçalho ("1. Ao finalizar", "2. O
+direcionamento", "3. Existe alguma"), como opcionais; o `nps-forms` grava; o
+analista as usa nos prós, contras e pauta; a tela NPS e a tela da pessoa as mostram.
+O código do `nps-forms` passou a morar no repo (baixado da versão publicada).
+
 Rodar na mão (devolvem JSON):
 
 ```bash
@@ -771,6 +778,11 @@ diferentes:
 
 Esquecer o `EMAIL_MENTOR` faz as sessões daquele mentor entrarem sem mentor
 identificado, silenciosamente.
+
+André e Gabriella (13/10/2026) entraram em `MENTORES` e no formulário de NPS;
+`EMAIL_MENTOR` ainda sem os e-mails deles. André fica **sem apelido** no
+fallback por nome: há mentorado chamado André, e o título "Mentoria André
+Bertozzi" creditaria a sessão ao mentor.
 
 ### A matriz do dashboard conta reunião, não linha
 
