@@ -467,6 +467,7 @@ tr.an-zero td{color:var(--subtle-foreground)}
     <button data-view="mentorados"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Mentorados</button>
     <button data-view="sessoes"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span> Sessões</button>
     <button data-view="rotas"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="5.5" r="2.5"/><path d="M8 18.5h6a4.5 4.5 0 0 0 0-9H10a4.5 4.5 0 0 1 0-9"/></svg></span> Rotas</button>
+    <button data-view="mentores" id="navMentores"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/><path d="M17 3l2 2-2 2"/></svg></span> Mentores</button>
     <button data-view="analise" id="navAnalise"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/></svg></span> STLSeller</button>
     <button data-view="nps" id="navNps"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span> NPS</button>
     <button data-view="ia" id="navIa"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="3.5"/></svg></span> Análise IA</button>
@@ -487,6 +488,7 @@ tr.an-zero td{color:var(--subtle-foreground)}
     <button data-view="mentorados">Mentorados</button>
     <button data-view="sessoes">Sessões</button>
     <button data-view="rotas">Rotas</button>
+    <button data-view="mentores" id="navMentoresMobile">Mentores</button>
     <button data-view="analise" id="navAnaliseMobile">STLSeller</button>
     <button data-view="nps" id="navNpsMobile">NPS</button>
     <button data-view="ia" id="navIaMobile">Análise IA</button>
@@ -593,6 +595,8 @@ let STLSELLER = [], STL_PEDIDOS = [], STL_PRODUTOS = [], STLSELLER_ERRO = null;
 /* NPS das sessoes (nps_respostas), gravado pela edge function nps-forms a partir
    da planilha do formulario. Mesmo recorte do STLSeller: admin e diretoria. */
 let NPS = [], NPS_ERRO = null;
+/* Calls transcritas (sync-transcricoes): só metadados, para a tela Mentores. */
+let TRANSCRICOES = [];
 /* Pesquisa de Experiencia (anonima, sync-experiencia) e a ultima rodada do
    analista de IA (nps-analista). Mesmo recorte: admin e diretoria. */
 let EXPERIENCIA = [], ANALISE = null, EXP_ERRO = null;
@@ -606,7 +610,7 @@ let view = "dash";
 /* `q` e a busca da tela Mentorados; as outras telas tem a sua propria. O termo
    fica separado por tela de proposito: quem filtrou um nome em Sessoes nao
    espera abrir o Financeiro e encontrar a tela recortada pelo mesmo nome. */
-let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:"", qAnalise:"", qNps:"", npsPeriodo:"semana", npsMentor:"", npsPagPeriodo:1, npsPagResp:1, npsAba:"sessoes", iaAba:"geral", iaSel:""};
+let filtro = {q:"", mentor:"", statusFin:"", tipoSessao:"", qDash:"", qSessoes:"", qFin:"", qRotas:"", qAnalise:"", qNps:"", npsPeriodo:"semana", npsMentor:"", mentorSel:"", npsPagPeriodo:1, npsPagResp:1, npsAba:"sessoes", iaAba:"geral", iaSel:""};
 /* Mes selecionado na matriz de sessoes por mentor ("YYYY-MM"), ou "" para o
    historico inteiro. `null` significa "ainda no padrao": quem resolve e o
    renderDash, que sabe quais meses tem sessao. */
@@ -670,6 +674,8 @@ async function afterLogin(session){
     $("#navNpsMobile").style.display = "none";
     $("#navIa").style.display = "none";
     $("#navIaMobile").style.display = "none";
+    $("#navMentores").style.display = "none";
+    $("#navMentoresMobile").style.display = "none";
   }
   aplicarEndereco(false); // o endereço da URL decide a tela; quem desenha é o loadAll
   await loadAll();
@@ -714,7 +720,7 @@ async function loadAll(){
     : Promise.resolve({data:[], error:null});
   const semNada = Promise.resolve({data:[], error:null});
   const verStl = pode("verFinanceiro");
-  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd,nps,exp,ana,ades] = await Promise.all([
+  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd,nps,exp,ana,ades,tra] = await Promise.all([
     mentorQuery,
     parcelaQuery,
     cobrancaQuery,
@@ -733,6 +739,7 @@ async function loadAll(){
     verStl ? paginado(()=>db.from("experiencia_respostas").select("*").order("respondido_em",{ascending:false})) : semNada,
     verStl ? db.from("nps_analises").select("*").order("gerado_em",{ascending:false}).limit(1) : semNada,
     db.rpc("experiencia_adesao", {p_desde: INICIO_COBRANCA_NPS, p_prazo_dias: PRAZO_RESPOSTA_DIAS}),
+    verStl ? db.from("transcricoes").select("mentor,status,realizada_em,mentorado_id") : semNada,
   ]);
   if(m.error||p.error||s.error){ toast((m.error||p.error||s.error).message, true); return; }
   M = m.data; P = p.data; S = s.data;
@@ -754,6 +761,9 @@ async function loadAll(){
   ADESAO_EXP = ades.error ? null : (ades.data||[])[0] || null;
   EXP_ERRO = erroExp ? erroExp.message : null;
   if(erroExp) console.error("[experiencia] load failed", erroExp);
+  // Sem transcrições a tela Mentores só perde a coluna de calls transcritas.
+  if(tra.error) console.error("[transcricoes] load failed", tra.error);
+  TRANSCRICOES = tra.data||[];
   if(!rotaAtual && ROTAS.length) rotaAtual = ROTAS[0].slug;
   dadosProntos = true;
   render();
@@ -1309,9 +1319,9 @@ function btnNovoMentorado(secundario){
 
    Hash e não caminho porque o deploy é estático na Vercel, sem build nem
    servidor: `/mentorado/<id>` pedido direto devolveria 404 antes de o JS rodar. */
-const TELAS = ["dash","acompanhamento","mentorados","sessoes","rotas","analise","nps","ia","financeiro"];
+const TELAS = ["dash","acompanhamento","mentorados","sessoes","rotas","mentores","analise","nps","ia","financeiro"];
 const ROTULO_TELA = {"#/dash":"Dashboard", "#/acompanhamento":"Acompanhamento", "#/mentorados":"Mentorados",
-  "#/sessoes":"Sessões", "#/rotas":"Rotas", "#/analise":"STLSeller", "#/nps":"NPS", "#/ia":"Análise IA", "#/financeiro":"Financeiro"};
+  "#/sessoes":"Sessões", "#/rotas":"Rotas", "#/mentores":"Mentores", "#/analise":"STLSeller", "#/nps":"NPS", "#/ia":"Análise IA", "#/financeiro":"Financeiro"};
 let fichaId = null, fichaAba = "cadastro";
 /* Antes do primeiro loadAll não há o que desenhar, e o roteador pode pedir um
    render antes disso — trocar o hash no boot dispara hashchange na hora. */
@@ -1334,7 +1344,7 @@ function aplicarEndereco(desenhar=true){
   if(!myRole) return; // hashchange antes do login não tem tela para desenhar
   const e = lerEndereco();
   // o financeiro é fechado por papel: link colado não abre o que a tela esconde
-  if(["financeiro","analise","nps","ia"].includes(e.view) && !pode("verFinanceiro")) return irPara("#/dash");
+  if(["financeiro","analise","nps","ia","mentores"].includes(e.view) && !pode("verFinanceiro")) return irPara("#/dash");
   if(e.view!=="sessoes") foco = null; // foco é do alerta que trouxe a pessoa aqui
   if(e.view!=="mentorado") voltarPara = "#/"+e.view;
   view = e.view; fichaId = e.id||null; fichaAba = e.aba||"cadastro";
@@ -1369,6 +1379,7 @@ function render(){
   else if(view==="analise" && pode("verFinanceiro")) renderAnalise();
   else if(view==="nps" && pode("verFinanceiro")) renderNps();
   else if(view==="ia" && pode("verFinanceiro")) renderIa();
+  else if(view==="mentores" && pode("verFinanceiro")) renderMentores();
   else { view="dash"; renderDash(); }
 }
 
@@ -2926,6 +2937,113 @@ function renderNps(){
       <td style="white-space:pre-line;min-width:260px">${esc(r.comentario||"—")}${perguntasNps(r)}</td></tr>`).join("")
       || `<tr><td colspan="5"><div class="empty">Ninguém neste recorte.</div></td></tr>`}
     </tbody></table></div>${pagResp.controles}</div>`}`;
+}
+
+/* ================= MENTORES ================= */
+/* Tudo o que a central sabe de cada mentor, num lugar: carteira, sessões 1:1
+   (contadas por reunião, como na matriz do dashboard), encontros em grupo,
+   agenda, NPS, calls transcritas e a leitura da Análise IA. Só leitura, e só
+   para quem vê o NPS (verFinanceiro): a tela mostra nota e leitura da IA. */
+const ha = dias => new Date(new Date(HOJE+"T12:00:00Z").getTime() - dias*864e5).toISOString().slice(0,10);
+function resumoMentor(nome, reunioes){
+  const minhas = S.filter(s=>s.mentor===nome);
+  const r1 = reunioes.filter(s=>s.mentor===nome);
+  const grupos = agruparGrupo(minhas.filter(s=>ehGrupo(s)&&s.status==="Concluída"));
+  // Carteira: mentorados ativos cuja sessão 1:1 mais recente foi com este mentor.
+  const ultimaPorMentorado = new Map();
+  S.filter(s=>eh1a1(s)&&s.status==="Concluída"&&s.data&&s.mentor).forEach(s=>{
+    const u = ultimaPorMentorado.get(s.mentorado_id);
+    if(!u || s.data>u.data) ultimaPorMentorado.set(s.mentorado_id, s);
+  });
+  const carteira = M.filter(m=>situacaoDe(m)==="ativo" && (ultimaPorMentorado.get(m.id)||{}).mentor===nome)
+    .map(m=>({m, ultima:ultimaPorMentorado.get(m.id)})).sort((a,b)=>a.ultima.data.localeCompare(b.ultima.data));
+  const nps = NPS.filter(r=>r.mentor===nome);
+  const nps30 = nps.filter(r=>diaSP(r.respondido_em)>=ha(30));
+  return {
+    nome, carteira, nps, nps30,
+    r1, r1_30: r1.filter(s=>s.data>=ha(30)), grupos, grupos30: grupos.filter(g=>g.data>=ha(30)),
+    agenda: minhas.filter(s=>s.status==="Agendada" && s.data && s.data>=HOJE).sort((a,b)=>(a.data+(a.hora||"")).localeCompare(b.data+(b.hora||""))),
+    ultima: [...r1.map(s=>s.data), ...grupos.map(g=>g.data)].filter(Boolean).sort().pop() || null,
+    calls: TRANSCRICOES.filter(t=>t.mentor===nome && t.status==="aceita").length,
+    leitura: ANALISE ? lista_(ANALISE.mentores).find(l=>l.mentor===nome) : null,
+  };
+}
+window.setMentorSel = function(i){ filtro.mentorSel = i<0 ? "" : (mentoresDaTela()[i]||""); render(); };
+// Os atuais primeiro, depois quem ainda aparece nas sessões (histórico).
+const mentoresDaTela = () => [...MENTORES, ...[...new Set(S.map(s=>s.mentor).filter(Boolean))]
+  .filter(n=>!MENTORES.includes(n)).sort((a,b)=>a.localeCompare(b,"pt-BR"))];
+
+function renderMentores(){
+  const nomes = mentoresDaTela();
+  const {reunioes} = reunioesConcluidas1a1();
+  const sel = filtro.mentorSel && nomes.includes(filtro.mentorSel) ? filtro.mentorSel : "";
+  const botoes = `<div class="rowflex" style="flex-wrap:wrap;margin-bottom:16px">${[["","Visão geral"],...nomes.map(n=>[n,n])].map(([v,rot],i)=>
+    `<button class="btn sm${v===sel?"":" ghost"}" aria-pressed="${v===sel}" onclick="setMentorSel(${i-1})">${esc(rot)}</button>`).join("")}</div>`;
+  const topo = `<div class="topbar"><div><h2>Mentores</h2>
+    <div class="sub">Carteira, sessões, encontros em grupo, agenda, NPS e leitura da Análise IA de cada mentor.
+      1:1 conta reunião (a mesma regra da matriz do dashboard); carteira = mentorados ativos cuja última sessão 1:1 foi com o mentor.</div></div></div>`;
+  $("#app").innerHTML = topo + botoes + (sel ? detalheMentor(resumoMentor(sel, reunioes)) : visaoMentores(nomes.map(n=>resumoMentor(n, reunioes))));
+}
+
+function visaoMentores(rs){
+  const ativos = rs.filter(r=>MENTORES.includes(r.nome) || r.r1_30.length || r.agenda.length);
+  const hist = rs.filter(r=>!ativos.includes(r));
+  const linha = (r,i) => `<tr style="cursor:pointer" onclick="setMentorSel(${i})"><td><a class="lk-nome">${esc(r.nome)}</a>${MENTORES.includes(r.nome)?"":' <span class="pill">histórico</span>'}</td>
+    <td class="num">${r.carteira.length}</td><td class="num">${r.r1_30.length} <span class="hint">/ ${r.r1.length}</span></td>
+    <td class="num">${r.grupos30.length} <span class="hint">/ ${r.grupos.length}</span></td><td class="num">${r.agenda.length}</td>
+    <td class="num">${r.nps.length?`${fmtMedia(mediaNps(r.nps))} <span class="hint">(${r.nps.length})</span>`:"—"}</td><td class="num">${fmtNps(scoreNps(r.nps))}</td>
+    <td class="num">${r.calls||"—"}</td><td>${fmtD(r.ultima)}</td></tr>`;
+  const idx = r => mentoresDaTela().indexOf(r.nome);
+  const tot = (f) => rs.reduce((a,r)=>a+f(r),0);
+  return `<div class="cards quiet" style="margin-bottom:20px">
+    <div class="card"><div class="k">Sessões 1:1 · 30 dias</div><div class="v">${tot(r=>r.r1_30.length)}</div><div class="d">${tot(r=>r.r1.length)} no total</div></div>
+    <div class="card"><div class="k">Encontros em grupo · 30 dias</div><div class="v">${tot(r=>r.grupos30.length)}</div><div class="d">${tot(r=>r.grupos.length)} no total</div></div>
+    <div class="card"><div class="k">Agendadas</div><div class="v">${tot(r=>r.agenda.length)}</div><div class="d">de hoje em diante</div></div>
+    <div class="card"><div class="k">NPS · 30 dias</div><div class="v">${fmtMedia(mediaNps(NPS.filter(r=>diaSP(r.respondido_em)>=ha(30))))}</div><div class="d">NPS ${fmtNps(scoreNps(NPS.filter(r=>diaSP(r.respondido_em)>=ha(30))))}</div></div>
+  </div>
+  <div class="panel"><h3>Mentores &middot; ${ativos.length}</h3>
+    <div class="tw"><table><thead><tr><th>Mentor</th><th class="num">Carteira</th><th class="num">1:1 (30d / total)</th><th class="num">Grupo (30d / total)</th>
+      <th class="num">Agendadas</th><th class="num">Média NPS</th><th class="num">NPS</th><th class="num">Calls transcritas</th><th>Última atividade</th></tr></thead><tbody>
+    ${ativos.map(r=>linha(r, idx(r))).join("") || `<tr><td colspan="9"><div class="empty">Nenhum mentor com atividade.</div></td></tr>`}
+    </tbody></table></div></div>
+  ${hist.length?`<div class="panel"><h3>Histórico &middot; ${hist.length}</h3><div class="hint" style="margin-bottom:8px">Fora da lista atual e sem sessão nos últimos 30 dias nem agenda.</div>
+    <div class="tw"><table><tbody>${hist.map(r=>linha(r, idx(r))).join("")}</tbody></table></div></div>`:""}`;
+}
+
+function detalheMentor(r){
+  const meses = [...Array(6)].map((_,i)=>{ const d = new Date(HOJE.slice(0,7)+"-15T12:00:00Z"); d.setUTCMonth(d.getUTCMonth()-5+i); return d.toISOString().slice(0,7); });
+  const l = r.leitura;
+  return `<div class="cards quiet" style="margin-bottom:20px">
+    <div class="card"><div class="k">Carteira ativa</div><div class="v">${r.carteira.length}</div><div class="d">mentorados</div></div>
+    <div class="card"><div class="k">1:1 · 30 dias</div><div class="v">${r.r1_30.length}</div><div class="d">${r.r1.length} no total</div></div>
+    <div class="card"><div class="k">Grupo · 30 dias</div><div class="v">${r.grupos30.length}</div><div class="d">${r.grupos.length} no total</div></div>
+    <div class="card"><div class="k">Média NPS</div><div class="v">${fmtMedia(mediaNps(r.nps))}</div><div class="d">NPS ${fmtNps(scoreNps(r.nps))} · ${r.nps.length} resposta(s) · 30d ${fmtMedia(mediaNps(r.nps30))}</div></div>
+    <div class="card"><div class="k">Calls transcritas</div><div class="v">${r.calls}</div><div class="d">aceitas no dossiê</div></div>
+  </div>
+  ${l?`<div class="panel"><h3>Leitura da Análise IA</h3><p style="margin:0 0 10px">${esc(l.leitura)}</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">${colunaPC("Prós","green",prosDe(l))}${colunaPC("Contras","red",contrasDe(l))}</div>
+    ${lista_(l.pauta).length?`<div class="hint" style="margin-top:8px">Pauta: ${lista_(l.pauta).map(esc).join(" · ")}</div>`:""}</div>`
+    :`<div class="panel"><div class="empty">Sem leitura da Análise IA para este mentor na última rodada.</div></div>`}
+  <div class="panel"><h3>Atividade por mês</h3>
+    <div class="tw"><table><thead><tr><th>Mês</th><th class="num">1:1</th><th class="num">Encontros em grupo</th><th class="num">Respostas NPS</th><th class="num">Média NPS</th></tr></thead><tbody>
+    ${meses.slice().reverse().map(k=>{ const n = r.nps.filter(x=>diaSP(x.respondido_em).slice(0,7)===k);
+      return `<tr><td>${esc(rotuloPeriodoNps(k,"mes"))}</td><td class="num">${r.r1.filter(s=>(s.data||"").startsWith(k)).length}</td>
+        <td class="num">${r.grupos.filter(g=>(g.data||"").startsWith(k)).length}</td><td class="num">${n.length}</td><td class="num">${fmtMedia(mediaNps(n))}</td></tr>`; }).join("")}
+    </tbody></table></div></div>
+  <div class="panel"><h3>Carteira &middot; ${r.carteira.length}</h3><div class="hint" style="margin-bottom:8px">Mais tempo sem sessão primeiro.</div>
+    <div class="tw"><table><thead><tr><th>Mentorado</th><th>Última sessão 1:1</th><th>Etapa</th><th class="num">Última nota</th></tr></thead><tbody>
+    ${r.carteira.map(({m,ultima})=>{ const n = r.nps.filter(x=>x.mentorado_id===m.id).sort((a,b)=>String(b.respondido_em).localeCompare(String(a.respondido_em)))[0];
+      return `<tr><td><a class="lk-nome" onclick="openMentorado('${m.id}')">${esc(m.nome)}</a></td><td>${fmtD(ultima.data)}</td><td>${esc(ultima.etapa)}</td><td class="num">${n?pillNota(n.nota):"—"}</td></tr>`; }).join("")
+      || `<tr><td colspan="4"><div class="empty">Nenhum mentorado ativo com a última sessão 1:1 com este mentor.</div></td></tr>`}
+    </tbody></table></div></div>
+  <div class="panel"><h3>Agenda &middot; ${r.agenda.length}</h3>
+    <div class="tw"><table><thead><tr><th>Data</th><th>Hora</th><th>Mentorado</th><th>Etapa</th></tr></thead><tbody>
+    ${r.agenda.map(s=>`<tr><td>${fmtD(s.data)}</td><td>${esc(s.hora||"—")}</td><td><a class="lk-nome" onclick="openMentorado('${s.mentorado_id}')">${esc(nome(s.mentorado_id))}</a></td><td>${esc(s.etapa)}</td></tr>`).join("")
+      || `<tr><td colspan="4"><div class="empty">Nada agendado.</div></td></tr>`}
+    </tbody></table></div></div>
+  <div class="panel"><h3>Últimas respostas de NPS</h3>
+    ${r.nps.slice().sort((a,b)=>String(b.respondido_em).localeCompare(String(a.respondido_em))).slice(0,10).map(x=>`<div style="border-top:1px solid var(--border);padding:10px 0">${fmtInstante(x.respondido_em)} · ${pillNota(x.nota)} <span class="hint">${nomeNps(x)}</span>
+      ${x.comentario?`<div style="margin-top:4px;white-space:pre-line">${esc(x.comentario)}</div>`:""}</div>`).join("") || `<div class="empty">Sem respostas.</div>`}</div>`;
 }
 
 /* ================= FICHA DO MENTORADO ================= */
