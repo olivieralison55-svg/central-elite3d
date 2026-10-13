@@ -676,7 +676,19 @@ t.ok("NPS abre nas sessões, sem a análise da IA", nps.includes("aria-pressed=\
   globalThis.location.hash = "#/nps";
   t.ok("link do NPS não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>NPS</h2>"), app.endereco());
   globalThis.location.hash = "#/ia";
-  t.ok("link da Análise IA não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>Análise IA</h2>"), app.endereco());
+  /* Análise IA abre para o mentor no recorte de analise_ia_mentor: sem resumo e
+     sem Por mentor. O recorte de dados é do banco; aqui a fixture simula o que a
+     função devolve e o teste prova que a tela não pede o que ele não recebe. */
+  app.estado.ANALISE = {gerado_em:"2026-10-08T11:00:00Z", modelo:"m", respostas:1, alertas:[], mentorados:[
+    {mentorado_id:"m1", mentorado:"Ana Clara", mentor:"Diovani", risco:"alto", leitura:"Frustrada", pros:[], contras:[], pauta:[]}]};
+  globalThis.location.hash = "#/ia"; app.mod.render();
+  t.ok("Análise IA abre para mentor", app.endereco() === "#/ia" && app.tela().includes("<h2>Análise IA</h2>"), app.endereco());
+  t.ok("mentor não vê Resumo nem Por mentor", !app.tela().includes("<h3>Resumo</h3>") && !app.tela().includes(">Por mentor<") && app.tela().includes(">Por mentorado<"));
+  globalThis.setIa("iaAba", "mentores");
+  t.ok("aba Por mentor forçada cai na visão geral", !app.tela().includes("Mentores &middot;"));
+  globalThis.setIa("iaAba", "mentorados"); globalThis.abrirIa("mentorado:m1");
+  t.ok("leitura do mentorado sem respostas de NPS", app.tela().includes("Frustrada") && !app.tela().includes("Respostas de NPS"));
+  globalThis.setIa("iaAba", "geral");
   globalThis.location.hash = "#/mentorado/m1/stlseller";
   t.ok("link da aba STLSeller cai nas sessões",
     app.tela().includes("Sessões 1:1 com mentores") && !app.tela().includes("Dados do STLSeller"),
@@ -699,8 +711,8 @@ t.ok("NPS abre nas sessões, sem a análise da IA", nps.includes("aria-pressed=\
   const {mod} = app;
 
   t.secao("Papel diretoria — capacidades");
-  t.ok("só tem verFinanceiro",
-    JSON.stringify(mod.CAPACIDADES.diretoria) === '["verFinanceiro"]',
+  t.ok("só tem leitura (verFinanceiro, verIa)",
+    JSON.stringify(mod.CAPACIDADES.diretoria) === '["verFinanceiro","verIa"]',
     JSON.stringify(mod.CAPACIDADES.diretoria));
   t.ok("vê financeiro", mod.pode("verFinanceiro") === true);
   ["criarMentorado", "editarMentorado", "editarFinanceiro", "escreverSessao",
