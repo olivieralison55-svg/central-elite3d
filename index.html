@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.6/purify.min.js"></script>
 <style>
 :root{
   /* ---- design system Elite 3D ---- */
@@ -286,6 +287,29 @@ tr.an-zero td{color:var(--subtle-foreground)}
 .lk-nome:hover{color:var(--primary);border-bottom-color:var(--primary)}
 .ficha-corpo{padding:26px}
 .ficha-corpo .sec:first-child{border-top:none;margin-top:0;padding-top:0}
+/* Bloco de notas da ficha */
+.nota-barra{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:16px;position:sticky;top:0;background:var(--panel);z-index:2}
+.nota-barra button{background:none;border:1px solid transparent;color:var(--mut);border-radius:var(--radius-control);min-width:34px;height:34px;padding:0 8px;font-size:14px;font-weight:600}
+.nota-barra button:hover{color:var(--txt);border-color:var(--line)}
+.nota-barra .sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+.nota-barra .estado{margin-left:auto;font-size:12.5px;color:var(--dim)}
+.nota{min-height:360px;outline:none;font-size:15px;line-height:1.65;color:var(--txt)}
+.nota:empty::before{content:attr(data-vazio);color:var(--dim)}
+.nota h1{font-size:26px;margin:18px 0 8px}.nota h2{font-size:21px;margin:16px 0 6px}.nota h3{font-size:17px;margin:14px 0 4px}
+.nota p{margin:4px 0}.nota ul,.nota ol{padding-left:24px;margin:4px 0}
+.nota blockquote{border-left:3px solid var(--primary);margin:8px 0;padding:2px 14px;color:var(--mut)}
+.nota pre{background:var(--panel2);border-radius:var(--radius-control);padding:12px 14px;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;white-space:pre-wrap}
+.nota code{background:var(--panel2);border-radius:6px;padding:1px 5px;font-family:ui-monospace,Menlo,monospace;font-size:.9em}
+.nota hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.nota a{color:var(--primary)}
+.nota ul.checklist{list-style:none;padding-left:4px}
+.nota ul.checklist li{position:relative;padding-left:28px}
+.nota ul.checklist li::before{content:"";position:absolute;left:0;top:5px;width:16px;height:16px;border:1.5px solid var(--border-hover);border-radius:4px;cursor:pointer}
+.nota ul.checklist li.feito{color:var(--dim);text-decoration:line-through}
+.nota ul.checklist li.feito::before{background:var(--primary);border-color:var(--primary)}
+/* margem direita = largura da sidebar (aside, 236px); some em tela estreita */
+.nota-barra,.nota{margin-right:236px}
+@media(max-width:1000px){.nota-barra,.nota{margin-right:0}}
 .ficha-h4{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--primary);font-weight:700;margin-bottom:14px}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
 .f label{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--subtle-foreground);font-weight:600;margin-bottom:6px}
@@ -633,9 +657,9 @@ let myRole = null, myProfile = null;
    `diretoria` nao tem policy de INSERT, UPDATE nem DELETE em lugar nenhum. */
 const CAPACIDADES = {
   admin:     ["verFinanceiro","criarMentorado","editarMentorado","editarFinanceiro",
-              "escreverSessao","criarSessao","escreverRotas","excluir"],
+              "escreverSessao","criarSessao","escreverRotas","escreverNotas","excluir"],
   diretoria: ["verFinanceiro"],
-  mentor:    ["escreverSessao","escreverRotas"],
+  mentor:    ["escreverSessao","escreverRotas","escreverNotas"],
 };
 const PAPEL_LABEL = {admin:"Administrador", diretoria:"Diretoria", mentor:"Mentor"};
 const pode = (cap) => (CAPACIDADES[myRole] || []).includes(cap);
@@ -2940,10 +2964,10 @@ function renderNps(){
    "stlseller"  -> o que o STLSeller sabe da pessoa (loja, vendas, status real)
    Quem clica numa parcela vencida no Financeiro cai direto na aba Financeiro;
    antes isso era o parâmetro `secao`, e continua sendo — agora ele vira URL. */
-const ABAS_FICHA = ["cadastro","financeiro","sessoes","stlseller"];
+const ABAS_FICHA = ["cadastro","financeiro","sessoes","notas","stlseller"];
 const ABA_DE_SECAO = {completo:"cadastro", basico:"cadastro", cadastro:"cadastro",
-                      financeiro:"financeiro", sessoes:"sessoes", stlseller:"stlseller"};
-const ROTULO_ABA = {cadastro:"Cadastro", financeiro:"Financeiro", sessoes:"Sessões", stlseller:"STLSeller"};
+                      financeiro:"financeiro", sessoes:"sessoes", notas:"notas", stlseller:"stlseller"};
+const ROTULO_ABA = {cadastro:"Cadastro", financeiro:"Financeiro", sessoes:"Sessões", notas:"Notas", stlseller:"STLSeller"};
 /* Abas que carregam dinheiro ou status de pagamento: fechadas por papel. */
 const ABAS_FINANCEIRAS = ["financeiro","stlseller"];
 
@@ -3184,9 +3208,116 @@ function renderFicha(){
     </div>
   </div>`).join("")}</div>`:''}`:''}
 
+  ${aba==="notas"?abaNotas():''}
   ${aba==="stlseller"?abaStlseller(m):''}
   </div>`;
+  if(aba==="notas") carregarNota(id);
 }
+/* ---- Aba Notas ----
+   Bloco de notas livre por mentorado, com formatação no estilo Notion:
+   barra de ferramentas e atalhos de markdown no início da linha ("# ", "- ",
+   "1. ", "> ", "[] ", "```", "---"). É contenteditable + execCommand, sem
+   biblioteca de editor; o HTML passa pelo DOMPurify com allowlist ao abrir,
+   ao colar e ao salvar, porque o que um mentor grava outro papel renderiza.
+   Salva sozinho ~1 s depois da última tecla. Decisão em docs/decisions/004. */
+const NOTA_TAGS = ["p","br","div","h1","h2","h3","b","strong","i","em","u","s","strike","ul","ol","li",
+                   "blockquote","pre","code","hr","a","span"];
+const limparNota = html => window.DOMPurify
+  ? DOMPurify.sanitize(html||"", {ALLOWED_TAGS:NOTA_TAGS, ALLOWED_ATTR:["href","class"]})
+  : "";
+let notaTimer = null, notaDe = null;
+
+function abaNotas(){
+  const ed = pode("escreverNotas");
+  const b = (cmd, rot, tit) => `<button type="button" title="${tit}" onmousedown="event.preventDefault()" onclick="notaCmd('${cmd}')">${rot}</button>`;
+  return `${ed?`<div class="nota-barra">
+    ${b("h1","H1","Título")}${b("h2","H2","Subtítulo")}${b("h3","H3","Seção")}${b("p","¶","Texto")}<span class="sep"></span>
+    ${b("bold","<b>B</b>","Negrito (⌘B)")}${b("italic","<i>I</i>","Itálico (⌘I)")}${b("underline","<u>U</u>","Sublinhado (⌘U)")}${b("strikeThrough","<s>S</s>","Tachado")}${b("code","&lt;/&gt;","Código")}<span class="sep"></span>
+    ${b("ul","•","Lista")}${b("ol","1.","Lista numerada")}${b("check","☑","Checklist")}${b("quote","❝","Citação")}${b("hr","—","Divisor")}${b("link","🔗","Link")}
+    <span class="estado" id="nota_estado"></span></div>`:`<div class="hint" style="margin-bottom:12px">Somente leitura para o seu papel.</div>`}
+  <div id="nota_editor" class="nota" ${ed?`contenteditable="true"`:""} data-vazio="${ed?"Carregando…":"Sem notas."}"></div>`;
+}
+
+async function carregarNota(id){
+  notaDe = null;
+  const {data, error} = await db.from("mentorado_notas").select("conteudo,atualizado_em").eq("mentorado_id", id).maybeSingle();
+  const el = document.getElementById("nota_editor");
+  if(fichaId!==id || !el) return; // trocou de ficha enquanto carregava
+  if(error){ console.error("[notas] load failed", error); el.removeAttribute("contenteditable");
+    el.dataset.vazio = "Não foi possível carregar as notas: " + error.message; return; }
+  el.innerHTML = limparNota(data?.conteudo);
+  if(!pode("escreverNotas")) return;
+  el.dataset.vazio = "Escreva aqui… use # para título, - para lista, [] para checklist.";
+  estadoNota(data ? `Salvo ${fmtInstante(data.atualizado_em)}` : "");
+  notaDe = id;
+  el.addEventListener("input", () => { estadoNota("Editando…"); clearTimeout(notaTimer); notaTimer = setTimeout(salvarNota, 1000); });
+  el.addEventListener("keydown", atalhoNota);
+  el.addEventListener("paste", e => {
+    e.preventDefault();
+    const d = e.clipboardData;
+    const html = d.getData("text/html");
+    html ? document.execCommand("insertHTML", false, limparNota(html))
+         : document.execCommand("insertText", false, d.getData("text/plain"));
+  });
+  el.addEventListener("click", e => { // marcar item do checklist clicando na caixa
+    const li = e.target.closest?.("ul.checklist > li");
+    if(li && e.offsetX < 24){ li.classList.toggle("feito"); el.dispatchEvent(new Event("input")); }
+  });
+}
+const estadoNota = t => { const s = document.getElementById("nota_estado"); if(s) s.textContent = t; };
+
+async function salvarNota(){
+  const el = document.getElementById("nota_editor");
+  const id = notaDe;
+  if(!el || !id || fichaId!==id) return;
+  // ponytail: last write wins; add version check (atualizado_em) if two people edit the same note at once.
+  const {error} = await db.from("mentorado_notas").upsert({mentorado_id:id, conteudo:limparNota(el.innerHTML), atualizado_em:new Date().toISOString()});
+  if(error){ console.error("[notas] save failed", error); estadoNota("Erro ao salvar"); return toast("Notas não salvas: " + error.message, true); }
+  estadoNota("Salvo " + fmtInstante(new Date().toISOString()));
+}
+window.addEventListener("beforeunload", () => { if(notaTimer && notaDe) salvarNota(); });
+
+function blocoAtual(){
+  const sel = getSelection(); if(!sel.rangeCount) return null;
+  let n = sel.anchorNode; const ed = document.getElementById("nota_editor");
+  while(n && n.parentNode!==ed) n = n.parentNode;
+  return n;
+}
+window.notaCmd = function(cmd){
+  const el = document.getElementById("nota_editor"); if(!el) return;
+  el.focus();
+  const bloco = t => document.execCommand("formatBlock", false, t);
+  if(["h1","h2","h3","p"].includes(cmd)) bloco(cmd);
+  else if(cmd==="quote") bloco("blockquote");
+  else if(cmd==="ul") document.execCommand("insertUnorderedList");
+  else if(cmd==="ol") document.execCommand("insertOrderedList");
+  else if(cmd==="hr") document.execCommand("insertHorizontalRule");
+  else if(cmd==="code"){ const t = getSelection().toString();
+    t ? document.execCommand("insertHTML", false, `<code>${esc(t)}</code>&#8203;`) : bloco("pre"); }
+  else if(cmd==="check"){ document.execCommand("insertUnorderedList");
+    const ul = getSelection().anchorNode?.parentElement?.closest("ul"); if(ul) ul.classList.toggle("checklist"); }
+  else if(cmd==="link"){ const url = prompt("Endereço do link (https://…)");
+    if(url && /^https?:\/\//i.test(url.trim())) document.execCommand("createLink", false, url.trim()); }
+  else document.execCommand(cmd);
+  el.dispatchEvent(new Event("input"));
+};
+/* Atalhos de markdown: digitar o marcador no começo de um bloco e espaço. */
+const ATALHOS_NOTA = {"#":"h1","##":"h2","###":"h3","-":"ul","*":"ul","1.":"ol",">":"quote","[]":"check"};
+function atalhoNota(e){
+  if(e.key!==" " && e.key!=="Enter") return;
+  const sel = getSelection(); const no = sel.anchorNode;
+  if(!no || no.nodeType!==3) return;
+  const antes = no.textContent.slice(0, sel.anchorOffset).replace(/ /g," ");
+  const blocoTexto = (blocoAtual()?.textContent||"").replace(/ /g," ");
+  if(blocoTexto.trim()!==antes.trim()) return; // só no início do bloco
+  const k = antes.trim();
+  const cmd = e.key===" " ? ATALHOS_NOTA[k] : (k==="```" ? "pre" : k==="---" ? "hr" : null);
+  if(!cmd) return;
+  e.preventDefault();
+  no.textContent = no.textContent.slice(sel.anchorOffset);
+  cmd==="pre" ? document.execCommand("formatBlock", false, "pre") : notaCmd(cmd);
+}
+
 window.closeModal = ()=>{ dpClose(); $("#overlay").classList.remove("open"); };
 $("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeModal(); });
 
