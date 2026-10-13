@@ -86,6 +86,7 @@ chama `render()`. `setView` e `openMentorado` sobrevivem como atalhos para
 | Endereço | Tela |
 |---|---|
 | `#/dash`, `#/mentorados`, `#/sessoes`, `#/rotas`, `#/financeiro` | as cinco telas |
+| `#/mentores` | tela Mentores (só `verFinanceiro`): carteira, 1:1, grupo, agenda, NPS, calls transcritas e leitura da Análise IA por mentor |
 | `#/mentorado/<id>` | ficha, aba de cadastro |
 | `#/mentorado/<id>/financeiro`, `#/mentorado/<id>/sessoes` | ficha, nas outras duas abas |
 
