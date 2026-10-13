@@ -745,6 +745,24 @@ direcionamento", "3. Existe alguma"), como opcionais; o `nps-forms` grava; o
 analista as usa nos prós, contras e pauta; a tela NPS e a tela da pessoa as mostram.
 O código do `nps-forms` passou a morar no repo (baixado da versão publicada).
 
+### `circle-presenca` — presença nas lives do Circle
+
+Os plantões de dúvida e as sessões de implementação acontecem em lives do
+Circle. A API admin v2 do Circle só expõe inscrição (RSVP), não comparecimento,
+então a presença vem de uma **automação do Circle**: gatilho *Attended live
+event* → ação *Send webhook* para
+`https://matgynpiscyoshnjzolo.supabase.co/functions/v1/circle-presenca?token=<CIRCLE_WEBHOOK_TOKEN>`.
+O gatilho dispara ao fim da live, uma vez por membro que esteve nela, com ou sem RSVP.
+
+A função grava o payload cru em `circle_presencas` (o corpo do webhook não é
+documentado), acha o e-mail do membro e o id do evento em qualquer profundidade,
+busca nome e início do evento na API (`CIRCLE_API_KEY`), deduz a etapa pelo nome
+("Plantão…"/"Sessão de Implementação…") e o mentor pelo sufixo do título, casa o
+mentorado pelo **e-mail da ficha** e faz upsert em `sessoes` (status Concluída)
+por `(mentorado_id, circle_event_id)`. O que não casa fica com `erro` preenchido
+na linha crua, para corrigir a ficha e reprocessar. `verify_jwt` desligado; a
+procedência é o `?token=`, comparado em tempo constante.
+
 Rodar na mão (devolvem JSON):
 
 ```bash
@@ -779,8 +797,8 @@ diferentes:
 Esquecer o `EMAIL_MENTOR` faz as sessões daquele mentor entrarem sem mentor
 identificado, silenciosamente.
 
-André e Gabriella (13/10/2026) entraram em `MENTORES` e no formulário de NPS;
-`EMAIL_MENTOR` ainda sem os e-mails deles. André fica **sem apelido** no
+André e Gabriella (13/10/2026) entraram em `MENTORES`, no formulário de NPS e
+em `EMAIL_MENTOR`, com login de mentor. André fica **sem apelido** no
 fallback por nome: há mentorado chamado André, e o título "Mentoria André
 Bertozzi" creditaria a sessão ao mentor.
 
