@@ -679,7 +679,8 @@ n8n-ops · "[Central Elite3D] Experiência - planilha -> sync-experiencia" (oNud
 edge function sync-experiencia ──upsert on origem_id──▶ experiencia_respostas
    ▲ pg_cron sync-experiencia-6h (45 */6 UTC)
 
-nps_respostas + experiencia_respostas ──▶ edge function nps-analista ──▶ Claude (claude-opus-5-5)
+nps_respostas + experiencia_respostas ──▶ edge function nps-analista
+  + mentorado_dossies (AD-003) + presença em grupo (sessoes ordem ≥ 90) ──▶ Claude (claude-opus-5-5)
    ▲ pg_cron nps-analista-diario (0 11 UTC = 08:00 Brasília)      └──insert──▶ nps_analises
 ```
 
@@ -798,7 +799,12 @@ mentorado_dossies (markdown em `documento`, jsonb em `estrutura`)
 ```
 
 `status` em `transcricoes`: `aceita`, `rejeitada` (com `motivo`), `grupo`, `sem_vinculo`,
-`erro` (tenta de novo até 3 vezes). Só calls dos últimos 30 dias entram na fila. Doc editado depois de processado não volta sozinho:
+`erro` (tenta de novo até 3 vezes). Só calls dos últimos 30 dias entram na fila.
+O `nps-analista` lê o dossiê (objetivos, pendências, pontos de atenção, última
+mentoria) de cada mentorado com mentoria nos últimos 90 dias, e quem tem dossiê
+entra na leitura mesmo sem nota. A presença em grupo (Circle e manual) só
+enriquece quem já está na leitura: incluir quem só tinha presença levou a lista
+de 10 para 42 mentorados e estourou o limite de 150 s da função. Doc editado depois de processado não volta sozinho:
 volte o `status` para `pendente` à mão. Os agentes leem `mentorado_dossies.documento`.
 Secrets: `JEV_API_KEY`, `TRANSCRICOES_WEBHOOK_URL`, `ANTHROPIC_API_KEY`.
 
