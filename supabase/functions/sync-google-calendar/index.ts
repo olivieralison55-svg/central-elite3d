@@ -34,6 +34,9 @@ const MENTORES: { nome: string; alias: string[] }[] = [
   { nome: "Petare",   alias: ["petare"] },
   { nome: "Michelle", alias: ["michelle", "michele", "michelli"] },
   { nome: "Israel",   alias: ["israel"] },
+  // André sem apelido de proposito: ha mentorado chamado André (Bertozzi), e o
+  // titulo "Mentoria André Bertozzi" creditaria a sessao ao mentor. So por e-mail.
+  { nome: "Gabriella", alias: ["gabriella", "gabriela"] },
 ];
 
 const tzFormatter = new Intl.DateTimeFormat("en-US", {
