@@ -376,6 +376,23 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     an.includes("<td>loja@ana.com</td>") && !an.includes("E-mail da loja"));
   t.ok("STLFLIX que acha a loja conta como resolvido", an.includes("1 resolvido(s) pelo e-mail STLFLIX: Eva Sem Ficha"));
 
+  t.secao("Mentores");
+  globalThis.location.hash = "#/mentores";
+  const mt = app.tela();
+  t.ok("tela de mentores desenha", mt.includes("<h2>Mentores</h2>") && semLixo(mt), mt.slice(0, 300));
+  t.ok("visão geral lista os mentores atuais", mt.includes(">Luan</a>") && mt.includes(">Gabriella</a>"));
+  t.ok("mentor fora da lista atual cai no histórico", mt.includes("Histórico &middot;") && mt.includes(">Evaldo</a>"));
+  {
+    const nomes = ["Luan","Sergio","Diovani","Petare","Michelle","André","Gabriella"];
+    let ok = true, ruim = "";
+    for (let i = 0; i < nomes.length + 2; i++) {
+      globalThis.setMentorSel(i);
+      const d = app.tela();
+      if (!d.includes("Carteira ativa") || !semLixo(d) || d.includes("<img")) { ok = false; ruim = d.slice(0, 300); break; }
+    }
+    t.ok("detalhe de cada mentor desenha, sem HTML cru", ok, ruim);
+    globalThis.setMentorSel(-1);
+  }
   t.secao("NPS");
   globalThis.location.hash = "#/nps";
   const nps = app.tela();
@@ -675,6 +692,8 @@ t.ok("NPS abre nas sessões, sem a análise da IA", nps.includes("aria-pressed=\
   t.ok("link da análise não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>STLSeller</h2>"), app.endereco());
   globalThis.location.hash = "#/nps";
   t.ok("link do NPS não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>NPS</h2>"), app.endereco());
+  globalThis.location.hash = "#/mentores";
+  t.ok("link de Mentores não abre para mentor", app.endereco() === "#/dash" && !app.tela().includes("<h2>Mentores</h2>"), app.endereco());
   globalThis.location.hash = "#/ia";
   /* Análise IA abre para o mentor no recorte de analise_ia_mentor: sem resumo e
      sem Por mentor. O recorte de dados é do banco; aqui a fixture simula o que a
