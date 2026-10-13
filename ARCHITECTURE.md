@@ -707,22 +707,36 @@ quais respostas são novas e a análise anterior, para ele não repetir alerta.
 A saída é `{resumo, alertas[], mentores[], mentorados[]}` por **structured
 output** (`output_config.format`): alertas com severidade, tipo
 (`mentorado`/`mentor`/`mentoria`), evidência literal e ação sugerida; uma
-leitura **por mentor** (pontos fortes e de atenção, só a partir do NPS da
-sessão — a Pesquisa de Experiência é anônima e não é atribuída a ninguém) e uma
-**por mentorado** (risco alto/médio/baixo, sinais, ação). A função recusa a
+leitura **por mentor** e uma **por mentorado**, cada uma com `pros`, `contras`
+(frases curtas com a evidência entre parênteses) e `pauta` (2 a 4 perguntas
+abertas), escritas para serem debatidas com a própria pessoa; o mentorado leva
+ainda risco alto/médio/baixo e ação. A leitura do mentor sai só do NPS da sessão
+— a Pesquisa de Experiência é anônima e não é atribuída a ninguém. Linhas
+antigas (`pontos_fortes`, `pontos_de_atencao`, `sinais`) seguem legíveis: os dois
+primeiros caem em prós e contras; `sinais` é evidência neutra e aparece sob a
+leitura, nunca como contra. A função recusa a
 rodada se o modelo devolver um `mentorado_id` que não veio dos dados: um id
 inventado viraria link para a ficha errada. `fallbacks: "default"` cobre recusa de classificador.
 A chave é o secret `ANTHROPIC_API_KEY` da função, a mesma ANTHROPIC_API_KEY da plataforma-product-ops.
 
 **Tela Análise IA** (`#/ia`, admin e diretoria): três abas — **Visão geral**
-(resumo e alertas, mais grave primeiro), **Por mentor** (cards com média, NPS e
-contagem calculados do NPS carregado, mais a leitura do modelo) e **Por
-mentorado** (tabela por risco, com link para a ficha e a última nota). **Tela
+(resumo e alertas, mais grave primeiro), **Por mentor** e **Por mentorado**:
+cada uma é uma lista de integrantes (números calculados do NPS carregado, risco,
+quantos prós e contras) e o clique abre a tela única da pessoa — leitura, prós e
+contras lado a lado, pauta para a conversa e o histórico de respostas. **Tela
 NPS** (`#/nps`): só números, em duas abas — **NPS das sessões** e **Pesquisa de
 Experiência** (NPS da mentoria, índice de experiência = média da grade,
 clareza dos próximos passos, índice por item com o pior primeiro, e as
 respostas abertas). **Nada vai para os
 mentores**: o RLS das duas tabelas novas só deixa admin e diretoria lerem.
+
+**Avisos das pesquisas no dashboard** (desde `INICIO_COBRANCA_NPS` = 13/10/2026,
+com prazo de resposta de `PRAZO_RESPOSTA_DIAS` = 2 dias após a sessão): admin e
+diretoria veem *Pesquisa de satisfação da sessão não respondida* (por mentorado,
+última 1:1 concluída sem resposta vinculada com dia ≥ o da sessão) e o
+totalizador anônimo da Pesquisa de Experiência. O mentor vê só a adesão
+agregada, pela RPC `experiencia_adesao(p_desde, p_prazo_dias)`, quando fica
+abaixo de `META_ADESAO_EXP` (70%) — ver docs/decisions/002.
 
 Rodar na mão (devolvem JSON):
 
