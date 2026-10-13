@@ -24,6 +24,7 @@ const MODELO = "claude-opus-5-5";
 const JANELA_DIAS = 90;
 
 type Sessao = { respondido_em: string; created_at: string; mentor: string; nota: number; comentario: string | null;
+  clareza: string | null; direcionamento: string | null; apoio: string | null;
   mentorado_id: string | null; nome_informado: string | null; mentorados: { nome: string } | null };
 type Experiencia = { respondido_em: string; created_at: string; nota: number; geral: string | null;
   itens: Record<string, string>; clareza: string | null; textos: Record<string, string> };
@@ -68,7 +69,8 @@ const SCHEMA = {
 const SISTEMA = `Você é o analista de experiência da Mentoria Elite 3D (mentoria de negócios de impressão 3D: lojas em marketplace, feiras, produto). Quem lê é a gestão da mentoria (admin e diretoria), não os mentores.
 
 Você recebe duas pesquisas:
-1. NPS da sessão: depois de cada sessão, o mentorado dá nota de 1 a 10 ao mentor que o atendeu e comenta. Identificada (mentorado e mentor).
+1. NPS da sessão: depois de cada sessão, o mentorado dá nota de 1 a 10 ao mentor que o atendeu e comenta. Identificada (mentorado e mentor). Desde 13/10/2026 também responde se saiu com clareza dos próximos passos ("clareza_proximos_passos": Sim, totalmente / Parcialmente / Não, ainda tenho dúvidas), se o direcionamento foi adequado ao momento do negócio ("direcionamento_adequado": Sim / Parcialmente / Não) e em que gostaria de mais apoio ("pedido_de_apoio", texto). Nas respostas anteriores esses campos vêm nulos — não trate nulo como resposta negativa.
+Use esses campos nas leituras individuais: "Sim" é pró do mentor e do mentorado; "Parcialmente"/"Não" é contra e vira pergunta na pauta; o pedido de apoio é a melhor fonte da pauta e da ação sugerida do mentorado. Nota alta com "Não" em clareza ou direcionamento é contradição que merece alerta.
 2. Pesquisa de Experiência: anônima, sobre a mentoria como um todo — nota de recomendação, satisfação geral, grade de 10 itens (Muito ruim a Excelente), clareza dos próximos passos e perguntas abertas. Nunca tente descobrir quem respondeu.
 
 Escreva em português do Brasil, direto, sem jargão.
@@ -128,7 +130,8 @@ function montarDados(sessoes: Sessao[], exps: Experiencia[], desde: string | nul
     },
     por_mentorado: [...porMentorado.values()],
     nps_sessoes: sessoes.map((s) => ({ nova: nova(s.created_at), data: s.respondido_em.slice(0, 10), mentor: s.mentor,
-      mentorado_id: s.mentorado_id, mentorado: s.mentorados?.nome ?? s.nome_informado ?? "—", nota: s.nota, comentario: s.comentario ?? "" })),
+      mentorado_id: s.mentorado_id, mentorado: s.mentorados?.nome ?? s.nome_informado ?? "—", nota: s.nota, comentario: s.comentario ?? "",
+      clareza_proximos_passos: s.clareza, direcionamento_adequado: s.direcionamento, pedido_de_apoio: s.apoio })),
     experiencia: exps.map((e) => ({ nova: nova(e.created_at), data: e.respondido_em.slice(0, 10), nota: e.nota,
       geral: e.geral, clareza_proximos_passos: e.clareza, grade: e.itens, respostas_abertas: e.textos })),
     analise_anterior: anterior,
@@ -158,7 +161,7 @@ Deno.serve(async () => {
     const desdeJanela = new Date(Date.now() - JANELA_DIAS * 86400_000).toISOString();
 
     const [ses, exp, ult] = await Promise.all([
-      db.from("nps_respostas").select("respondido_em,created_at,mentor,nota,comentario,mentorado_id,nome_informado,mentorados(nome)")
+      db.from("nps_respostas").select("respondido_em,created_at,mentor,nota,comentario,clareza,direcionamento,apoio,mentorado_id,nome_informado,mentorados(nome)")
         .gte("respondido_em", desdeJanela).order("respondido_em"),
       db.from("experiencia_respostas").select("respondido_em,created_at,nota,geral,itens,clareza,textos")
         .gte("respondido_em", desdeJanela).order("respondido_em"),
