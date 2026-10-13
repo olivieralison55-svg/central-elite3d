@@ -738,6 +738,34 @@ totalizador anônimo da Pesquisa de Experiência. O mentor vê só a adesão
 agregada, pela RPC `experiencia_adesao(p_desde, p_prazo_dias)`, quando fica
 abaixo de `META_ADESAO_EXP` (70%) — ver docs/decisions/002.
 
+**Perguntas novas da Pesquisa de Satisfação** (13/10/2026): `nps_respostas`
+ganhou `clareza`, `direcionamento` e `apoio` (nulos antes disso). O workflow do
+n8n acha as colunas pelo prefixo do cabeçalho ("1. Ao finalizar", "2. O
+direcionamento", "3. Existe alguma"), como opcionais; o `nps-forms` grava; o
+analista as usa nos prós, contras e pauta; a tela NPS e a tela da pessoa as mostram.
+O código do `nps-forms` passou a morar no repo (baixado da versão publicada).
+
+### `circle-presenca` — presença nas lives do Circle
+
+Os plantões de dúvida e as sessões de implementação acontecem em lives do
+Circle. A API admin v2 do Circle só expõe inscrição (RSVP), não comparecimento,
+então a presença vem de uma **automação do Circle**: gatilho *Attended live
+event* → ação *Send webhook* para
+`https://matgynpiscyoshnjzolo.supabase.co/functions/v1/circle-presenca?token=<CIRCLE_WEBHOOK_TOKEN>`.
+O gatilho dispara ao fim da live, uma vez por membro que esteve nela, com ou sem RSVP.
+
+O gatilho exige **um evento específico** (só lista os futuros): é uma automação
+por live. O corpo real é `{"type":"live_event_ended","data":{"community_member_id",
+"event_id",…}}`, sem e-mail. A função grava o payload cru em `circle_presencas`,
+acha o membro e o evento em qualquer profundidade, busca o e-mail do membro em
+`community_members/{id}`,
+busca nome e início do evento na API (`CIRCLE_API_KEY`), deduz a etapa pelo nome
+("Plantão…"/"Sessão de Implementação…") e o mentor pelo sufixo do título, casa o
+mentorado pelo **e-mail da ficha** e faz upsert em `sessoes` (status Concluída)
+por `(mentorado_id, circle_event_id)`. O que não casa fica com `erro` preenchido
+na linha crua, para corrigir a ficha e reprocessar. `verify_jwt` desligado; a
+procedência é o `?token=`, comparado em tempo constante.
+
 Rodar na mão (devolvem JSON):
 
 ```bash
@@ -797,6 +825,11 @@ diferentes:
 
 Esquecer o `EMAIL_MENTOR` faz as sessões daquele mentor entrarem sem mentor
 identificado, silenciosamente.
+
+André e Gabriella (13/10/2026) entraram em `MENTORES`, no formulário de NPS e
+em `EMAIL_MENTOR`, com login de mentor. André fica **sem apelido** no
+fallback por nome: há mentorado chamado André, e o título "Mentoria André
+Bertozzi" creditaria a sessão ao mentor.
 
 ### A matriz do dashboard conta reunião, não linha
 

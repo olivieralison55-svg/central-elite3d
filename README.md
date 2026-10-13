@@ -80,6 +80,14 @@ Duas coisas se repetem em todas elas:
   de criar (administrador e diretoria). Nas telas que já têm uma ação própria —
   Sessões, com o encontro em grupo — ele aparece como botão secundário.
 
+### Acompanhamento
+
+Item próprio na barra lateral, para mentores, admin e diretoria. Mostra só o
+**"Precisa de atenção agora"** e as listas de cada alerta (sem sessão há +30 dias,
+sem subir de marco, sem sessão de implementação etc.), sem os números gerais e a
+matriz do fechamento. É o mesmo cálculo do Dashboard, que continua com o bloco no
+topo: os dois nunca discordam. Cada papel vê os itens que já via no Dashboard.
+
 ### Dashboard
 
 É a tela inicial e responde "como está o programa hoje".
@@ -126,6 +134,7 @@ Abaixo dele:
 - **Sessões sem evento no Google Agenda** — ver *Alertas* abaixo.
 - **Mentorados sem sessão há +30 dias** — ver *Alertas* abaixo.
 - **Mentorados sem subir de marco há +30 dias** — ver *Alertas* abaixo.
+- **Mentorados que ainda não fizeram a sessão de implementação** — ver *Alertas* abaixo.
 
 Clicar em qualquer linha abre a ficha do mentorado.
 
@@ -294,6 +303,7 @@ sem ver as duas lado a lado não há como decidir qual etapa está errada.
 |---|---|---|
 | **Mentorados sem sessão há +30 dias** | Passou mais de um mês sem sessão concluída e não há nada agendado. Quem nunca concluiu nenhuma sessão é medido pela data de fechamento do contrato, e aparece marcado como **Nunca começou** — esse é o caso mais grave. | Falar com o mentor e com o mentorado. Agendar. |
 | **Mentorados sem subir de marco há +30 dias** | Mentorado ativo com contrato assinado cuja última subida de marco (marco concluído na tela de Rotas) foi há mais de 30 dias. Vale retroativo. Quem nunca subiu é contado do fechamento e aparece como **Nunca subiu**; quem subiu e parou, como **Travou**. | Registrar as subidas na tela de Rotas; conversar sobre o que trava o próximo marco. |
+| **Mentorados que ainda não fizeram a sessão de implementação** | Todo mentorado tem direito a uma *Sessão de Implementação* e a plantões de dúvida 1x por mês. Entra aqui o ativo sem presença concluída numa Sessão de Implementação. Os plantões só são contados (na lista e no topo da ficha), sem alerta. | Convidar para o próximo encontro de implementação. |
 | **Pesquisa de satisfação da sessão não respondida** (admin e diretoria) | Última sessão 1:1 concluída desde 13/10/2026, há 2+ dias, sem resposta do mentorado. | Reforçar o envio do formulário. |
 | **Sessões aguardando confirmação** | A data da sessão já passou e ninguém confirmou se ela aconteceu. | Abrir a sessão e usar **Confirmar**. É obrigatório informar quem atendeu — sem isso a sessão não entra na conta do mentor. |
 | **Sessões sem evento no Google Agenda** | O evento foi apagado, renomeado ou saiu da janela de sincronização. Esses registros **pararam de receber atualização automática**. | Conferir manualmente. Se o encontro aconteceu, confirmar na mão. |

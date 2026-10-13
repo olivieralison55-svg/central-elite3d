@@ -20,6 +20,8 @@ const EMAIL_MENTOR: Record<string, string> = {
   "diovane_martins@hotmail.com": "Diovani", // legado: mantido para reconhecer eventos antigos
   "petarerp@gmail.com": "Petare",
   "sergiodink@gmail.com": "Sergio",
+  "andreandradestlflix@gmail.com": "André",
+  "gabriellaandradestlflix@gmail.com": "Gabriella",
 };
 
 // Fallback por nome escrito no titulo/descricao. Israel e Evaldo sairam do
@@ -34,6 +36,9 @@ const MENTORES: { nome: string; alias: string[] }[] = [
   { nome: "Petare",   alias: ["petare"] },
   { nome: "Michelle", alias: ["michelle", "michele", "michelli"] },
   { nome: "Israel",   alias: ["israel"] },
+  // André sem apelido de proposito: ha mentorado chamado André (Bertozzi), e o
+  // titulo "Mentoria André Bertozzi" creditaria a sessao ao mentor. So por e-mail.
+  { nome: "Gabriella", alias: ["gabriella", "gabriela"] },
 ];
 
 const tzFormatter = new Intl.DateTimeFormat("en-US", {
