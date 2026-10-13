@@ -20,6 +20,8 @@ const EMAIL_MENTOR: Record<string, string> = {
   "diovane_martins@hotmail.com": "Diovani", // legado: mantido para reconhecer eventos antigos
   "petarerp@gmail.com": "Petare",
   "sergiodink@gmail.com": "Sergio",
+  "andreandradestlflix@gmail.com": "André",
+  "gabriellaandradestlflix@gmail.com": "Gabriella",
 };
 
 // Fallback por nome escrito no titulo/descricao. Israel e Evaldo sairam do
