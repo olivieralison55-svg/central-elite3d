@@ -1734,4 +1734,19 @@ t.ok("NPS abre nas sessões, sem a análise da IA", nps.includes("aria-pressed=\
   t.ok("sem lixo", semLixo(tela), tela.slice(0, 300));
 }
 
+/* Aba Notas: mentor e admin editam com a barra; diretoria só lê. O conteúdo
+   chega depois, por carregarNota, e passa pelo DOMPurify — fora do alcance
+   deste ambiente, que não tem DOM real. */
+for (const [papel, edita] of [["admin", true], ["mentor", true], ["diretoria", false]]) {
+  const app = preparar(carregarApp(), papel);
+  t.secao(`Aba Notas (${papel})`);
+  globalThis.location.hash = "#/mentorado/m1/notas";
+  const tela = app.tela();
+  t.ok("a aba existe e abre", tela.includes('id="nota_editor"') && app.endereco() === "#/mentorado/m1/notas", app.endereco());
+  t.ok(edita ? "editável, com barra" : "somente leitura, sem barra",
+    edita ? (tela.includes('contenteditable="true"') && tela.includes("nota-barra"))
+          : (!tela.includes("contenteditable") && !tela.includes("nota-barra")));
+  t.ok("sem lixo", semLixo(tela), tela.slice(0, 300));
+}
+
 process.exit(t.fim() ? 1 : 0);
