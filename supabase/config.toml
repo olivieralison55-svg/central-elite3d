@@ -20,3 +20,11 @@ verify_jwt = true
 # Mesmo motivo: grava em `nps_analises` e gasta a chave da Anthropic a cada chamada.
 [functions.nps-analista]
 verify_jwt = true
+
+# Mesmo motivo: grava em `transcricoes`/`mentorado_dossies` e gasta Jev e Anthropic a cada chamada.
+[functions.sync-transcricoes]
+verify_jwt = true
+
+# Mesmo motivo: grava em `transcricoes` com a service_role key.
+[functions.buscar-transcricoes]
+verify_jwt = true

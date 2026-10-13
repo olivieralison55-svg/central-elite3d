@@ -1,6 +1,6 @@
 # Transcrições das calls 1:1 no contexto do analista
 
-- **Status**: em debate com o time (não iniciado)
+- **Status**: superado por docs/decisions/003 (13/10/2026)
 - **Date**: 2026-10-13
 
 ## Ideia
