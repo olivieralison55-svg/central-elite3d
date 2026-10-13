@@ -4,9 +4,12 @@ const { extrair, etapaDoEvento, mentorDoEvento } = await import("./index.ts");
 
 Deno.test("acha e-mail e id do evento em qualquer profundidade", () => {
   assertEquals(extrair({ data: { member: { email: "Ana@X.com" }, event: { id: 36450345, name: "x" } } }),
-    { email: "ana@x.com", eventId: 36450345 });
-  assertEquals(extrair({ member_email: "b@y.com", event_id: "123" }), { email: "b@y.com", eventId: 123 });
-  assertEquals(extrair({ nada: 1 }), { email: null, eventId: null });
+    { email: "ana@x.com", eventId: 36450345, membroId: null });
+  assertEquals(extrair({ member_email: "b@y.com", event_id: "123" }), { email: "b@y.com", eventId: 123, membroId: null });
+  assertEquals(extrair({ nada: 1 }), { email: null, eventId: null, membroId: null });
+  // Corpo real do Circle: só ids.
+  assertEquals(extrair({ type: "live_event_ended", data: { community_id: 555008, community_member_id: 98049952, event_id: 1, space_id: 1 } }),
+    { email: null, eventId: 1, membroId: 98049952 });
 });
 
 Deno.test("etapa e mentor saem do nome do evento", () => {

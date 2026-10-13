@@ -754,8 +754,11 @@ event* → ação *Send webhook* para
 `https://matgynpiscyoshnjzolo.supabase.co/functions/v1/circle-presenca?token=<CIRCLE_WEBHOOK_TOKEN>`.
 O gatilho dispara ao fim da live, uma vez por membro que esteve nela, com ou sem RSVP.
 
-A função grava o payload cru em `circle_presencas` (o corpo do webhook não é
-documentado), acha o e-mail do membro e o id do evento em qualquer profundidade,
+O gatilho exige **um evento específico** (só lista os futuros): é uma automação
+por live. O corpo real é `{"type":"live_event_ended","data":{"community_member_id",
+"event_id",…}}`, sem e-mail. A função grava o payload cru em `circle_presencas`,
+acha o membro e o evento em qualquer profundidade, busca o e-mail do membro em
+`community_members/{id}`,
 busca nome e início do evento na API (`CIRCLE_API_KEY`), deduz a etapa pelo nome
 ("Plantão…"/"Sessão de Implementação…") e o mentor pelo sufixo do título, casa o
 mentorado pelo **e-mail da ficha** e faz upsert em `sessoes` (status Concluída)

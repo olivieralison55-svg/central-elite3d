@@ -4,10 +4,11 @@
 // vez por membro, quando a live termina. Só quem esteve na live chega aqui: a
 // inscrição (RSVP) não dispara este gatilho.
 //
-// O Circle não documenta o corpo do webhook, então a função (1) grava o payload
-// cru em `circle_presencas` antes de tudo e (2) procura o e-mail do membro e o id
-// do evento em qualquer profundidade. O resto vem da API admin v2 do Circle
-// (nome e início do evento), não do payload.
+// Corpo real (teste de 13/10/2026): {"type":"live_event_ended","data":{
+// "community_id","community_member_id","event_id","space_id"}} -- sem e-mail.
+// A função (1) grava o payload cru em `circle_presencas` antes de tudo, (2) acha
+// o membro e o evento em qualquer profundidade e (3) busca na API admin v2 do
+// Circle o e-mail do membro e o nome e o início do evento.
 //
 // A presença vira uma linha de `sessoes`, status Concluída, na etapa do encontro
 // em grupo pelo nome do evento ("Plantão..." ou "Sessão de Implementação..."),
@@ -62,13 +63,16 @@ function achar(v: unknown, casa: (caminho: string[], valor: unknown) => boolean,
 }
 
 export function extrair(payload: unknown) {
+  const membro = achar(payload, (c, v) => (c.at(-1) ?? "") === "community_member_id"
+    && (typeof v === "number" || (typeof v === "string" && /^\d+$/.test(v))));
   const email = achar(payload, (c, v) => typeof v === "string" && /email/.test(c.at(-1) ?? "") && v.includes("@"));
   const id = achar(payload, (c, v) => {
     const k = c.at(-1) ?? "", pai = c.at(-2) ?? "";
     return (typeof v === "number" || (typeof v === "string" && /^\d+$/.test(v)))
       && (k === "event_id" || (k === "id" && /event/.test(pai)));
   });
-  return { email: typeof email === "string" ? email.trim().toLowerCase() : null, eventId: id === undefined ? null : Number(id) };
+  return { email: typeof email === "string" ? email.trim().toLowerCase() : null, eventId: id === undefined ? null : Number(id),
+    membroId: membro === undefined ? null : Number(membro) };
 }
 
 export function etapaDoEvento(nome: string) {
@@ -88,7 +92,9 @@ Deno.serve(async (req) => {
   try { payload = await req.json(); } catch { return json(400, { erro: "JSON inválido" }); }
 
   const db = createClient(SUPABASE_URL, SERVICE_KEY);
-  const { email, eventId } = extrair(payload);
+  const ext = extrair(payload);
+  const eventId = ext.eventId;
+  let email = ext.email;
   const { data: reg, error: errReg } = await db.from("circle_presencas")
     .insert({ payload, email, circle_event_id: eventId }).select("id").single();
   if (errReg) return json(500, { erro: `registro: ${errReg.message}` });
@@ -100,13 +106,21 @@ Deno.serve(async (req) => {
     await db.from("circle_presencas").update({ erro }).eq("id", reg.id);
     return json(200, { ok: false, erro });
   };
-  if (!email) return falha("payload sem e-mail do membro");
   if (!eventId) return falha("payload sem id do evento");
   if (!CIRCLE_KEY) return falha("CIRCLE_API_KEY ausente");
-
-  const res = await fetch(`https://app.circle.so/api/admin/v2/events/${eventId}`, {
+  const circle = (rota: string) => fetch(`https://app.circle.so/api/admin/v2/${rota}`, {
     headers: { Authorization: `Bearer ${CIRCLE_KEY}` },
   });
+  if (!email && ext.membroId) {
+    const rm = await circle(`community_members/${ext.membroId}`);
+    if (!rm.ok) return falha(`Circle community_members/${ext.membroId}: HTTP ${rm.status}`);
+    const m = await rm.json() as { email?: string };
+    email = m.email?.trim().toLowerCase() || null;
+    await db.from("circle_presencas").update({ email }).eq("id", reg.id);
+  }
+  if (!email) return falha("sem e-mail do membro (nem no payload, nem na API)");
+
+  const res = await circle(`events/${eventId}`);
   if (!res.ok) return falha(`Circle events/${eventId}: HTTP ${res.status}`);
   const evento = await res.json() as { name?: string; starts_at?: string };
   if (!evento.name || !evento.starts_at) return falha(`evento ${eventId} sem nome ou início`);
