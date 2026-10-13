@@ -748,6 +748,32 @@ curl -X POST -H "Authorization: Bearer $K" https://matgynpiscyoshnjzolo.supabase
 
 Redeploy: `npx supabase@latest functions deploy <sync-experiencia|nps-analista> --project-ref matgynpiscyoshnjzolo --use-api`.
 
+### `buscar-transcricoes` (diária) e `sync-transcricoes` (10 min) — dossiê do mentorado
+
+Desde 13/10/2026. Decisão e calibragem em [docs/decisions/003](docs/decisions/003-dossie-do-mentorado-a-partir-das-transcricoes.md).
+
+```
+Drive "gravações" (1CK91G…), uma pasta por call: doc "Anotações do Gemini" (notas + 📖 Transcrição)
+   ▼
+n8n-ops · "[Central Elite3D] Transcrições - Drive -> sync-transcricoes" (iK1jiqXLhD8JzmSV)
+   │  ?desde=<ISO> lista docs alterados · ?id=<doc> exporta o texto (credencial @software)
+   │  Header Auth: a mesma credencial do sync-experiencia (EXPERIENCIA_WEBHOOK_TOKEN)
+   ▼
+edge function buscar-transcricoes ── enfileira ──▶ transcricoes (status pendente)
+   ▲ pg_cron buscar-transcricoes-diario (0 9 UTC = 06:00 Brasília)
+   ▼
+edge function sync-transcricoes ── ?id= de cada pendente
+   │  2 por rodada, da mais antiga: grupo? → casa mentorado/sessão → triagem → Jev → Claude
+   ▼
+mentorado_dossies (markdown em `documento`, jsonb em `estrutura`)
+   ▲ pg_cron sync-transcricoes-10min (*/10, timeout 150 s)
+```
+
+`status` em `transcricoes`: `aceita`, `rejeitada` (com `motivo`), `grupo`, `sem_vinculo`,
+`erro` (tenta de novo até 3 vezes). Só calls dos últimos 30 dias entram na fila. Doc editado depois de processado não volta sozinho:
+volte o `status` para `pendente` à mão. Os agentes leem `mentorado_dossies.documento`.
+Secrets: `JEV_API_KEY`, `TRANSCRICOES_WEBHOOK_URL`, `ANTHROPIC_API_KEY`.
+
 ### `promover_sessoes_vencidas()` — função Postgres
 
 Job `promover-sessoes-vencidas-15min` (minutos 5, 20, 35, 50). Promove
