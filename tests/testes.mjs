@@ -242,6 +242,19 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
     app.estado.rotas(...fixtures().rotas);
     mod.renderDash();
   }
+  {
+    /* Sessão de implementação: ativos sem presença concluída viram alerta (m1 e
+       m2 só têm agendada; m3 não tem). m4 está pausado: fora. Plantões só contam. */
+    const S0 = app.estado.S;
+    app.estado.S = [...S0, {id:"i1", mentorado_id:"m3", etapa:"Sessão de Implementação Mensal", ordem:91, status:"Concluída", mentor:"Michelle", data:"2026-09-10", hora:"20:00:00"}];
+    mod.renderDash();
+    const d = app.tela(), ini = d.indexOf('id="sem-implementacao"'), sec = d.slice(ini, d.indexOf("</table>", ini));
+    t.ok("sem implementação: ativos sem presença concluída, com plantões contados",
+      sec.includes("Sem sessão de implementação &middot; 2") && sec.includes("Ana Clara") && sec.includes("Bruno Dias")
+      && !sec.includes("Diego") && !sec.includes("Carla") && /Ana Clara<\/td>\s*<td class="mono">[^<]*<\/td><td class="num">1<\/td>/.test(sec), sec.slice(0, 600));
+    app.estado.S = S0;
+    mod.renderDash();
+  }
   t.ok("matriz separa 1:1 de grupo em vez de somar",
     dash.includes(">1:1</th>") && !dash.includes('<th class="num">Total</th>'));
   t.ok("próximas mostra o encontro agregado",
@@ -278,6 +291,8 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   /* A ficha é página, não modal: sai em #app e leva o endereço junto. */
   t.secao("Ficha do mentorado");
   globalThis.openMentorado("m1", "sessoes");
+  t.ok("ficha resume implementação pendente e plantões desde a entrada",
+    app.tela().includes("Implementação pendente") && app.tela().includes("1 plantão(ões) de dúvida desde a entrada"));
   const ficha = app.tela();
   t.ok("endereço leva id e aba", app.endereco() === "#/mentorado/m1/sessoes", app.endereco());
   t.ok("sem lixo", semLixo(ficha), ficha.slice(0, 300));
@@ -358,6 +373,17 @@ const ESCRITA = ["salvarMentorado", "salvarSituacao", "toggleParcela", "addParce
   globalThis.location.hash = "#/nps";
   const nps = app.tela();
   t.ok("tela de NPS desenha", nps.includes("<h2>NPS</h2>") && semLixo(nps), nps.slice(0, 300));
+  {
+    const N0 = app.estado.NPS;
+    app.estado.NPS = [...N0, {id:"q1", mentor:"Gabriella", nota:9, respondido_em:"2026-10-14T15:00:00Z", nome_informado:"Nova",
+      comentario:"Boa", clareza:"Parcialmente", direcionamento:"Sim", apoio:"Precificação " + XSS}];
+    globalThis.setNps("npsPeriodo", "semana");
+    const n2 = app.tela();
+    t.ok("perguntas novas aparecem na resposta, com cor e escape", n2.includes('Clareza dos próximos passos <span class="pill amber">Parcialmente</span>')
+      && n2.includes('Direcionamento adequado <span class="pill green">Sim</span>') && n2.includes("Quer mais apoio em: Precificação") && escapado(n2));
+    app.estado.NPS = N0;
+    globalThis.setNps("npsPeriodo", "semana");
+  }
   t.ok("média geral sobre todas as respostas", nps.includes("Média geral</div><div class=\"v\">8,0"), nps.slice(nps.indexOf("Média geral"), nps.indexOf("Média geral") + 120));
   t.ok("média por semana, domingo à noite fica no domingo",
     nps.includes("<td>07/09 a 13/09</td><td class=\"num\">1</td><td class=\"num\"><b>10,0</b>")

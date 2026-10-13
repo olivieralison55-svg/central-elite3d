@@ -551,13 +551,21 @@ function nivelDe(total){
 
 /* Mentores que recebem novos agendamentos. Quem sai do projeto vai para
    MENTORES_HIST: some dos formularios, mas continua contando no historico. */
-const MENTORES = ["Luan","Sergio","Diovani","Petare","Michelle"];
+const MENTORES = ["Luan","Sergio","Diovani","Petare","Michelle","André","Gabriella"];
 const MENTORES_HIST = ["Israel","Evaldo"];
 const TODOS_MENTORES = [...MENTORES, ...MENTORES_HIST];
 const ETAPAS = ["Diagnóstico de Negócio","Plano de Ação","Checkup 1","Checkup 2","Checkup 3","Checkup 4","Checkup 5","Checkup 6","Checkup 7","Checkup 8","Checkup 9","Checkup 10"];
 /* Sessões em grupo: encontros coletivos, fora da trilha de 12 sessões 1:1.
    Ordem 90+ para nunca colidir com a numeração das etapas individuais. */
 const ETAPAS_GRUPO = ["Plantão de Dúvida Semanal","Sessão de Implementação Mensal"];
+/* Direitos do mentorado nas sessoes em grupo: 1 sessao de implementacao (a
+   falta dela e alerta no dashboard) e plantoes de duvida 1x por mes (so contados
+   na ficha, sem alerta). */
+const ETAPA_IMPLEMENTACAO = "Sessão de Implementação Mensal", ETAPA_PLANTAO = "Plantão de Dúvida Semanal";
+const implementacaoDe = mid => S.filter(s=>s.mentorado_id===mid && s.etapa===ETAPA_IMPLEMENTACAO && s.status==="Concluída")
+  .sort((a,b)=>String(a.data).localeCompare(String(b.data)))[0] || null;
+const plantoesDe = m => S.filter(s=>s.mentorado_id===m.id && s.etapa===ETAPA_PLANTAO && s.status==="Concluída"
+  && (!m.data_fechamento || !s.data || s.data>=m.data_fechamento)).length;
 const ETAPA_ORD = Object.fromEntries([
   ...ETAPAS.map((e,i)=>[e,i+1]),
   ...ETAPAS_GRUPO.map((e,i)=>[e,90+i]),
@@ -1460,6 +1468,7 @@ function renderDash(){
     const rota = marco && ROTAS.find(r=>r.id===marco.rota_id);
     return [{m, sub, ref, dias, marco, rota}];
   }).sort((a,b)=>b.dias-a.dias);
+  const semImplementacao = ativos.filter(m=>!implementacaoDe(m.id));
   const semSessao30 = ativos.filter(m=>{
     if(sessoes1a1De(m.id).some(s=>s.status==="Agendada")) return false;
     const ref = ultimaConcluida(m.id) || m.data_fechamento;
@@ -1604,6 +1613,7 @@ function renderDash(){
     {label:"Mentorados criados pela Lia, sem cadastro completo", count:incompletos.length, view:"mentorados", filtro:"incompletos"},
     {label:"Mentorados sem sessão há +30 dias", count:semSessao30.length, view:null, anchor:"risco"},
     {label:"Mentorados sem subir de marco há +30 dias", count:semSubida30.length, view:null, anchor:"sem-subida"},
+    {label:"Mentorados que ainda não fizeram a sessão de implementação", count:semImplementacao.length, view:null, anchor:"sem-implementacao"},
     aguardConf ? {label:"Sessões aguardando confirmação", count:aguardConf, view:"sessoes"} : null,
     ORFAS.length ? {label:"Sessões sem evento no Google Agenda", count:ORFAS.length, anchor:"orfas"} : null,
     /* Só para quem vê financeiro: é dinheiro recebido que a aplicação ainda não
@@ -1722,6 +1732,11 @@ function renderDash(){
           : `<td class="mono">nunca · fechou ${fmtD(m.data_fechamento)}</td><td><span class="pill red">Nunca começou</span></td>`)
       + `</tr>`;
   }).join("")}</tbody></table></div>`:`<div class="empty">Nenhum dos ${semSessao30.length} mentorados sem sessão casa com a busca.</div>`}</div>`:""}
+  ${semImplementacao.length?`<div class="panel detail" id="sem-implementacao"><h3>Sem sessão de implementação &middot; ${semImplementacao.length}</h3>
+  <div class="hint" style="margin-bottom:8px">Todo mentorado tem direito a uma. Conta a presença concluída em ${ETAPA_IMPLEMENTACAO}.</div>
+  <div style="overflow-x:auto"><table><thead><tr><th>Mentorado</th><th>Fechamento</th><th class="num">Plantões de dúvida</th></tr></thead><tbody>
+  ${semImplementacao.filter(m=>casaBusca(filtro.qDash, m.nome)).map(m=>`<tr class="click" onclick="openMentorado('${m.id}','sessoes')"><td>${esc(m.nome)}</td>
+    <td class="mono">${fmtD(m.data_fechamento)}</td><td class="num">${plantoesDe(m)}</td></tr>`).join("")}</tbody></table></div></div>`:""}
   ${semSubida30.length?`<div class="panel detail" id="sem-subida"><h3>Sem subir de marco há +30 dias &middot; ${semSubida30.length}</h3>
   <div class="hint" style="margin-bottom:8px">Contrato assinado. Conta da última subida de marco; quem nunca subiu, do fechamento.</div>
   <div style="overflow-x:auto"><table><thead><tr><th>Mentorado</th><th>Última subida</th><th class="num">Dias</th><th></th></tr></thead><tbody>
@@ -2743,6 +2758,15 @@ const chaveMentorado = l => l.mentorado_id || `nome:${l.mentorado}`;
 const npsDoMentorado = l => NPS.filter(r=>l.mentorado_id ? r.mentorado_id===l.mentorado_id : !r.mentorado_id && (r.nome_informado||"")===l.mentorado)
   .sort((a,b)=>String(b.respondido_em).localeCompare(String(a.respondido_em)));
 
+/* Perguntas da Pesquisa de Satisfacao desde 13/10/2026; nulas nas respostas anteriores. */
+const perguntasNps = r => {
+  const cor = v => /^sim/i.test(v) ? "green" : /^parcial/i.test(v) ? "amber" : "red";
+  const itens = [r.clareza && `Clareza dos próximos passos <span class="pill ${cor(r.clareza)}">${esc(r.clareza)}</span>`,
+    r.direcionamento && `Direcionamento adequado <span class="pill ${cor(r.direcionamento)}">${esc(r.direcionamento)}</span>`].filter(Boolean);
+  return (itens.length ? `<div class="hint" style="margin-top:6px;white-space:normal">${itens.join(" · ")}</div>` : "")
+    + (r.apoio ? `<div class="hint" style="margin-top:4px;white-space:pre-line">Quer mais apoio em: ${esc(r.apoio)}</div>` : "");
+};
+
 const colunaPC = (titulo, cor, itens) => `<div class="panel" style="margin:0"><h3><span class="pill ${cor}">${titulo}</span> ${itens.length}</h3>
   ${itens.length ? `<ul style="margin:0 0 0 18px">${itens.map(t=>`<li style="margin-bottom:6px">${esc(t)}</li>`).join("")}</ul>` : `<div class="empty">Nada nos dados desta rodada.</div>`}</div>`;
 
@@ -2758,7 +2782,7 @@ function telaPessoa(nome, sub, l, respostas, extra){
   <div class="panel"><h3>Respostas de NPS &middot; ${respostas.length}</h3>
     ${respostas.map(r=>`<div style="border-top:1px solid var(--border);padding:10px 0">${fmtInstante(r.respondido_em)} · ${pillNota(r.nota)}
       <span class="hint">${esc(r.mentor)} · ${esc((M.find(x=>x.id===r.mentorado_id)||{}).nome || r.nome_informado || "—")}</span>
-      ${r.comentario?`<div style="margin-top:4px;white-space:pre-line">${esc(r.comentario)}</div>`:""}</div>`).join("") || `<div class="empty">Sem respostas na base.</div>`}</div>`;
+      ${r.comentario?`<div style="margin-top:4px;white-space:pre-line">${esc(r.comentario)}</div>`:""}${perguntasNps(r)}</div>`).join("") || `<div class="empty">Sem respostas na base.</div>`}</div>`;
 }
 
 function iaMentores(){
@@ -2848,7 +2872,7 @@ function renderNps(){
   const doMentor = m => NPS.filter(r=>r.mentor===m);
 
   let lista = NPS.filter(r=>!mentorSel || r.mentor===mentorSel)
-    .filter(r=>casaBusca(filtro.qNps, r.nome_informado, r.mentor, r.comentario, (M.find(x=>x.id===r.mentorado_id)||{}).nome));
+    .filter(r=>casaBusca(filtro.qNps, r.nome_informado, r.mentor, r.comentario, r.apoio, (M.find(x=>x.id===r.mentorado_id)||{}).nome));
   lista = applySort(lista, "nps", {
     data:r=>r.respondido_em, nome:r=>(r.nome_informado||"").toLowerCase(), mentor:r=>r.mentor, nota:r=>Number(r.nota),
   }, "data", "desc");
@@ -2891,7 +2915,7 @@ function renderNps(){
       ${th("nps","data","Data")}${th("nps","nome","Mentorado")}${th("nps","mentor","Mentor")}${th("nps","nota","Nota","num")}<th>Comentário</th>
     </tr></thead><tbody>
     ${pagResp.itens.map(r=>`<tr><td>${fmtInstante(r.respondido_em)}</td><td>${nomeNps(r)}</td><td>${esc(r.mentor)}</td><td class="num">${pillNota(r.nota)}</td>
-      <td style="white-space:pre-line;min-width:260px">${esc(r.comentario||"—")}</td></tr>`).join("")
+      <td style="white-space:pre-line;min-width:260px">${esc(r.comentario||"—")}${perguntasNps(r)}</td></tr>`).join("")
       || `<tr><td colspan="5"><div class="empty">Ninguém neste recorte.</div></td></tr>`}
     </tbody></table></div>${pagResp.controles}</div>`}`;
 }
@@ -3033,6 +3057,8 @@ function renderFicha(){
     `Fechamento ${fmtD(m.data_fechamento)}`,
     (verFin && ps.length) ? `${ps.filter(p=>p.status==="paga").length}/${ps.length} parcelas pagas` : "",
     ss.length ? `${ss.filter(s=>s.status==="Concluída").length} de ${ss.length} sessões concluídas` : "",
+    implementacaoDe(id) ? `Implementação feita em ${fmtD(implementacaoDe(id).data)}` : "Implementação pendente",
+    `${plantoesDe(m)} plantão(ões) de dúvida desde a entrada`,
   ].filter(Boolean).join(" · ");
 
   $("#app").innerHTML = `
