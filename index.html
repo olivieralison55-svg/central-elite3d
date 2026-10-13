@@ -633,9 +633,10 @@ let myRole = null, myProfile = null;
    `diretoria` nao tem policy de INSERT, UPDATE nem DELETE em lugar nenhum. */
 const CAPACIDADES = {
   admin:     ["verFinanceiro","criarMentorado","editarMentorado","editarFinanceiro",
-              "escreverSessao","criarSessao","escreverRotas","excluir"],
-  diretoria: ["verFinanceiro"],
-  mentor:    ["escreverSessao","escreverRotas"],
+              "escreverSessao","criarSessao","escreverRotas","excluir","verIa"],
+  diretoria: ["verFinanceiro","verIa"],
+  /* verIa sem verFinanceiro = recorte do mentor na Análise IA (analise_ia_mentor) */
+  mentor:    ["escreverSessao","escreverRotas","verIa"],
 };
 const PAPEL_LABEL = {admin:"Administrador", diretoria:"Diretoria", mentor:"Mentor"};
 const pode = (cap) => (CAPACIDADES[myRole] || []).includes(cap);
@@ -668,6 +669,8 @@ async function afterLogin(session){
     $("#navAnaliseMobile").style.display = "none";
     $("#navNps").style.display = "none";
     $("#navNpsMobile").style.display = "none";
+  }
+  if(!pode("verIa")){
     $("#navIa").style.display = "none";
     $("#navIaMobile").style.display = "none";
   }
@@ -714,7 +717,7 @@ async function loadAll(){
     : Promise.resolve({data:[], error:null});
   const semNada = Promise.resolve({data:[], error:null});
   const verStl = pode("verFinanceiro");
-  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd,nps,exp,ana,ades] = await Promise.all([
+  const [m,p,cob,s,r,md,mm,fat,cn,mc,orf,stl,stlPed,stlProd,nps,exp,ana,ades,anaMentor] = await Promise.all([
     mentorQuery,
     parcelaQuery,
     cobrancaQuery,
@@ -733,6 +736,7 @@ async function loadAll(){
     verStl ? paginado(()=>db.from("experiencia_respostas").select("*").order("respondido_em",{ascending:false})) : semNada,
     verStl ? db.from("nps_analises").select("*").order("gerado_em",{ascending:false}).limit(1) : semNada,
     db.rpc("experiencia_adesao", {p_desde: INICIO_COBRANCA_NPS, p_prazo_dias: PRAZO_RESPOSTA_DIAS}),
+    (!verStl && pode("verIa")) ? db.rpc("analise_ia_mentor") : semNada,
   ]);
   if(m.error||p.error||s.error){ toast((m.error||p.error||s.error).message, true); return; }
   M = m.data; P = p.data; S = s.data;
@@ -747,8 +751,9 @@ async function loadAll(){
   if(erroStl) console.error("[stlseller] load failed", erroStl);
   NPS = nps.data||[]; NPS_ERRO = nps.error ? nps.error.message : null;
   if(nps.error) console.error("[nps] load failed", nps.error);
-  const erroExp = exp.error || ana.error;
-  EXPERIENCIA = exp.data||[]; ANALISE = (ana.data||[])[0] || null;
+  const erroExp = exp.error || ana.error || anaMentor.error;
+  /* O mentor recebe só o recorte da análise: sem resumo, sem "Por mentor" e sem os alertas sobre mentores. */
+  EXPERIENCIA = exp.data||[]; ANALISE = (ana.data||[])[0] || (anaMentor.data||[])[0] || null;
   // Aviso de adesao nao trava a aplicacao: sem ele o dashboard so nao mostra o painel.
   if(ades.error) console.error("[experiencia_adesao]", ades.error);
   ADESAO_EXP = ades.error ? null : (ades.data||[])[0] || null;
@@ -1334,7 +1339,8 @@ function aplicarEndereco(desenhar=true){
   if(!myRole) return; // hashchange antes do login não tem tela para desenhar
   const e = lerEndereco();
   // o financeiro é fechado por papel: link colado não abre o que a tela esconde
-  if(["financeiro","analise","nps","ia"].includes(e.view) && !pode("verFinanceiro")) return irPara("#/dash");
+  if(["financeiro","analise","nps"].includes(e.view) && !pode("verFinanceiro")) return irPara("#/dash");
+  if(e.view==="ia" && !pode("verIa")) return irPara("#/dash");
   if(e.view!=="sessoes") foco = null; // foco é do alerta que trouxe a pessoa aqui
   if(e.view!=="mentorado") voltarPara = "#/"+e.view;
   view = e.view; fichaId = e.id||null; fichaAba = e.aba||"cadastro";
@@ -1368,7 +1374,7 @@ function render(){
   else if(view==="financeiro" && pode("verFinanceiro")) renderFinanceiro();
   else if(view==="analise" && pode("verFinanceiro")) renderAnalise();
   else if(view==="nps" && pode("verFinanceiro")) renderNps();
-  else if(view==="ia" && pode("verFinanceiro")) renderIa();
+  else if(view==="ia" && pode("verIa")) renderIa();
   else { view="dash"; renderDash(); }
 }
 
@@ -2742,7 +2748,7 @@ const lista_ = v => Array.isArray(v) ? v : [];
 function iaGeral(){
   const ordem = {alta:0, media:1, baixa:2};
   const alertas = lista_(ANALISE.alertas).slice().sort((a,b)=>(ordem[a.severidade]??3)-(ordem[b.severidade]??3));
-  return `<div class="panel"><h3>Resumo</h3><p style="white-space:pre-line;margin:0">${esc(ANALISE.resumo)}</p></div>
+  return `${ANALISE.resumo!=null?`<div class="panel"><h3>Resumo</h3><p style="white-space:pre-line;margin:0">${esc(ANALISE.resumo)}</p></div>`:""}
   <div class="panel"><h3>Alertas &middot; ${alertas.length}</h3>
     ${alertas.map(a=>{ const [cor,rot] = SEVERIDADE[a.severidade] || ["amber", a.severidade];
       const quem = [a.mentor && `Mentor: ${a.mentor}`, a.mentorado && `Mentorado: ${a.mentorado}`].filter(Boolean).join(" · ");
@@ -2787,10 +2793,10 @@ function telaPessoa(nome, sub, l, respostas, extra){
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px">
     ${colunaPC("Prós","green",prosDe(l))}${colunaPC("Contras","red",contrasDe(l))}</div>
   ${pauta.length ? `<div class="panel"><h3>Pauta para a conversa</h3><ol style="margin:0 0 0 18px">${pauta.map(t=>`<li style="margin-bottom:6px">${esc(t)}</li>`).join("")}</ol></div>` : ""}
-  <div class="panel"><h3>Respostas de NPS &middot; ${respostas.length}</h3>
+  ${!pode("verFinanceiro") ? "" : `<div class="panel"><h3>Respostas de NPS &middot; ${respostas.length}</h3>
     ${respostas.map(r=>`<div style="border-top:1px solid var(--border);padding:10px 0">${fmtInstante(r.respondido_em)} · ${pillNota(r.nota)}
       <span class="hint">${esc(r.mentor)} · ${esc((M.find(x=>x.id===r.mentorado_id)||{}).nome || r.nome_informado || "—")}</span>
-      ${r.comentario?`<div style="margin-top:4px;white-space:pre-line">${esc(r.comentario)}</div>`:""}${perguntasNps(r)}</div>`).join("") || `<div class="empty">Sem respostas na base.</div>`}</div>`;
+      ${r.comentario?`<div style="margin-top:4px;white-space:pre-line">${esc(r.comentario)}</div>`:""}${perguntasNps(r)}</div>`).join("") || `<div class="empty">Sem respostas na base.</div>`}</div>`}`;
 }
 
 function iaMentores(){
@@ -2834,17 +2840,20 @@ function iaMentorados(){
 }
 
 function renderIa(){
-  const aba = filtro.iaAba;
+  const completa = pode("verFinanceiro"); // sem isso é o recorte do mentor
+  const aba = (!completa && filtro.iaAba==="mentores") ? "geral" : filtro.iaAba;
   const corpo = EXP_ERRO ? `<div class="panel"><div class="empty">Não foi possível carregar a análise: ${esc(EXP_ERRO)}</div></div>`
     : !ANALISE ? `<div class="panel"><div class="empty">Nenhuma análise ainda. O analista roda todo dia às 8h, só quando chegou resposta nova.</div></div>`
     : `<div class="rowflex" style="justify-content:space-between;flex-wrap:wrap;margin-bottom:16px">
-        ${abas("setIa","iaAba",aba,[["geral","Visão geral"],["mentores","Por mentor"],["mentorados","Por mentorado"]])}
+        ${abas("setIa","iaAba",aba,completa ? [["geral","Visão geral"],["mentores","Por mentor"],["mentorados","Por mentorado"]]
+                                            : [["geral","Visão geral"],["mentorados","Por mentorado"]])}
         <span class="hint">${fmtInstante(ANALISE.gerado_em)} · ${esc(ANALISE.respostas)} resposta(s) lidas · ${esc(ANALISE.modelo)}</span></div>
+      ${completa?"":`<div class="hint" style="margin-bottom:12px">Visão dos mentores: alertas sobre mentorados e sobre a mentoria, e a leitura de cada mentorado.</div>`}
       ${aba==="mentores" ? iaMentores() : aba==="mentorados" ? iaMentorados() : iaGeral()}`;
   $("#app").innerHTML = `
   <div class="topbar"><div><h2>Análise IA</h2>
     <div class="sub">Leitura do Claude sobre o NPS das sessões e a Pesquisa de Experiência. Roda todo dia às 8h,
-      só quando chegou resposta nova. Visível só para admin e diretoria — os mentores não recebem.</div></div></div>
+      só quando chegou resposta nova.${completa?" Os mentores veem só a visão geral sem os alertas sobre mentores e a aba Por mentorado.":""}</div></div></div>
   ${corpo}`;
 }
 
