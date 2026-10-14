@@ -990,17 +990,17 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Sem capacidade: `escrever` não é chamado
-- [ ] Duas chamadas no mesmo tick: `escrever` roda uma vez
-- [ ] Erro: toast com a mensagem e `false`
-- [ ] 0 linhas: "Nada foi gravado: sem permissão ou registro não encontrado." e `false`
-- [ ] Escrita parcial: "N de M gravadas" e `false`
-- [ ] Sessão ausente ou de outro usuário: `escrever` não é chamado e a escrita é descartada
-- [ ] Sucesso: toast, `recarregar()` e `true`
-- [ ] W11 seguido de W11b com falha: "Cadastro salvo, mas as cobranças da Lia não foram puxadas:" seguido do erro
-- [ ] Falha de `lia_refletir_financeiro`: o erro num toast
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 243 → 253
+- [x] Sem capacidade: `escrever` não é chamado
+- [x] Duas chamadas no mesmo tick: `escrever` roda uma vez
+- [x] Erro: toast com a mensagem e `false`
+- [x] 0 linhas: "Nada foi gravado: sem permissão ou registro não encontrado." e `false`
+- [x] Escrita parcial: "N de M gravadas" e `false`
+- [x] Sessão ausente ou de outro usuário: `escrever` não é chamado e a escrita é descartada
+- [x] Sucesso: toast, `recarregar()` e `true`
+- [x] W11 seguido de W11b com falha: "Cadastro salvo, mas as cobranças da Lia não foram puxadas:" seguido do erro
+- [x] Falha de `lia_refletir_financeiro`: o erro num toast
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 243 → 253
 
 **Tests**: unit
 **Gate**: quick

@@ -590,10 +590,10 @@ Depois do G6, problema vira correção para a frente, não revert.
 | DATA-09 | P1: Porta — última recarga vence (AC9) | Execute | Implementing |
 | WRITE-01 | P1: Escritas — payload igual (AC1) | Execute | Implementing |
 | WRITE-02 | P1: Escritas — 0 linhas não é sucesso (AC2) | Execute | Implementing |
-| WRITE-03 | P1: Escritas — botão travado (AC3) | - | Pending |
-| WRITE-04 | P1: Escritas — clique duplo (AC4) | - | Pending |
-| WRITE-05 | P1: Escritas — erro mantém o formulário (AC5) | - | Pending |
-| WRITE-06 | P1: Escritas — falha do `lia_adotar_orfas` (AC6) | - | Pending |
+| WRITE-03 | P1: Escritas — botão travado (AC3) | Execute | Implementing |
+| WRITE-04 | P1: Escritas — clique duplo (AC4) | Execute | Implementing |
+| WRITE-05 | P1: Escritas — erro mantém o formulário (AC5) | Execute | Implementing |
+| WRITE-06 | P1: Escritas — falha do `lia_adotar_orfas` (AC6) | Execute | Implementing |
 | WRITE-07 | P1: Escritas — falha do `lia_refletir_financeiro` (AC7) | Execute | Implementing |
 | WRITE-08 | P1: Escritas — capacidade no handler (AC8) | Execute | Implementing |
 | WRITE-09 | P1: Escritas — diretoria sem controle de escrita (AC9) | - | Pending |
