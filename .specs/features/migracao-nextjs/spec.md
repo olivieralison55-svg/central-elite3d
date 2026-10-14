@@ -1,7 +1,7 @@
 # Migração do front para Next.js e o design system da product-ops — Specification
 
 **Scope:** Complex · **Date:** 2026-10-13 · **Base:** `main@2aea455`; a paridade é medida contra o `index.html` do merge-base com a `main` a cada G2
-**Status:** em execução desde 13/10/2026, a pedido do Lucas. Próxima fase: Design. O Execute só começa com o G0 verde.
+**Status:** em execução desde 13/10/2026, a pedido do Lucas. Design pronto em [`design.md`](design.md), com as emendas listadas lá. Próximas fases: threat pass e Tasks. O app só começa a ser escrito com o G0 verde.
 **Insumo:** [`docs/planejamento/mapeamento-migracao-nextjs.md`](../../../docs/planejamento/mapeamento-migracao-nextjs.md) (citado abaixo como "mapeamento §N"). O mapeamento descreve o comportamento de hoje e é o contrato de paridade desta spec.
 
 ## Problem Statement
@@ -44,7 +44,7 @@ Decisões do orquestrador, tomadas pela opção mais segura dentro do pedido. S�
 | Formato do endereço | Rotas do App Router com os mesmos nomes do hash de hoje (`/sessoes`, `/mentorado/<id>/financeiro`). Um link antigo `#/…` é trocado no cliente pelo caminho equivalente | O hash existia porque o deploy era estático, sem rota no servidor. O Next tem rota de verdade, com voltar e avançar nativos. O redirecionamento mantém os links de ficha que já circulam no WhatsApp | n |
 | Identidade visual | Design system da plataforma sem acento próprio: Inter, `primary` `#4169e1`, tema claro e escuro pelo `ThemeToggle`, começando pelo tema do sistema operacional. O verde-limão e a Manrope saem | Pedido explícito: o mesmo design system. Cor fora dos tokens deixaria de ser o mesmo visual | n |
 | Fonte do design system | Cópia literal da `plataforma-product-ops` na `main`, lida com `git show main:<caminho>`, com o commit registrado em `src/design-system/SNAPSHOT` | O snapshot do skill `design-system-ops` (30/09) está atrás da `main` (mapeamento §8). A pasta da plataforma está noutra branch, com trabalho de outra sessão: ler do working tree pegaria código não mesclado | n |
-| Lacunas do design system | Primitivo genérico novo, como arquivo novo em `src/components/ui/`. Extensão de um arquivo copiado só com AD que nomeia o arquivo | Arquivo copiado e editado à mão deixa de ser o mesmo design system e trava a próxima cópia (AD-006) | n |
+| Lacunas do design system | Primitivo do design system que já existe, composição deles, ou primitivo genérico novo como arquivo novo em `src/components/ui/`. Extensão de um arquivo copiado só com AD que nomeia o arquivo | Arquivo copiado e editado à mão deixa de ser o mesmo design system e trava a próxima cópia (AD-006) | n |
 | Hospedagem e domínio | O mesmo projeto Vercel e o mesmo domínio `central-elite3d.vercel.app`. A branch leva `vercel.json` com `"framework": "nextjs"`, que sobrepõe o preset do projeto por deploy (documentação da Vercel, `project-configuration/vercel-json`). O dono não precisa mudar o projeto | O mesmo domínio preserva a sessão salva e os links. A `main` continua publicando o app estático até o merge, porque não tem `vercel.json` | n |
 | Variáveis públicas | `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, com padrão igual aos valores de produção em `src/lib/data/config.ts` | A chave publicável é pública por desenho e já está no repo. O padrão evita uma configuração externa no corte; é o mesmo desenho do template da plataforma (`PLATFORM_URL`) | n |
 | Versão do supabase-js | Fixa em `2.117.3` | É a que o `@2` do CDN entrega hoje: o mesmo comportamento que roda em produção | n |
@@ -98,18 +98,20 @@ O app está em produção, sem staging, e o push na `main` publica. Um gate só 
 - **Ação remota só com "go" do Lucas escrito na evidência:** push de branch, push de tag, merge e push na `main`, mudança na Vercel, criação de conta.
 - **Ordem fixa:** G0 → G1 (a cada task) → G2 → G3 → G4 → G5 → G6.
 
-### G0 — Pré-voo (antes do primeiro commit de código)
+### G0 — Pré-voo (antes do primeiro commit do app)
+
+A Fase 0 do `tasks.md` (casca do repo, cópia do design system e script de snapshot) roda antes do G0, sob o G1: o G0.2 e o G0.3 dependem dela.
 
 | item | verificação | passa quando |
 | ---- | ----------- | ------------ |
 | G0.1 | `node tests/testes.mjs` na base | exit 0 e 497 asserções |
 | G0.2 | snapshot de paridade (GATE-05) | gravado fora do repo, com a contagem de linhas de R01–R22 na evidência |
-| G0.3 | commit do design system | sha da `main` da plataforma gravado em `src/design-system/SNAPSHOT` |
+| G0.3 | commit do design system | sha gravado em `src/design-system/SNAPSHOT` e alcançável pela `origin/main` da plataforma |
 | G0.4 | Vercel | o dono confirma por escrito: previews de branch ligados e `main` como branch de produção |
 | G0.5 | contas de UAT | uma conta de diretoria e uma de mentor disponíveis |
 | G0.6 | congelamento e janela | Lucas aprova o congelamento do `index.html` e a janela do corte |
 
-Se falhar: o Execute não começa.
+Se falhar: a Fase 1 não começa.
 
 ### G1 — Task (cada commit da branch)
 
@@ -207,7 +209,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 
 **Acceptance Criteria**:
 
-1. The app SHALL usar Next.js 15 com App Router, React 19, TypeScript com `strict`, Tailwind 3 e pnpm, com as versões de `next`, `react`, `react-dom`, `tailwindcss`, `zod`, `vitest`, `lucide-react` e `react-hot-toast` iguais às do `package.json` da plataforma no commit de `src/design-system/SNAPSHOT`.  <!-- ubiquitous -->
+1. The app SHALL usar Next.js 15 com App Router, React 19, TypeScript com `strict`, Tailwind 3 e pnpm, com as versões de `next`, `react`, `react-dom`, `tailwindcss`, `zod`, `vitest`, `lucide-react` e `react-hot-toast` iguais às resolvidas no `pnpm-lock.yaml` da plataforma no commit de `src/design-system/SNAPSHOT`, fixadas sem `^`.  <!-- ubiquitous -->
 2. The app SHALL manter o design system em `src/design-system/` e `src/components/ui/`, nos mesmos caminhos da plataforma, a camada de dados em `src/lib/data/` e as regras de negócio como funções puras em `src/lib/`, fora dos componentes.  <!-- ubiquitous -->
 3. WHEN `pnpm typecheck`, `pnpm test` e `pnpm build` rodam THEN cada comando SHALL sair com código 0.  <!-- event-driven -->
 4. The repo SHALL ter `.gitignore` cobrindo (`node_modules/`, `.next/`, `.vercel/`, `.env*` exceto `.env.example`, `supabase/.temp/`), e `git ls-files` SHALL não listar nenhum arquivo `.env*` além de `.env.example`.  <!-- ubiquitous -->
@@ -372,7 +374,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 
 1. The editor SHALL usar `contenteditable` e os comandos de edição do navegador, sem biblioteca de editor.  <!-- ubiquitous -->
 2. The app SHALL sanitizar o HTML da nota com DOMPurify, permitindo só as tags de `NOTA_TAGS` e os atributos `href` e `class`, ao abrir, ao colar e ao salvar.  <!-- ubiquitous -->
-3. IF o sanitizador não está disponível THEN o editor SHALL ficar só leitura e SHALL não gravar.  <!-- unwanted-behavior -->
+3. IF o sanitizador não está disponível THEN o editor SHALL ficar só leitura, SHALL não exibir o HTML da nota e SHALL não gravar.  <!-- unwanted-behavior -->
 4. WHEN o usuário fica 1 s sem digitar THEN a porta SHALL gravar a nota (W10).  <!-- event-driven -->
 5. WHEN o usuário troca de aba, de ficha ou de tela com gravação pendente THEN o app SHALL gravar a nota antes de desmontar o editor.  <!-- event-driven -->
 6. WHILE o papel é `diretoria` the editor SHALL ficar só leitura e sem barra de ferramentas.  <!-- state-driven -->
@@ -417,7 +419,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 3. The app SHALL usar a Inter auto-hospedada por `next/font/local`, com o `InterVariable.woff2` da plataforma (AD-037 dela), e SHALL não carregar Manrope nem fonte do Google.  <!-- ubiquitous -->
 4. WHEN o usuário troca o tema no `ThemeToggle` THEN as 10 telas e a ficha SHALL usar os tokens do tema escolhido, e WHEN não há escolha salva THEN o tema SHALL seguir o do sistema operacional.  <!-- event-driven -->
 5. The app SHALL usar `ConfirmDialog` para excluir sessão, parcela e faturamento (a exclusão de mentorado mantém o nome digitado de OPS-11), e o código SHALL não chamar `window.confirm`, `window.prompt` nem `window.alert`.  <!-- ubiquitous -->
-6. The app SHALL resolver as lacunas listed in mapeamento §8 (data única, mês, combobox, trilha de 12 segmentos, paginação, ordenação e clique de linha em tabela, moeda BRL) com primitivo genérico em `src/components/ui/` ou extensão retrocompatível, cada uma com AD em `docs/decisions/`.  <!-- ubiquitous -->
+6. The app SHALL resolver as lacunas listed in mapeamento §8 (data única, mês, combobox, trilha de 12 segmentos, paginação, ordenação e clique de linha em tabela, moeda BRL) com primitivo do design system (existente, composição de existentes ou arquivo novo genérico em `src/components/ui/`), sem editar arquivo copiado, e SHALL registrar a escolha de cada lacuna num AD em `docs/decisions/`.  <!-- ubiquitous -->
 7. The app SHALL mostrar `EmptyState` em lista vazia e `Skeleton` durante carregamento.  <!-- ubiquitous -->
 8. The casca do app (sidebar, menu mobile, usuário e Sair) SHALL ser montada com primitivos do design system (`NavItem`, `Button`, `Avatar`), sem CSS próprio.  <!-- ubiquitous -->
 
@@ -435,7 +437,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 
 1. WHEN `tests/` é apagado THEN cada grupo listed in mapeamento §7 SHALL ter pelo menos um teste vitest que afirma o mesmo resultado sobre o código novo.  <!-- event-driven -->
 2. The suíte SHALL renderizar as 10 telas, a ficha e os modais com o nome de mentorado `<img src=x onerror=alert(1)>` e SHALL achar `&lt;img` e não achar `<img src=x` no HTML gerado.  <!-- ubiquitous -->
-3. The código em `src/` SHALL usar `dangerouslySetInnerHTML` só no editor de notas e sempre com a saída do DOMPurify, verificado por teste.  <!-- ubiquitous -->
+3. The código em `src/` SHALL atribuir HTML (`dangerouslySetInnerHTML` ou `innerHTML`) só no editor de notas e sempre com a saída de `sanitizarNota`, verificado por teste.  <!-- ubiquitous -->
 4. The suíte SHALL afirmar, lendo `supabase/functions/sync-google-calendar/index.ts`, que as etapas e ordens de `TRILHA` são as de `ETAPAS`/`ETAPA_ORD` e que cada nome de `MENTORES` aparece como valor de `EMAIL_MENTOR`.  <!-- ubiquitous -->
 5. The suíte SHALL afirmar que `hojeSP()` às 23:30 de Brasília (02:30 UTC do dia seguinte) devolve a data de Brasília.  <!-- ubiquitous -->
 6. WHEN `pnpm test` roda THEN a suíte SHALL sair com 0 sem rede e sem banco.  <!-- event-driven -->
@@ -457,7 +459,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 3. The evidência SHALL conter só ids e contagens, sem nome, e-mail, comentário ou valor financeiro de mentorado.  <!-- ubiquitous -->
 4. The branch SHALL ter `vercel.json` com `"framework": "nextjs"`, e WHILE a branch não foi mesclada the `main` SHALL continuar publicando o app estático.  <!-- complex -->
 5. The script de snapshot SHALL ler R01–R22 com a sessão de um admin, pedir e-mail e senha no terminal sem gravá-los, e gravar o resultado fora do repo, numa pasta com permissão `0700`.  <!-- ubiquitous -->
-6. The script de paridade SHALL calcular as métricas PAR-01 a PAR-17 do Apêndice A com o `index.html` do merge-base, executado pelo `tests/ambiente.mjs`, e com o app novo, sobre o mesmo snapshot e a mesma data de "hoje", e SHALL sair com código 1 se houver divergência fora das exceções do Apêndice A.  <!-- ubiquitous -->
+6. The script de paridade SHALL calcular as métricas PAR-01 a PAR-17 do Apêndice A com o `index.html` do merge-base, executado pela técnica do `tests/ambiente.mjs` num carregador que alimenta o `loadAll` com o snapshot, e com o app novo, sobre o mesmo snapshot e a mesma data de "hoje", e SHALL sair com código 1 se houver divergência fora das exceções do Apêndice A.  <!-- ubiquitous -->
 7. WHEN o script de paridade acha divergência THEN o relatório SHALL mostrar a métrica, o id e os dois valores, sem nome, e-mail nem comentário.  <!-- event-driven -->
 8. WHILE o UAT da diretoria roda no preview the navegador SHALL não enviar POST, PATCH nem DELETE a `/rest/v1/` além de `POST /rest/v1/rpc/experiencia_adesao`.  <!-- state-driven -->
 9. WHEN o UAT de escrita roda THEN o admin SHALL usar como único mentorado de toda escrita o registro de teste `ZZQ Migracao Xyzzy` (`zzq-migracao@example.invalid`) e SHALL excluí-lo no fim.  <!-- event-driven -->
@@ -618,7 +620,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | UI-08 | P1: Design system — casca com primitivos do DS (AC8) | - | Pending |
 | TEST-01 | P1: Testes — 20 grupos portados (AC1) | - | Pending |
 | TEST-02 | P1: Testes — XSS em toda tela (AC2) | - | Pending |
-| TEST-03 | P1: Testes — `dangerouslySetInnerHTML` só nas notas (AC3) | - | Pending |
+| TEST-03 | P1: Testes — HTML atribuído só nas notas (AC3) | - | Pending |
 | TEST-04 | P1: Testes — listas iguais às da function (AC4) | - | Pending |
 | TEST-05 | P1: Testes — `hojeSP()` às 23:30 (AC5) | - | Pending |
 | TEST-06 | P1: Testes — offline (AC6) | - | Pending |
@@ -648,7 +650,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | EDGE-04 | Edge — nota grande demais | - | Pending |
 | EDGE-05 | Edge — status fora do domínio | - | Pending |
 
-**Coverage:** 127 total, 0 mapped to tasks, 127 unmapped ⚠️ (Design e Tasks ainda não rodaram)
+**Coverage:** 127 total, 0 mapped to tasks, 127 unmapped ⚠️ (Design pronto; Tasks ainda não rodou)
 
 ---
 
