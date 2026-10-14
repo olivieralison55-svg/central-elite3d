@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { ETAPA_ORD } from "@/lib/constantes";
+import { ordemDaEtapa } from "@/lib/constantes";
 
 import { cliente } from "./cliente";
 import type { Parcela, Resultado } from "./esquemas";
@@ -43,7 +43,6 @@ async function conferir(rel: string, pedido: Resposta, esperadas = 1): Promise<R
 
 // Campo de texto do formulário: vazio vira null, como o `value || null` de hoje.
 const ouNulo = (valor: string | null) => valor || null;
-const ordemDaEtapa = (etapa: string) => ETAPA_ORD[etapa] ?? 99;
 
 // W02: os campos de um encontro em grupo, iguais para todos os participantes.
 export interface EncontroGrupo {

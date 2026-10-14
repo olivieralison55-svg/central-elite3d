@@ -1051,10 +1051,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] O teste lê `supabase/functions/sync-google-calendar/index.ts`: etapas e ordens de `TRILHA` iguais a `ETAPAS`/`ETAPA_ORD`; cada nome de `MENTORES` aparece como valor de `EMAIL_MENTOR`
-- [ ] `ETAPAS_GRUPO` com ordens 90 e 91; fallback 99
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 255 → 260
+- [x] O teste lê `supabase/functions/sync-google-calendar/index.ts`: etapas e ordens de `TRILHA` iguais a `ETAPAS`/`ETAPA_ORD`; cada nome de `MENTORES` aparece como valor de `EMAIL_MENTOR`
+- [x] `ETAPAS_GRUPO` com ordens 90 e 91; fallback 99
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 255 → 260
 
 **Tests**: unit
 **Gate**: quick

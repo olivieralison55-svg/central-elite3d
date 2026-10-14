@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { z } from "zod";
 
+import { INICIO_COBRANCA_NPS, PRAZO_RESPOSTA_DIAS } from "@/lib/constantes";
 import { type Papel, pode } from "@/lib/papeis";
 
 import { usuarioDaSessao } from "./auth";
@@ -14,10 +15,6 @@ import { lerPaginado, type Ordem, validarLinhas } from "./paginar";
 // DATA-06: falha de R02/R03, R04 ou R06 derruba a carga; a de outra relação vai para `erros`, e
 // só as telas que a usam mostram o erro (DATA-07). SEC-06: `sessaoMudou` diz que nada foi lido.
 export type Carga = { ok: true; dados: Dataset; erros: ErrosDeCarga } | { ok: false; erro: string; sessaoMudou?: true };
-
-// `INICIO_COBRANCA_NPS` e `PRAZO_RESPOSTA_DIAS` do index.html (:807–809), os argumentos do R20.
-const INICIO_COBRANCA_NPS = "2026-10-13";
-const PRAZO_RESPOSTA_DIAS = 2;
 
 type Resposta = PromiseLike<{ data: unknown; error: { message: string } | null }>;
 

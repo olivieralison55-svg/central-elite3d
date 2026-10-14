@@ -599,7 +599,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | WRITE-09 | P1: Escritas — diretoria sem controle de escrita (AC9) | - | Pending |
 | OPS-01 | P1: Operação — painel de atenção (AC1) | - | Pending |
 | OPS-02 | P1: Operação — matriz conta reunião (AC2) | - | Pending |
-| OPS-03 | P1: Operação — mentor normalizado (AC3) | - | Pending |
+| OPS-03 | P1: Operação — mentor normalizado (AC3) | Execute | Implementing |
 | OPS-04 | P1: Operação — mês padrão (AC4) | - | Pending |
 | OPS-05 | P1: Operação — só 1:1 na trilha (AC5) | - | Pending |
 | OPS-06 | P1: Operação — grupo grava N linhas (AC6) | Execute | Implementing |
@@ -650,7 +650,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | TEST-01 | P1: Testes — 20 grupos portados (AC1) | - | Pending |
 | TEST-02 | P1: Testes — XSS em toda tela (AC2) | Execute | Implementing |
 | TEST-03 | P1: Testes — HTML atribuído só nas notas (AC3) | Execute | Implementing |
-| TEST-04 | P1: Testes — listas iguais às da function (AC4) | - | Pending |
+| TEST-04 | P1: Testes — listas iguais às da function (AC4) | Execute | Implementing |
 | TEST-05 | P1: Testes — `hojeSP()` às 23:30 (AC5) | - | Pending |
 | TEST-06 | P1: Testes — offline (AC6) | Execute | Implementing |
 | GATE-01 | P1: Gates — ordem e refazer o que falhou (AC1) | - | Pending |
