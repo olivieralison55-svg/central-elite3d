@@ -588,8 +588,8 @@ Depois do G6, problema vira correção para a frente, não revert.
 | DATA-07 | P1: Porta — erro isolado por relação (AC7) | Execute | Implementing |
 | DATA-08 | P1: Porta — só 4 rpcs (AC8) | Execute | Implementing |
 | DATA-09 | P1: Porta — última recarga vence (AC9) | Execute | Implementing |
-| WRITE-01 | P1: Escritas — payload igual (AC1) | - | Pending |
-| WRITE-02 | P1: Escritas — 0 linhas não é sucesso (AC2) | - | Pending |
+| WRITE-01 | P1: Escritas — payload igual (AC1) | Execute | Implementing |
+| WRITE-02 | P1: Escritas — 0 linhas não é sucesso (AC2) | Execute | Implementing |
 | WRITE-03 | P1: Escritas — botão travado (AC3) | - | Pending |
 | WRITE-04 | P1: Escritas — clique duplo (AC4) | - | Pending |
 | WRITE-05 | P1: Escritas — erro mantém o formulário (AC5) | - | Pending |
@@ -602,9 +602,9 @@ Depois do G6, problema vira correção para a frente, não revert.
 | OPS-03 | P1: Operação — mentor normalizado (AC3) | - | Pending |
 | OPS-04 | P1: Operação — mês padrão (AC4) | - | Pending |
 | OPS-05 | P1: Operação — só 1:1 na trilha (AC5) | - | Pending |
-| OPS-06 | P1: Operação — grupo grava N linhas (AC6) | - | Pending |
+| OPS-06 | P1: Operação — grupo grava N linhas (AC6) | Execute | Implementing |
 | OPS-07 | P1: Operação — grupo por etapa, data e hora (AC7) | - | Pending |
-| OPS-08 | P1: Operação — etapa deduzida (AC8) | - | Pending |
+| OPS-08 | P1: Operação — etapa deduzida (AC8) | Execute | Implementing |
 | OPS-09 | P1: Operação — últimas 30 concluídas (AC9) | - | Pending |
 | OPS-10 | P1: Operação — busca (AC10) | - | Pending |
 | OPS-11 | P1: Operação — exclusão pelo nome (AC11) | - | Pending |

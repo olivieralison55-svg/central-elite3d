@@ -872,15 +872,15 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] W01: `update({ status: "Concluída", mentor }).in("id", ids)`
-- [ ] W02: `insert` de N linhas com `mentorado_id`, `etapa`, `ordem` (`ETAPA_ORD` ou 99), `status`, `mentor`, `data`, `hora`, `link_meet`, `link_gravacao`, vazios como `null`, mesma etapa, data, hora, mentor e status
-- [ ] W03: payload com `etapa_deduzida: false`; `insert` sem id e `update` com id
-- [ ] W04: `update({ status: "Concluída", mentor })` sem `etapa_deduzida`
-- [ ] W05: `delete().eq("id", id)`
-- [ ] Resposta sem erro e com 0 linhas → `{ ok: false, zeroLinhas: true }`
-- [ ] W01 e W02 com menos linhas que as pedidas → `{ ok: false, linhas, esperadas }`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 202 → 215
+- [x] W01: `update({ status: "Concluída", mentor }).in("id", ids)`
+- [x] W02: `insert` de N linhas com `mentorado_id`, `etapa`, `ordem` (`ETAPA_ORD` ou 99), `status`, `mentor`, `data`, `hora`, `link_meet`, `link_gravacao`, vazios como `null`, mesma etapa, data, hora, mentor e status
+- [x] W03: payload com `etapa_deduzida: false`; `insert` sem id e `update` com id
+- [x] W04: `update({ status: "Concluída", mentor })` sem `etapa_deduzida`
+- [x] W05: `delete().eq("id", id)`
+- [x] Resposta sem erro e com 0 linhas → `{ ok: false, zeroLinhas: true }`
+- [x] W01 e W02 com menos linhas que as pedidas → `{ ok: false, linhas, esperadas }`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 202 → 215
 
 **Tests**: unit
 **Gate**: quick
