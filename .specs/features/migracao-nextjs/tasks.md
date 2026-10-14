@@ -703,10 +703,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] As duas páginas só chamam `caminhoDoHash` e `substituir` (a lógica e os testes estão na T11)
-- [ ] `pnpm build` lista `/` e a página 404
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 160 → 160
+- [x] As duas páginas só chamam `caminhoDoHash` e `substituir` (a lógica e os testes estão na T11)
+- [x] `pnpm build` lista `/` e a página 404
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 160 → 160
 
 **Tests**: none
 **Gate**: build
