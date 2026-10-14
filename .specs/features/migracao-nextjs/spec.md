@@ -685,7 +685,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | SEC-05 | P1: Segurança — link do banco só http(s) (AC5) | - | Pending |
 | SEC-06 | P1: Segurança — identidade antes de ler e escrever (AC6) | - | Pending |
 | SEC-07 | P1: Segurança — pnpm fixo e scripts de instalação na lista (AC7) | Execute | Implementing |
-| SEC-08 | P1: Segurança — correção de segurança sem nova cópia do DS (AC8) | - | Pending |
+| SEC-08 | P1: Segurança — correção de segurança sem nova cópia do DS (AC8) | Execute | Implementing |
 
 **Coverage:** 135 total, 0 mapped to tasks, 135 unmapped ⚠️ (Design e threat pass prontos; Tasks em rascunho)
 

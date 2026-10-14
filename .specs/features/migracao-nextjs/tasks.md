@@ -213,13 +213,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `SNAPSHOT` tem o sha, uma linha `versao` por pacote de STACK-01, uma linha `blob` por arquivo copiado e, se houver, uma linha `excecao <pacote> <versão> <aviso>` por correção de segurança (SEC-08)
-- [ ] O teste de versões aceita a versão de uma linha `excecao` no lugar da `versao` e recusa qualquer outra diferença
-- [ ] `src/design-system/snapshot.test.ts`: cada arquivo bate com o hash do `SNAPSHOT`; o `package.json` fixa as 8 versões do `SNAPSHOT`; nenhum arquivo em `src/design-system/` ou `src/components/ui/` fora do `SNAPSHOT`, salvo os primitivos novos listados no AD-008
-- [ ] Os testes copiados rodam e passam: `tokens.contrast.test.ts` (31), `select.test.ts` (9), `color-swatch-picker.test.ts` (10)
-- [ ] `src/public/fonts/InterVariable.woff2` copiada
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 7 → 61
+- [x] `SNAPSHOT` tem o sha, uma linha `versao` por pacote de STACK-01, uma linha `blob` por arquivo copiado e, se houver, uma linha `excecao <pacote> <versão> <aviso>` por correção de segurança (SEC-08)
+- [x] O teste de versões aceita a versão de uma linha `excecao` no lugar da `versao` e recusa qualquer outra diferença
+- [x] `src/design-system/snapshot.test.ts`: cada arquivo bate com o hash do `SNAPSHOT`; o `package.json` fixa as 8 versões do `SNAPSHOT`; nenhum arquivo em `src/design-system/` ou `src/components/ui/` fora do `SNAPSHOT`, salvo os primitivos novos listados no AD-008
+- [x] Os testes copiados rodam e passam: `tokens.contrast.test.ts` (31), `select.test.ts` (9), `color-swatch-picker.test.ts` (10)
+- [x] `src/public/fonts/InterVariable.woff2` copiada
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 7 → 61
 
 **Tests**: unit
 **Gate**: quick
