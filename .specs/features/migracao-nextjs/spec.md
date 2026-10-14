@@ -576,7 +576,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | NAV-05 | P1: Endereço — guarda de aba (AC5) | Execute | Implementing |
 | NAV-06 | P1: Endereço — menu por papel (AC6) | Execute | Implementing |
 | NAV-07 | P1: Endereço — voltar e avançar (AC7) | Execute | Implementing |
-| NAV-08 | P1: Endereço — Skeleton na 1ª carga (AC8) | - | Pending |
+| NAV-08 | P1: Endereço — Skeleton na 1ª carga (AC8) | Execute | Implementing |
 | NAV-09 | P1: Endereço — ficha não encontrada (AC9) | - | Pending |
 | NAV-10 | P1: Endereço — foco dos avisos (AC10) | Execute | Implementing |
 | DATA-01 | P1: Porta — só ela importa o supabase-js (AC1) | Execute | Implementing |
@@ -645,7 +645,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | UI-04 | P1: Design system — dois temas (AC4) | Execute | Implementing |
 | UI-05 | P1: Design system — ConfirmDialog (AC5) | Execute | Implementing |
 | UI-06 | P1: Design system — lacunas com AD (AC6) | - | Pending |
-| UI-07 | P1: Design system — EmptyState e Skeleton (AC7) | - | Pending |
+| UI-07 | P1: Design system — EmptyState e Skeleton (AC7) | Execute | Implementing |
 | UI-08 | P1: Design system — casca com primitivos do DS (AC8) | Execute | Implementing |
 | TEST-01 | P1: Testes — 20 grupos portados (AC1) | - | Pending |
 | TEST-02 | P1: Testes — XSS em toda tela (AC2) | Execute | Implementing |

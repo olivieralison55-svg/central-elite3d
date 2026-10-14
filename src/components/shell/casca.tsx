@@ -6,6 +6,7 @@ import { lerCaminho, telaPermitida } from "@/lib/endereco";
 import type { Papel } from "@/lib/papeis";
 
 import { NavegarProvider, type Ui, UiProvider, useNavegar, useSessao, useUi } from "./contexto";
+import { DadosDoUsuario } from "./dados";
 import Menu from "./menu";
 import { Carregando, SessaoProvider } from "./sessao";
 
@@ -40,15 +41,17 @@ export function Moldura({ children }: { children: ReactNode }) {
   );
 }
 
-// O layout do grupo (app). O estado de tela nasce dentro da sessão pronta, com a key do usuário
-// (AUTH-08). O servidor só renderiza o Skeleton da sessão em verificação: nada de sessão, dado
-// ou relógio sai de lá.
+// O layout do grupo (app). O estado de tela e a carga nascem dentro da sessão pronta, com a key
+// do usuário (AUTH-08); a Moldura só aparece com a primeira carga (NAV-08). O servidor só
+// renderiza o Skeleton da sessão em verificação: nada de sessão, dado ou relógio sai de lá.
 export default function Casca({ children }: { children: ReactNode }) {
   return (
     <NavegarProvider>
       <SessaoProvider>
         <UiProvider>
-          <Moldura>{children}</Moldura>
+          <DadosDoUsuario>
+            <Moldura>{children}</Moldura>
+          </DadosDoUsuario>
         </UiProvider>
       </SessaoProvider>
     </NavegarProvider>

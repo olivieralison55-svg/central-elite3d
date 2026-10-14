@@ -841,13 +841,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Antes da 1ª carga: `Skeleton`, nunca "Ficha não encontrada"
-- [ ] Falha de R02/R03, R04 ou R06 na 1ª carga: a mensagem do erro e "Tentar de novo"
-- [ ] Falha numa recarga: o dataset anterior fica e o erro vai para um toast
-- [ ] Trocar de usuário desmonta o provider e descarta os dados
-- [ ] `AvisoRelacoes`: relação essencial com falha troca o conteúdo por `EmptyState` com "Tentar de novo"; complementar com falha põe um `Alert` com o nome dela e renderiza o resto
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 196 → 202
+- [x] Antes da 1ª carga: `Skeleton`, nunca "Ficha não encontrada"
+- [x] Falha de R02/R03, R04 ou R06 na 1ª carga: a mensagem do erro e "Tentar de novo"
+- [x] Falha numa recarga: o dataset anterior fica e o erro vai para um toast
+- [x] Trocar de usuário desmonta o provider e descarta os dados
+- [x] `AvisoRelacoes`: relação essencial com falha troca o conteúdo por `EmptyState` com "Tentar de novo"; complementar com falha põe um `Alert` com o nome dela e renderiza o resto
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 196 → 202
 
 **Tests**: unit
 **Gate**: build
