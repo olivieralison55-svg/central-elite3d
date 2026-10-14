@@ -14,7 +14,12 @@ const SNAPSHOT = lerSnapshot(readFileSync(join(RAIZ, "src/design-system/SNAPSHOT
 // Arquivos deste repo dentro das pastas copiadas.
 const PROPRIOS = ["src/design-system/SNAPSHOT", "src/design-system/snapshot.test.ts"];
 // Primitivos genéricos novos em src/components/ui/, um por lacuna fechada no AD-008.
-const PRIMITIVOS_NOVOS: string[] = ["src/components/ui/segmented-progress.tsx", "src/components/ui/segmented-progress.test.tsx"];
+const PRIMITIVOS_NOVOS: string[] = [
+  "src/components/ui/segmented-progress.tsx",
+  "src/components/ui/segmented-progress.test.tsx",
+  "src/components/ui/pagination.tsx",
+  "src/components/ui/pagination.test.tsx",
+];
 // SEC-08: só um aviso high ou critical nestes três fixa versão fora da cópia.
 const PODEM_TER_EXCECAO = ["next", "react", "react-dom"];
 
