@@ -111,3 +111,71 @@ export function confirmarSessao(id: string, mentor: string, db: SupabaseClient =
 export function delSessao(id: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
   return conferir("sessoes", db.from("sessoes").delete().eq("id", id).select("id"));
 }
+
+// W09: a evolução de um marco. A rota simples grava só status e data; a rica leva também o teste
+// de passagem, com `criterios_ok`, `criterios_pendentes` e `progresso` já derivados (OPS-18).
+export interface EvolucaoSimples {
+  status: string;
+  data: string | null;
+}
+
+export interface EvolucaoRica extends EvolucaoSimples {
+  criterios_ok: string[];
+  criterios_pendentes: string[];
+  progresso: number | null;
+  bloqueios: string[];
+  proxima_acao: string | null;
+}
+
+// W06 (index.html:2479): um canal de venda por mentorado e rota.
+export function salvarCanalMentorado(mentoradoId: string, rotaId: string, canalId: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir(
+    "mentorado_canais",
+    db
+      .from("mentorado_canais")
+      .upsert({ mentorado_id: mentoradoId, rota_id: rotaId, canal_id: canalId }, { onConflict: "mentorado_id,rota_id" })
+      .select("mentorado_id"),
+  );
+}
+
+// W07 (index.html:2488): `mes` chega como AAAA-MM e vai como o primeiro dia; valor vazio vale 0.
+export function salvarFaturamento(mentoradoId: string, mes: string, canalId: string, valor: number | null, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir(
+    "faturamento_mensal",
+    db
+      .from("faturamento_mensal")
+      .upsert({ mentorado_id: mentoradoId, mes: `${mes}-01`, canal_id: canalId, valor: valor ?? 0 }, { onConflict: "mentorado_id,mes,canal_id" })
+      .select("id"),
+  );
+}
+
+// W08 (index.html:2498).
+export function excluirFaturamento(id: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("faturamento_mensal", db.from("faturamento_mensal").delete().eq("id", id).select("id"));
+}
+
+// W09 (index.html:2521).
+export function salvarMarco(mentoradoId: string, marcoId: string, evolucao: EvolucaoSimples | EvolucaoRica, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  const simples = { mentorado_id: mentoradoId, marco_id: marcoId, status: evolucao.status, data: ouNulo(evolucao.data) };
+  const payload =
+    "criterios_ok" in evolucao
+      ? {
+          ...simples,
+          criterios_ok: evolucao.criterios_ok,
+          criterios_pendentes: evolucao.criterios_pendentes,
+          progresso: evolucao.progresso,
+          bloqueios: evolucao.bloqueios,
+          proxima_acao: evolucao.proxima_acao,
+        }
+      : simples;
+  return conferir("mentorado_marcos", db.from("mentorado_marcos").upsert(payload, { onConflict: "mentorado_id,marco_id" }).select("mentorado_id"));
+}
+
+// W10 (index.html:3396): a chave é o `mentorado_id`. O `conteudo` chega do sanitizador e o
+// `atualizado_em` é o relógio de quem grava, lido por quem chama: relógio fica fora da porta (AD-007).
+export function salvarNota(mentoradoId: string, conteudo: string, atualizadoEm: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir(
+    "mentorado_notas",
+    db.from("mentorado_notas").upsert({ mentorado_id: mentoradoId, conteudo, atualizado_em: atualizadoEm }).select("mentorado_id"),
+  );
+}

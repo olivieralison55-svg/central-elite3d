@@ -614,7 +614,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | OPS-15 | P1: Operação — status nulo preservado (AC15) | - | Pending |
 | OPS-16 | P1: Operação — critério sem re-render (AC16) | - | Pending |
 | OPS-17 | P1: Operação — um marco aberto (AC17) | - | Pending |
-| OPS-18 | P1: Operação — critérios por texto (AC18) | - | Pending |
+| OPS-18 | P1: Operação — critérios por texto (AC18) | Execute | Implementing |
 | OPS-19 | P1: Operação — régua por unidade (AC19) | - | Pending |
 | OPS-20 | P1: Operação — moeda BRL (AC20) | - | Pending |
 | FIN-01 | P1: Dinheiro — busca não esconde (AC1) | - | Pending |
@@ -626,7 +626,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | NOTE-01 | P1: Notas — contenteditable (AC1) | - | Pending |
 | NOTE-02 | P1: Notas — DOMPurify (AC2) | - | Pending |
 | NOTE-03 | P1: Notas — sem sanitizador, só leitura (AC3) | - | Pending |
-| NOTE-04 | P1: Notas — grava em 1 s (AC4) | - | Pending |
+| NOTE-04 | P1: Notas — grava em 1 s (AC4) | Execute | Implementing |
 | NOTE-05 | P1: Notas — grava ao sair (AC5) | - | Pending |
 | NOTE-06 | P1: Notas — diretoria só lê (AC6) | - | Pending |
 | NOTE-07 | P1: Notas — atalhos (AC7) | - | Pending |

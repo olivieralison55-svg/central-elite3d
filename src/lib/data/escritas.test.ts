@@ -1,7 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { confirmarGrupo, confirmarSessao, criarSessaoGrupo, delSessao, type EncontroGrupo, type ResultadoEscrita, salvarSessao } from "./escritas";
+import {
+  confirmarGrupo,
+  confirmarSessao,
+  criarSessaoGrupo,
+  delSessao,
+  type EncontroGrupo,
+  excluirFaturamento,
+  type ResultadoEscrita,
+  salvarCanalMentorado,
+  salvarFaturamento,
+  salvarMarco,
+  salvarNota,
+  salvarSessao,
+} from "./escritas";
 
 type Resposta = { data: unknown; error: { message: string } | null };
 
@@ -187,6 +200,128 @@ describe("escritas de sessão W01–W05 (WRITE-01, WRITE-02, OPS-06, OPS-08)", (
       const mensagem = `new row violates row-level security policy (${w})`;
       expect(await escrever(clienteFalso({ sessoes: falha(mensagem) }).db), w).toEqual({ ok: false, erro: mensagem });
       expect(erroNoConsole.mock.calls.at(-1), w).toEqual(["[central-elite3d] sessoes", { message: mensagem }]);
+    }
+  });
+});
+
+// O teste de passagem de um marco de rota rica, já derivado por quem monta a evolução (OPS-18).
+const EVOLUCAO_RICA = {
+  status: "EM_ANDAMENTO",
+  data: "2026-10-01",
+  criterios_ok: ["Banca montada na feira"],
+  criterios_pendentes: ["Primeira venda", "Cartão de visita"],
+  progresso: 33,
+  bloqueios: ["Sem alvará"],
+  proxima_acao: "Pedir o alvará na prefeitura",
+};
+
+// Cada escrita de rotas e nota, a relação dela e a chamada com o cliente que o teste passa.
+const ROTAS_E_NOTA: Array<[string, string, (db: SupabaseClient) => Promise<ResultadoEscrita>]> = [
+  ["W06", "mentorado_canais", (db) => salvarCanalMentorado("m1", "r1", "c2", db)],
+  ["W07", "faturamento_mensal", (db) => salvarFaturamento("m1", "2026-09", "c2", 1500, db)],
+  ["W08", "faturamento_mensal", (db) => excluirFaturamento("f1", db)],
+  ["W09", "mentorado_marcos", (db) => salvarMarco("m1", "mk1", EVOLUCAO_RICA, db)],
+  ["W10", "mentorado_notas", (db) => salvarNota("m1", "<p>Plano</p>", "2026-10-14T13:00:00.000Z", db)],
+];
+
+describe("escritas de rotas e nota W06–W10 (WRITE-01, WRITE-02, OPS-18, NOTE-04)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("W06: upsert de mentorado_id, rota_id e canal_id com onConflict 'mentorado_id,rota_id'", async () => {
+    const f = clienteFalso();
+    expect(await salvarCanalMentorado("m1", "r1", "c2", f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([
+      [
+        ["from", "mentorado_canais"],
+        ["upsert", { mentorado_id: "m1", rota_id: "r1", canal_id: "c2" }, { onConflict: "mentorado_id,rota_id" }],
+        ["select", "mentorado_id"],
+      ],
+    ]);
+  });
+
+  it("W07: upsert com `mes` AAAA-MM-01 e onConflict 'mentorado_id,mes,canal_id'; valor vazio vale 0", async () => {
+    const f = clienteFalso();
+    expect(await salvarFaturamento("m1", "2026-09", "c2", 1234.56, f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([
+      [
+        ["from", "faturamento_mensal"],
+        ["upsert", { mentorado_id: "m1", mes: "2026-09-01", canal_id: "c2", valor: 1234.56 }, { onConflict: "mentorado_id,mes,canal_id" }],
+        ["select", "id"],
+      ],
+    ]);
+    const vazio = clienteFalso();
+    await salvarFaturamento("m1", "2026-10", "c2", null, vazio.db);
+    expect(vazio.pedidos[0][1]).toEqual(["upsert", { mentorado_id: "m1", mes: "2026-10-01", canal_id: "c2", valor: 0 }, { onConflict: "mentorado_id,mes,canal_id" }]);
+  });
+
+  it("W08: delete por id", async () => {
+    const f = clienteFalso();
+    expect(await excluirFaturamento("f1", f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([[["from", "faturamento_mensal"], ["delete"], ["eq", "id", "f1"], ["select", "id"]]]);
+  });
+
+  it("W09: a rota simples grava só mentorado_id, marco_id, status e data, com onConflict 'mentorado_id,marco_id'", async () => {
+    const f = clienteFalso();
+    expect(await salvarMarco("m1", "mk2", { status: "passou", data: "" }, f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([
+      [
+        ["from", "mentorado_marcos"],
+        ["upsert", { mentorado_id: "m1", marco_id: "mk2", status: "passou", data: null }, { onConflict: "mentorado_id,marco_id" }],
+        ["select", "mentorado_id"],
+      ],
+    ]);
+  });
+
+  it("W09 e OPS-18: a rota rica leva também criterios_ok com o texto, criterios_pendentes, progresso, bloqueios e proxima_acao", async () => {
+    const f = clienteFalso();
+    expect(await salvarMarco("m1", "mk1", EVOLUCAO_RICA, f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([
+      [
+        ["from", "mentorado_marcos"],
+        [
+          "upsert",
+          {
+            mentorado_id: "m1",
+            marco_id: "mk1",
+            status: "EM_ANDAMENTO",
+            data: "2026-10-01",
+            criterios_ok: ["Banca montada na feira"],
+            criterios_pendentes: ["Primeira venda", "Cartão de visita"],
+            progresso: 33,
+            bloqueios: ["Sem alvará"],
+            proxima_acao: "Pedir o alvará na prefeitura",
+          },
+          { onConflict: "mentorado_id,marco_id" },
+        ],
+        ["select", "mentorado_id"],
+      ],
+    ]);
+  });
+
+  it("W10 e NOTE-04: upsert de mentorado_id, conteudo e atualizado_em pela chave da tabela, sem onConflict", async () => {
+    const f = clienteFalso();
+    expect(await salvarNota("m1", "<h1>Plano</h1>", "2026-10-14T13:00:00.000Z", f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([
+      [["from", "mentorado_notas"], ["upsert", { mentorado_id: "m1", conteudo: "<h1>Plano</h1>", atualizado_em: "2026-10-14T13:00:00.000Z" }], ["select", "mentorado_id"]],
+    ]);
+  });
+
+  it("WRITE-02: resposta sem erro e com 0 linhas é { ok: false, zeroLinhas: true }, em W06–W10", async () => {
+    const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    for (const [w, rel, escrever] of ROTAS_E_NOTA) {
+      expect(await escrever(clienteFalso({ [rel]: linhas(0) }).db), w).toEqual({ ok: false, zeroLinhas: true });
+      expect(erroNoConsole.mock.calls.at(-1)?.[0], w).toBe(`[central-elite3d] ${rel}`);
+    }
+  });
+
+  it("erro do banco em W06–W10 devolve { ok: false, erro } com a mensagem e escreve no console", async () => {
+    const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    for (const [w, rel, escrever] of ROTAS_E_NOTA) {
+      const mensagem = `permission denied for table ${rel} (${w})`;
+      expect(await escrever(clienteFalso({ [rel]: falha(mensagem) }).db), w).toEqual({ ok: false, erro: mensagem });
+      expect(erroNoConsole.mock.calls.at(-1), w).toEqual([`[central-elite3d] ${rel}`, { message: mensagem }]);
     }
   });
 });

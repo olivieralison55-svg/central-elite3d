@@ -903,14 +903,14 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] W06: `upsert` com `onConflict: "mentorado_id,rota_id"`
-- [ ] W07: `upsert` com `mes` `AAAA-MM-01`, valor vazio como 0 e `onConflict: "mentorado_id,mes,canal_id"`
-- [ ] W08: `delete` por id
-- [ ] W09: rota simples com `mentorado_id`, `marco_id`, `status`, `data`; rota rica com `criterios_ok`, `criterios_pendentes`, `progresso`, `bloqueios`, `proxima_acao`; `onConflict: "mentorado_id,marco_id"`
-- [ ] W10: `upsert` de `mentorado_id`, `conteudo` e `atualizado_em`
-- [ ] 0 linhas → `zeroLinhas`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 215 → 223
+- [x] W06: `upsert` com `onConflict: "mentorado_id,rota_id"`
+- [x] W07: `upsert` com `mes` `AAAA-MM-01`, valor vazio como 0 e `onConflict: "mentorado_id,mes,canal_id"`
+- [x] W08: `delete` por id
+- [x] W09: rota simples com `mentorado_id`, `marco_id`, `status`, `data`; rota rica com `criterios_ok`, `criterios_pendentes`, `progresso`, `bloqueios`, `proxima_acao`; `onConflict: "mentorado_id,marco_id"`
+- [x] W10: `upsert` de `mentorado_id`, `conteudo` e `atualizado_em`
+- [x] 0 linhas → `zeroLinhas`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 215 → 223
 
 **Tests**: unit
 **Gate**: quick
