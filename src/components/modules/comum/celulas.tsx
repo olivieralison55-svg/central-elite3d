@@ -2,7 +2,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import Badge, { type BadgeVariant } from "@/components/ui/badge";
+import type { Mentorado } from "@/lib/data/esquemas";
 import { type Aba, caminhoDaFicha } from "@/lib/endereco";
+import { situacaoDe } from "@/lib/mentorados";
 
 // Células que várias tabelas repetem (index.html:847–877).
 
@@ -38,4 +40,25 @@ const TOM_STATUS: ReadonlyMap<string, BadgeVariant> = new Map([
 // O status da sessão. Fora de S_STATUS, o texto cru, que o React escapa (EDGE-05).
 export function StatusSessao({ status }: { status: string | null }) {
   return <Badge variant={TOM_STATUS.get(status ?? "") ?? "neutral"}>{status || "—"}</Badge>;
+}
+
+// O contrato (pillContrato, index.html:860–865): os três conhecidos com rótulo fixo; o resto cru,
+// ou "Pendente" quando vazio.
+const TOM_CONTRATO: ReadonlyMap<string, [BadgeVariant, string]> = new Map([
+  ["Assinado", ["success", "Assinado"]],
+  ["Aguardando assinatura", ["warning", "Aguardando"]],
+  ["Cancelou", ["danger", "Cancelou"]],
+]);
+
+export function StatusContrato({ status }: { status: string | null | undefined }) {
+  const [tom, rotulo] = TOM_CONTRATO.get(status ?? "") ?? ["neutral", status || "Pendente"];
+  return <Badge variant={tom}>{rotulo}</Badge>;
+}
+
+// A situação que não é ativo (pillSituacao, index.html:939–944): cancelado ou pausado.
+export function SituacaoMentorado({ mentorado }: { mentorado: Pick<Mentorado, "situacao" | "cancelado"> }) {
+  const situacao = situacaoDe(mentorado);
+  if (situacao === "cancelado") return <Badge variant="danger">cancelado</Badge>;
+  if (situacao === "pausado") return <Badge variant="warning">pausado</Badge>;
+  return null;
 }

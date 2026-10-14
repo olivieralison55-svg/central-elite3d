@@ -1455,11 +1455,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Coluna Contrato só com `verFinanceiro`; não ativos com opacidade reduzida
-- [ ] Ordenação pela T37; linha leva à ficha por `<Link>`
-- [ ] "+ Novo mentorado" só com `criarMentorado`, com `data-escrita="W14"`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 366 → 372
+- [x] Coluna Contrato só com `verFinanceiro`; não ativos com opacidade reduzida
+- [x] Ordenação pela T37; linha leva à ficha por `<Link>`
+- [x] "+ Novo mentorado" só com `criarMentorado`, com `data-escrita="W14"`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 366 → 372
 
 **Tests**: unit
 **Gate**: quick

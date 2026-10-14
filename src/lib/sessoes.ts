@@ -39,6 +39,10 @@ export const plantoesDe = (sessoes: readonly Sessao[], m: { id: string; data_fec
       (!m.data_fechamento || !s.data || s.data >= m.data_fechamento),
   ).length;
 
+// Quantas 1:1 concluídas o mentorado tem: a ordem da coluna Sessões e o "N" de "N de M".
+export const concluidas1a1De = (sessoes: readonly Sessao[], mentoradoId: string): number =>
+  sessoes1a1De(sessoes, mentoradoId).filter((s) => s.status === "Concluída").length;
+
 // A trilha de 12 segmentos: uma marca por sessão 1:1, no formato do SegmentedProgress.
 export type TomTrilha = "success" | "primary" | "danger" | "neutral";
 const TOM_TRILHA: ReadonlyMap<string, TomTrilha> = new Map([
