@@ -1262,9 +1262,9 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Ícone para `asc`, `desc` e `null`; `aria-label` com o estado
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 305 → 308
+- [x] Ícone para `asc`, `desc` e `null`; `aria-label` com o estado
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 305 → 308
 
 **Tests**: unit
 **Gate**: quick

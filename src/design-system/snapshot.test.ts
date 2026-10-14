@@ -19,6 +19,8 @@ const PRIMITIVOS_NOVOS: string[] = [
   "src/components/ui/segmented-progress.test.tsx",
   "src/components/ui/pagination.tsx",
   "src/components/ui/pagination.test.tsx",
+  "src/components/ui/sort-header.tsx",
+  "src/components/ui/sort-header.test.tsx",
 ];
 // SEC-08: só um aviso high ou critical nestes três fixa versão fora da cópia.
 const PODEM_TER_EXCECAO = ["next", "react", "react-dom"];
