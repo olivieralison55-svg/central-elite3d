@@ -65,6 +65,8 @@ Vão no mesmo commit deste design. O `validate_spec.py` roda de novo.
 | NOTE-03 | "… SHALL ficar só leitura, SHALL não exibir o HTML da nota e SHALL não gravar" | sem DOM, o DOMPurify 3.2.6 devolve o HTML sem sanitizar (`dompurify/dist/purify.es.mjs:1197–1200`) |
 | UI-06 | "com primitivo do design system (existente, composição de existentes ou arquivo novo genérico em `src/components/ui/`), sem editar arquivo copiado, e a escolha de cada lacuna registrada num AD" | quatro das sete lacunas fecham com primitivos que já existem (ver "Primitivos novos") |
 
+O threat pass emendou mais 16 ACs e criou SEC-01 a SEC-08: ver a seção "Threat pass".
+
 ---
 
 ## Code Reuse Analysis
@@ -110,10 +112,14 @@ Os nomes de hoje ficam, porque o mapeamento, a spec e a paridade citam esses nom
 | `painel.ts` | os 12 itens de "Precisa de atenção", números gerais, progressão (`nivelDe`), próximas 8 | OPS-01, GER-08 |
 | `mentorados.ts` | filtros de Mentorados, `resumoExclusao`, `normalizaEmail`, `msgErroMentorado`, situação | OPS-11, OPS-13 |
 | `financeiro.ts` | `cobrancasOrfas`, `motivoOrfa`, `cobrancasDescartadas`, `parcelaDaLia`, `proximaParcela`, cards | FIN-01–05 |
-| `rotas.ts` | régua, stepper, montagem do W09, `toggleSort`/`applySort` viram `aplicarOrdem` | OPS-16–19 |
+| `rotas.ts` | régua, stepper, montagem do W09 | OPS-16–19 |
+| `ordem.ts` | `toggleSort`/`applySort` (`:1198–1230`) viram `alternarOrdem` e `aplicarOrdem` | UI-06 (ordenação) |
 | `stlseller.ts`, `nps.ts`, `ia.ts`, `mentores.ts` | agregações de `renderAnalise`, `renderNps`, `renderIa`, `renderMentores` | GER-01–07 |
 | `notas.ts` | `NOTA_TAGS`, `sanitizarNota`, detecção de atalho, validação de link, agendador do autosave | NOTE-02–08 |
-| `escrita.ts` | o que nenhum handler de hoje faz: capacidade, trava, conferência de linhas | WRITE-02–08 |
+| `escrita.ts` | o que nenhum handler de hoje faz: capacidade, identidade, trava, conferência de linhas | WRITE-02–08, SEC-06 |
+| `links.ts` | `linkOr` (`:965–969`) vira `linkSeguro(url)`: `href` só para `http:` e `https:`, o resto como texto. O React 19 bloqueia `javascript:`, mas deixa `data:` passar | SEC-05 |
+| `sessao.ts` | `boot` e `afterLogin` (`:672–708`) viram a máquina de fases da sessão | AUTH-01, AUTH-06–08, EDGE-02 |
+| `recarga.ts` | o `loadAll` sem `await` (`:3496`, `:3547`) vira "a última pedida vence" | DATA-09 |
 
 ### Integration Points
 
@@ -151,7 +157,7 @@ public/theme-init.js                       o script sem flash de tema do layout 
 - **Interfaces**:
   - `page.tsx` de cada tela: Server Component de uma linha que renderiza a tela cliente (`<Dashboard modo="completo" />`).
   - Ficha: `async function Page({ params }: { params: Promise<{ id: string; aba?: string[] }> })` → `<Ficha id={id} aba={aba?.[0]} />`. O optional catch-all casa zero ou mais segmentos (`next/dist/shared/lib/router/utils/route-regex.js:58`). A ficha usa só o primeiro, como o `lerEndereco` faz com `[a,b,c]` (`:1364–1366`).
-  - `/`: componente cliente. No mount, `substituir(caminhoDoHash(location.hash) ?? "/dash")`. O `router.replace` navega com `replaceState`, sem entrada nova no histórico (`next/dist/client/components/app-router-instance.js:296–299`, `app-router.js:106–114`) (NAV-02).
+  - `/`: componente cliente. No mount, `substituir(caminhoDoHash(location.hash) ?? "/dash")`. O `caminhoDoHash` monta o caminho só a partir de uma tela de `TELAS` ou de `mentorado/<id>[/<aba de ABAS_FICHA>]`, com o id em `encodeURIComponent`. Qualquer outra forma devolve `null`, inclusive `#//evil.example`, que um mapeamento ingênuo `"/" + resto` transformaria num endereço de outra origem (THREAT-01, NAV-02). O `router.replace` navega com `replaceState`, sem entrada nova no histórico (`next/dist/client/components/app-router-instance.js:296–299`, `app-router.js:106–114`) (NAV-02).
   - `not-found.tsx`: componente cliente que faz `substituir("/dash")` (NAV-03).
 - **Dependencies**: `next/navigation` só dentro de `useNavegar`.
 - **Reuses**: o layout raiz da plataforma (`src/app/layout.tsx` dela), trocando o `<script dangerouslySetInnerHTML>` por `<script src="/theme-init.js" />`.
@@ -171,7 +177,7 @@ public/theme-init.js                       o script sem flash de tema do layout 
   - `useSessao(): { usuario: { id: string; email: string }; perfil: Perfil; papel: Papel; pode(c: Capacidade): boolean; sair(): Promise<void> }`
   - `useDados(): { dados: Dataset; erros: ErrosDeCarga; recarregando: boolean; recarregar(): Promise<void> }`
   - `useUi(): { ui: Ui; mudar(p: Partial<Ui>): void }`. É o porte dos globais que hoje sobrevivem à troca de tela: `filtro` inteiro, `mesMatriz`, `foco`, `rotaAtual`, `rotaMentoradoId`, `marcoAberto`, `voltarPara` e `sortState` (`:621–654`).
-  - `useNavegar(): { ir(caminho: string): void; substituir(caminho: string): void; caminho: string }`. Embrulha `useRouter` e `usePathname`. Nos testes, um stub entra pelo mesmo contexto.
+  - `useNavegar(): { ir(caminho: string): void; substituir(caminho: string): void; caminho: string }`. Embrulha `useRouter` e `usePathname`. Nos testes, um stub entra pelo mesmo contexto. É a única porta para o roteador: se `new URL(destino, location.origin).origin !== location.origin`, navega para `/dash` e não entrega o destino (SEC-01). O `router.replace` do Next faz `location.replace` em destino de outra origem, então a guarda tem de ficar antes dele.
 - **Arquivos**: `casca.tsx` (gate de sessão, carga, sidebar e menu mobile), `sessao.tsx` (provider de auth), `dados.tsx` (provider de carga), `tela-login.tsx`, `tela-papel.tsx` ("Papel não reconhecido" e "Perfil não encontrado"), `menu.tsx` (itens por papel, NAV-06), `use-escrita.ts`.
 - **Regras da casca**:
   - Ao mudar o caminho para fora de `/sessoes`, `foco = null` (NAV-10). Ao mudar para fora de `/mentorado/*`, `voltarPara = caminho`. O item aceso do menu na ficha é o `voltarPara`, como hoje (`:1384–1386`).
@@ -182,31 +188,33 @@ public/theme-init.js                       o script sem flash de tema do layout 
 
 - **Purpose**: o único lugar que importa `@supabase/supabase-js` (DATA-01).
 - **Arquivos e interfaces**:
-  - `config.ts`: `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY`, de `process.env.NEXT_PUBLIC_*` com o padrão de produção (`:530–531`). `assertChavePublica(chave)` lança um erro que nomeia `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` se a chave começa com `sb_secret_` ou é JWT com `role: "service_role"` (STACK-06). Roda ao carregar o módulo, então quebra o `next build` antes do deploy.
-  - `cliente.ts`: `cliente(): SupabaseClient`, um singleton preguiçoso, criado só no browser com `createClient(URL, KEY)` sem opções, como hoje (`:532`). Nenhum `import` cria cliente.
+  - `config.ts`: `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY`, de `process.env.NEXT_PUBLIC_*` com o padrão de produção (`:530–531`), e `validarConfig({ url, chave }): string | null`, uma lista de permissão: a chave começa com `sb_publishable_` ou é JWT com `role` `anon`, e a URL é a de produção. O erro nomeia a variável (STACK-06). Quem chama é o `next.config.ts`, na carga da config: o `next build`, o `next dev` e o `next start` param antes de servir. A checagem roda no `next.config.ts`, não no browser. Ela também não usa nenhum texto de chave secreta: mesmo que o código de `validarConfig` vá parar no bundle do cliente, a varredura do G2.3 não acha a própria guarda (THREAT-02).
+  - `cliente.ts`: `cliente(): SupabaseClient`, um singleton preguiçoso, criado só no browser com `createClient(URL, KEY, { auth: { detectSessionInUrl: false } })`. A chave do storage não muda e a sessão de hoje continua valendo (AUTH-09), mas um link com `access_token` na URL deixa de trocar a sessão da aba (AUTH-10, THREAT-10). Nenhum `import` cria cliente.
+  - `auth.ts`: `entrar`, `sair`, `ouvirSessao`, `lerPerfil` (R01), `classificarErroLogin` e `usuarioDaSessao(): Promise<string | null>`. Mora aqui porque as classes de erro vêm do supabase-js.
   - `esquemas.ts`: um schema Zod por relação, com as colunas que o código de hoje lê. Os tipos de linha saem de `z.infer`. Coluna é anulável, salvo `NOT NULL` provado em migration ou no snapshot.
   - `paginar.ts`: `lerPaginado<T>(rel: Relacao, consulta: () => Consulta, ordem: Ordem[], schema: z.ZodType<T>): Promise<Resultado<T[]>>`. Páginas de 1.000, `order` acumulado e desempate pela chave única: o `order()` do postgrest-js concatena colunas (`postgrest-js/dist/index.mjs:902–906`) e o `range()` vira `offset`/`limit` (`:1068–1073`). Para quando vem página com menos de 1.000 linhas (DATA-04, DATA-05).
   - `leituras.ts`: `lerPerfil(userId)` (R01), `carregarTudo(papel): Promise<Carga>` (R02–R22, em paralelo) e `lerNota(mentoradoId)` (R23).
   - `escritas.ts`: uma função por escrita, com os nomes do mapeamento §4.2 (`confirmarGrupo`, `criarSessaoGrupo`, `salvarSessao`, `confirmarSessao`, `delSessao`, `salvarCanalMentorado`, `salvarFaturamento`, `excluirFaturamento`, `salvarMarco`, `salvarNota`, `salvarMentorado`, `adotarOrfas`, `salvarSituacao`, `excluirMentorado`, `criarMentorado`, `vincularCobranca`, `descartarCobranca`, `restaurarCobranca`, `refletirFinanceiro`, `toggleParcela`, `addParcela`, `salvarParcela`, `delParcela`). Cada uma devolve `ResultadoEscrita`.
 - **Toda função recebe o cliente como último parâmetro, com `cliente()` de padrão.** Os testes passam um falso que captura a chamada e responde do fixture. Nenhum teste toca a rede (TEST-06).
 - **Validação**: linha que falha no schema escreve `console.error("[central-elite3d] <relação>: schema mismatch", issues)` e vira falha da relação (DATA-03).
-- **Conferência de linhas**: toda escrita leva `.select("<chave>")`, o padrão que só o W13 usa hoje (`:3731`). O `select()` acrescenta `Prefer: return=representation` (`postgrest-js/dist/index.mjs:702–712`), e a resposta traz as linhas afetadas. Lista vazia sem erro é `{ ok: false, zeroLinhas: true }` (WRITE-02). O payload, a relação, a operação e o `onConflict` não mudam (WRITE-01).
+- **Conferência de linhas**: toda escrita leva `.select("<chave>")`, o padrão que só o W13 usa hoje (`:3731`). O `select()` acrescenta `Prefer: return=representation` (`postgrest-js/dist/index.mjs:702–712`), e a resposta traz as linhas afetadas. Lista vazia sem erro é `{ ok: false, zeroLinhas: true }`. Escrita de várias linhas (W01, W02) compara as linhas devolvidas com as pedidas, e menos que o pedido vira `{ ok: false, linhas, esperadas }` (WRITE-02, THREAT-11). O payload, a relação, a operação e o `onConflict` não mudam (WRITE-01).
+- **Identidade** (SEC-06, THREAT-09): `carregarTudo(papel, usuarioId)` e o executor de escrita conferem `usuarioDaSessao()` antes de mandar a requisição. Sem sessão, ou com a sessão de outro usuário (login em outra aba), nada sai: a requisição iria como `anon` e voltaria vazia sem erro, ou gravaria com o JWT de outra pessoa. O `SessaoProvider` então mostra a sessão atual.
 
 ### 5. Escrita (`src/lib/escrita.ts` + `src/components/shell/use-escrita.ts`)
 
 - **Purpose**: uma regra só para todo botão que grava.
 - **Interfaces**:
-  - `executarEscrita(o: { pode: boolean; ocupado: { current: boolean }; escrever(): Promise<ResultadoEscrita>; avisar(msg: string, tipo: "sucesso" | "erro"): void; recarregar(): Promise<void>; sucesso?: string }): Promise<boolean>`. Sem capacidade, não chama `escrever` (WRITE-08). Com `ocupado.current`, devolve `false` sem chamar: dois cliques no mesmo tick gravam uma vez (WRITE-04). Erro vira toast (WRITE-05) e 0 linhas vira o aviso de WRITE-02. Devolve `true` só com sucesso, e o modal só fecha com `true`. Recarrega depois de sucesso ou de 0 linhas.
+  - `executarEscrita(o: { pode: boolean; ocupado: { current: boolean }; usuarioId: string; usuarioDaSessao(): Promise<string | null>; escrever(): Promise<ResultadoEscrita>; avisar(msg: string, tipo: "sucesso" | "erro"): void; recarregar(): Promise<void>; sucesso?: string }): Promise<boolean>`. Sem capacidade, não chama `escrever` (WRITE-08). Sessão ausente ou de outro usuário: não chama `escrever` e descarta (SEC-06). Escrita parcial mostra "N de M gravadas" e não mostra sucesso (WRITE-02). Com `ocupado.current`, devolve `false` sem chamar: dois cliques no mesmo tick gravam uma vez (WRITE-04). Erro vira toast (WRITE-05) e 0 linhas vira o aviso de WRITE-02. Devolve `true` só com sucesso, e o modal só fecha com `true`. Recarrega depois de sucesso ou de 0 linhas.
   - `useEscrita(cap: Capacidade, escrever: (...a: A) => Promise<ResultadoEscrita>, sucesso?: string): { executar(...a: A): Promise<boolean>; ocupado: boolean }`. Liga o executor ao `toast`, ao `pode` e ao `recarregar`. O `ocupado` vai para o `loading` do `Button` (WRITE-03).
 - **Composições**: W11 seguido de W11b; se o W11b falha, aparece "Cadastro salvo, mas as cobranças da Lia não foram puxadas: <erro>" (WRITE-06). W15–W17 chamam `refletirFinanceiro` quando há dono. Se ele falha, o erro vai para um toast e a tela fica (WRITE-07).
 
 ### 6. Telas (`src/components/modules/`)
 
 - **Purpose**: renderizar o que as regras puras devolvem. Componente não calcula regra (STACK-02).
-- **Pastas**: `dashboard/` (atende `/dash` e `/acompanhamento` com `modo`), `mentorados/`, `sessoes/`, `ficha/` (topo e 5 abas), `financeiro/`, `rotas/`, `stlseller/`, `nps/`, `ia/`, `mentores/` e `comum/` (`campo-moeda.tsx`, `trilha.tsx`, `aviso-erro-relacao.tsx`).
+- **Pastas**: `dashboard/` (atende `/dash` e `/acompanhamento` com `modo`), `mentorados/`, `sessoes/`, `ficha/` (topo e 5 abas), `financeiro/`, `rotas/`, `stlseller/`, `nps/`, `ia/`, `mentores/` e `comum/` (`campo-moeda.tsx`).
 - **Modal**: cada modal exporta o corpo como componente próprio (`SessaoForm`, `ParcelaForm`, `NovoMentoradoForm`…) e um invólucro com o `Dialog`. O `Dialog` devolve `null` quando não há `document` (`ui/dialog.tsx:65`), e no vitest `node` não há. Os testes renderizam o corpo.
 - **Clique de linha**: a primeira célula leva um `<Link>` para a ficha, em vez de `onClick` no `<tr>`. Ele é alcançável por teclado e não exige mudar o `DataTable`.
-- **Escopo de erro por relação** (DATA-07): cada tela declara as relações essenciais e as complementares. Falha de essencial troca o conteúdo por `EmptyState` com "Tentar de novo". Falha de complementar põe um `Alert` no topo, com o nome do que faltou, e o resto renderiza.
+- **Escopo de erro por relação** (DATA-07): cada tela declara as relações essenciais e as complementares para o `AvisoRelacoes`, exportado por `shell/dados.tsx`. Falha de essencial troca o conteúdo por `EmptyState` com "Tentar de novo". Falha de complementar põe um `Alert` no topo, com o nome do que faltou, e o resto renderiza.
 
 | tela | essenciais (além de R02/R03, R04, R06) | complementares |
 |---|---|---|
@@ -227,11 +235,11 @@ O erro da Experiência (R18) deixa de derrubar a tela IA (mapeamento §10, item 
 - **Purpose**: AD-004 sem perda de edição (NOTE-01–08).
 - **Desenho**: `div contentEditable` **não controlado**. O JSX não tem filho; o HTML entra por `ref.current.innerHTML = sanitizarNota(html)` uma vez por abertura. É o único `innerHTML =` do app. Assim o React nunca reconcilia o conteúdo e o cursor não pula (mapeamento §9, risco 13).
 - **Interfaces** (`notas.ts`):
-  - `sanitizarNota(html: string, purify = DOMPurify): string | null` devolve `null` quando `!purify.isSupported`. Com DOM, chama `purify.sanitize(html, { ALLOWED_TAGS: NOTA_TAGS, ALLOWED_ATTR: ["href", "class"] })`, a mesma config de `:3352–3354`. Roda ao abrir, ao colar e ao salvar.
+  - `sanitizarNota(html: string, purify = DOMPurify): string | null` devolve `null` quando `!purify.isSupported`. Com DOM, chama `purify.sanitize(html, { ALLOWED_TAGS: NOTA_TAGS, ALLOWED_ATTR: ["href", "class"], ALLOW_DATA_ATTR: false, ALLOWED_URI_REGEXP: /^https?:/i })`, e um hook `uponSanitizeAttribute` passa o `class` por `filtrarClasses`, que só deixa `checklist` e `feito` (NOTE-02 emendado). A config de hoje (`:3352–3354`) deixava `class` livre: com o Tailwind do app, um mentor poderia cobrir a tela do admin com `fixed inset-0 z-50` e um link falso (THREAT-07). Roda ao abrir, ao colar e ao salvar.
   - `atalhoPara(textoDoBloco: string, tecla: " " | "Enter"): ComandoNota | null`: `#`, `##`, `###`, `-`, `*`, `1.`, `>`, `[]` com espaço; três crases e `---` com Enter (NOTE-07). O `execCommand` fica no componente.
   - `linkValido(texto: string): string | null`: só `http:` e `https:`, por `new URL` (NOTE-08). O link é pedido num `Dialog` com `Input`, sem `prompt()`.
   - `criarAutosave({ salvar, atraso = 1000, agendar, cancelar }): { mudou(html: string): void; descarregar(): void }`. `mudou` reagenda; `descarregar` grava na hora o pendente, se houver.
-- **Saída sem perda** (NOTE-05): a cada `input`, o HTML vai para `htmlRef` (uma ref de string, não o nó). O cleanup do efeito chama `descarregar()` com `htmlRef.current`, sem ler o DOM, porque a ref do nó já pode estar solta quando o cleanup roda. `visibilitychange` para `hidden` também descarrega, no lugar do `beforeunload` assíncrono de hoje (`:3405`).
+- **Saída sem perda** (NOTE-05): a cada `input`, o HTML vai para `htmlRef` (uma ref de string, não o nó). O cleanup do efeito chama `descarregar()` com `htmlRef.current`, sem ler o DOM, porque a ref do nó já pode estar solta quando o cleanup roda. `visibilitychange` para `hidden` também descarrega, no lugar do `beforeunload` assíncrono de hoje (`:3405`). O editor registra o `descarregar` em `registrarPendencia` (`src/lib/sessao.ts`), e o `sair()` espera `descarregarPendencias()` antes do `signOut`, para a nota não sair com o JWT de ninguém (SEC-06).
 - **Sem sanitizador** (NOTE-03 emendado): `Alert` "O editor não abriu com segurança neste navegador", sem `contentEditable`, sem HTML e sem gravar.
 - **Diretoria** (NOTE-06): sem barra e sem `contentEditable`. O conteúdo sanitizado aparece só para leitura.
 - **Limite** (EDGE-04): o erro do banco vai para o toast e o texto continua no editor; nada limpa o nó.
@@ -248,7 +256,7 @@ Cada lacuna do mapeamento §8 fecha sem editar arquivo copiado. A escolha de cad
 | combobox | `Popover` + `SearchInput` + lista, com `casaBusca`. Troca de mentorado só no clique ou no Enter | `modules/rotas/escolher-mentorado.tsx` |
 | trilha de 12 segmentos | primitivo novo: `SegmentedProgress({ segments: { tone: "success" \| "primary" \| "warning" \| "danger" \| "neutral"; label: string }[]; label: string })` | `ui/segmented-progress.tsx` |
 | paginação | primitivo novo: `Pagination({ page, pageCount, onChange, label })`, com "Página X de Y" e dois `Button` de ícone | `ui/pagination.tsx` |
-| ordenação | primitivo novo: `SortHeader({ label, direction: "asc" \| "desc" \| null, onToggle })` no `header` da coluna, porque o `sortable` do `DataTable` só desenha o ícone (`data-table.tsx:26`, `:351`). A ordem em si é regra: `aplicarOrdem` em `src/lib/rotas.ts`, porte de `:1198–1230` | `ui/sort-header.tsx` |
+| ordenação | primitivo novo: `SortHeader({ label, direction: "asc" \| "desc" \| null, onToggle })` no `header` da coluna, porque o `sortable` do `DataTable` só desenha o ícone (`data-table.tsx:26`, `:351`). A ordem em si é regra: `aplicarOrdem` em `src/lib/ordem.ts`, porte de `:1198–1230` | `ui/sort-header.tsx` |
 | clique de linha | `<Link>` na primeira célula (componente 6) | nenhum novo |
 
 Os três primitivos novos são genéricos, em inglês e sem domínio, para poderem subir para a plataforma.
@@ -257,7 +265,7 @@ Os três primitivos novos são genéricos, em inglês e sem domínio, para poder
 
 - **Purpose**: "atualizar é copiar de novo" (AD-006), com prova byte a byte (UI-01).
 - **Interface**: `node scripts/sync-design-system.mjs <repo-da-plataforma> <sha>`.
-  1. Recusa `sha` que não seja ancestral de `origin/main` da plataforma (G0.3 emendado).
+  1. Avisa em `stderr` quando o `sha` não é ancestral da `origin/main` da plataforma. Não recusa: quem barra é o G0.3, e a Fase 0 não deve esperar o push da plataforma para andar.
   2. Lê os blobs por `git ls-tree -r <sha>` e `git show <sha>:<caminho>`, nunca pelo working tree, e escreve nos mesmos caminhos, menos as exclusões.
   3. Escreve `src/app/globals.css` a partir do da plataforma, sem a linha `@import "../components/reports/report.css"`.
   4. Lê as versões resolvidas dos 8 pacotes de STACK-01 no `pnpm-lock.yaml` daquele `sha`.
@@ -276,10 +284,10 @@ blob <sha1-git> src/components/ui/button.tsx
 ### 10. Paridade (`scripts/parity/`)
 
 - **Purpose**: GATE-05, GATE-06 e GATE-07.
-- **`snapshot.mjs`** (Node puro, `pnpm parity:snapshot`): pede e-mail e senha no terminal com eco desligado, entra com supabase-js 2.117.3 e lê R01–R22. Inclui `mentorados_basic`, que o admin também lê. R20 e R21 são lidos pela rpc: a `analise_ia_mentor()` devolve ao admin o mesmo recorte do mentor (`supabase/migrations/20261013_analise_ia_mentor.sql:10–20`). Pagina com a mesma ordem e desempate da porta. Confere que cada chave de desempate existe e é única, e falha alto se não for. Grava `~/.central-elite3d-paridade/snapshot-<data>.json` com a pasta em `0700` e o arquivo em `0600`. Imprime só contagens. **Quem roda é o Lucas, num terminal dele**: a senha nunca passa pela sessão do agente.
+- **`snapshot.mjs`** (Node puro, `pnpm parity:snapshot`): pede e-mail e senha no terminal com eco desligado, entra com supabase-js 2.117.3 (`persistSession: false`, `signOut` no fim) e lê R01–R22. Recusa gravar se a pasta já existe com modo diferente de `0700` e a exclui do Time Machine com `tmutil addexclusion` (GATE-05 emendado, THREAT-03). Inclui `mentorados_basic`, que o admin também lê. R20 e R21 são lidos pela rpc: a `analise_ia_mentor()` devolve ao admin o mesmo recorte do mentor (`supabase/migrations/20261013_analise_ia_mentor.sql:10–20`). Pagina com a mesma ordem e desempate da porta. Confere que cada chave de desempate existe e é única, e falha alto se não for. Grava `~/.central-elite3d-paridade/snapshot-<data>.json` com a pasta em `0700` e o arquivo em `0600`. Imprime só contagens. **Quem roda é o Lucas, num terminal dele**: a senha nunca passa pela sessão do agente.
 - **`legado.mjs`**: carregador do app antigo. Recebe o `index.html` do merge-base (`git show`), o snapshot, o papel e o "hoje". Reusa a técnica de `tests/ambiente.mjs`: extrai o `<script>`, tira o `boot()`, roda com stubs de DOM e de `location`. O cliente Supabase falso responde do snapshot e respeita `select/order/range/limit/eq/single/maybeSingle`. Chama o `afterLogin` real, que roda o `loadAll` real. Depois navega pelo hash e lê o HTML de cada tela.
 - **`metricas-legado.mjs`** e **`metricas.ts`**: uma função por PAR-01…PAR-17 em cada lado. As duas devolvem `Record<chave, valor>` com chave estável (id, mês, mentor normalizado, rótulo do item). O lado antigo lê o HTML pelas âncoras de hoje (`#risco`, `#sem-subida`, `openMentorado('<id>'`…) e pelos símbolos que o script expõe. O lado novo chama as regras de `src/lib/`.
-- **`paridade.parity.ts`** (`pnpm parity`, com `vitest.parity.config.ts`): fixa o relógio com `vi.setSystemTime(<hoje do snapshot, 12:00 em SP>)` antes de carregar os dois apps. Valida cada linha do snapshot contra `esquemas.ts`, e linha que falha conta como divergência. Roda os três papéis, compara as métricas e imprime `PAR-xx | chave | antigo | novo`, sem nome, e-mail nem comentário. Sai com código 1 se houver divergência fora do Apêndice A.
+- **`paridade.parity.ts`** (`pnpm parity`, com `vitest.parity.config.ts`): fixa o relógio com `vi.setSystemTime(<hoje do snapshot, 12:00 em SP>)` antes de carregar os dois apps. Valida cada linha do snapshot contra `esquemas.ts`, e linha que falha conta como divergência. Roda os três papéis, compara as métricas e imprime só `PAR-xx | chave | falta, sobra ou valor diferente`. Os dois valores vão para `divergencias-<data>.json` (`0600`) na pasta do snapshot: PAR-05, PAR-12 e PAR-13 carregam R$ por mentorado, e o que sai na tela entra no transcript do agente (GATE-07 emendado, SEC-02). Sai com código 1 se houver divergência fora do Apêndice A.
 - **Papéis na paridade**: diretoria lê os mesmos dados do admin. Para o mentor, R02 vira R03, R04, R05 e R14–R19, R22 vêm vazios, e entra R21. É o que o `loadAll` pede por papel (`:737–766`).
 - **Fora do `pnpm test`**: precisa do snapshot e do merge-base, então não roda offline (TEST-06).
 
@@ -293,14 +301,16 @@ blob <sha1-git> src/components/ui/button.tsx
 |---|---|
 | DATA-01 | import de `@supabase/supabase-js` fora de `src/lib/data/` |
 | STACK-05 | `process.env.` com nome diferente dos dois `NEXT_PUBLIC_*` |
-| STACK-07 | `service_role`, `SUPABASE_SERVICE_ROLE_KEY` e `sb_secret_` fora de `src/lib/data/config.ts` |
+| STACK-07 | `service_role`, `SUPABASE_SERVICE_ROLE_KEY` e `sb_secret_` em `src/` ou no `next.config.ts` |
 | STACK-08 | `<script src="http`, `<link href="http`, `fonts.googleapis`; versões exatas de supabase-js e dompurify; ausência de `chart.js` |
-| TEST-03 | `dangerouslySetInnerHTML` e `.innerHTML =` fora do editor, ou sem `sanitizarNota(` |
+| TEST-03 | `dangerouslySetInnerHTML`, `.innerHTML =`, `.outerHTML =`, `insertAdjacentHTML`, `createContextualFragment` e `execCommand("insertHTML"` fora do editor, ou sem `sanitizarNota(` |
+| GATE-03 | `evidence/` com HAR, `Authorization`, `/auth/v1/`, `refresh_token` ou texto em formato JWT |
+| SEC-07 | `packageManager` fixo; `pnpm.onlyBuiltDependencies` presente |
 | UI-02 | hexa, `rgb(`, `rgba(` e paleta padrão do Tailwind em `src/components/modules/` e `src/app/` |
 | UI-05 | `window.confirm`, `window.prompt`, `window.alert`, `confirm(`, `prompt(`, `alert(` |
 | UI-03 | `next/font/google` e `Manrope` |
 
-- **Varredura de papel**: `src/test/diretoria.test.tsx` renderiza as 10 telas, a ficha e os corpos de modal como diretoria e como admin, e conta controles de escrita pelo atributo `data-escrita="W.."` que todo botão de escrita leva (WRITE-09). Ser um atributo explícito, e não um texto de template, é o que deixa a varredura sobreviver ao fim do `innerHTML`.
+- **Varredura de papel**: `src/test/papeis.test.tsx` renderiza as 10 telas, a ficha e os corpos de modal como diretoria, admin e mentor, e conta controles de escrita pelo atributo `data-escrita="W.."` que todo botão de escrita leva (WRITE-09). Ser um atributo explícito, e não um texto de template, é o que deixa a varredura sobreviver ao fim do `innerHTML`.
 - **Porte dos 20 grupos** (TEST-01):
 
 | grupo do mapeamento §7 (asserções) | teste novo |
@@ -309,8 +319,8 @@ blob <sha1-git> src/components/ui/button.tsx
 | 1:1 × grupo (18) | `lib/sessoes.test.ts` |
 | Telas do admin (39); Modais e telas (110) | `test/xss.test.tsx` e um teste por tela em `modules/*/*.test.tsx` |
 | Escrita do grupo (10); Etapa deduzida (7) | `lib/data/escritas.test.ts` (W01–W04) e `modules/sessoes/*.test.tsx` |
-| Papel mentor (29) | `test/mentor.test.tsx`, `lib/endereco.test.ts` |
-| Papel diretoria (25); Controle negativo com admin (1) | `test/diretoria.test.tsx` |
+| Papel mentor (29) | `test/papeis.test.tsx`, `lib/endereco.test.ts` |
+| Papel diretoria (25); Controle negativo com admin (1) | `test/papeis.test.tsx` |
 | Matriz por mentor (15); Alertas que focam linhas (18) | `lib/matriz.test.ts` |
 | Busca e botão de criar (60); Busca por data (13) | `lib/busca.test.ts` e os testes de tela |
 | Exclusão (14); E-mail do mentorado (13); Ficha criada pela Lia (9) | `lib/mentorados.test.ts`, `modules/ficha/*.test.tsx` |
@@ -449,9 +459,13 @@ interface Ui {
 | sanitizador indisponível | editor só leitura, sem HTML | `Alert` (NOTE-03) |
 | caminho desconhecido | `not-found` → `/dash` | Dashboard (NAV-03) |
 | `/mentorado/*` com codificação inválida | middleware → `/dash` | Dashboard (NAV-03) |
-| `#/…` com codificação inválida | `caminhoDoHash` devolve `null` → `/dash` | Dashboard |
+| `#/…` com codificação inválida ou fora das formas conhecidas | `caminhoDoHash` devolve `null` → `/dash` | Dashboard (NAV-02) |
+| destino de outra origem pedido ao roteador | `useNavegar` → `/dash` | Dashboard (SEC-01) |
+| sessão ausente ou de outro usuário na hora de ler ou escrever | nada é enviado; a escrita pendente é descartada | a tela da sessão atual (SEC-06) |
+| escrita de várias linhas com menos linhas que as pedidas | toast | "N de M gravadas", sem sucesso (WRITE-02) |
+| link do banco que não é `http(s)` | `linkSeguro` devolve `null` | o valor como texto (SEC-05) |
 | status fora de `S_STATUS` | texto cru, escapado pelo React | a tela inteira (EDGE-05) |
-| chave secreta configurada | `assertChavePublica` lança | o build falha; o app não sobe (STACK-06) |
+| chave fora da lista de permissão, ou URL que não é a de produção | `validarConfig` devolve o erro e o `next.config.ts` lança | `next build`, `next dev` e `next start` param com o nome da variável (STACK-06) |
 
 Toda falha de leitura e de escrita escreve `console.error("[central-elite3d] <contexto>", detalhe)`.
 
@@ -510,7 +524,33 @@ Os itens com "AD-007" são convenção do repo e moram lá. Os outros valem só 
 | varredura de escrita | atributo `data-escrita="Wnn"` em todo controle que grava | WRITE-09 conta por atributo, não por texto de template |
 | paridade | vitest à parte (`pnpm parity`); `snapshot.mjs` em Node puro, rodado pelo Lucas | precisa de TS e alias do lado novo; a senha não passa pelo agente |
 | `vercel.json` | `framework`, `installCommand` e `buildCommand` | as três sobrepõem as Project Settings por deploy |
-| `next.config` | nenhum | nada a configurar: sem `output`, sem headers, sem imagem remota |
+| `next.config.ts` | chama `validarConfig` na carga, `headers()` com os 3 cabeçalhos de SEC-04 (menos no `next dev`, para não bloquear o HMR), `poweredByHeader: false` | a guarda roda no build, fora do browser, sem texto de chave secreta (THREAT-02); os cabeçalhos valem igual no `next start` local e na Vercel (THREAT-06) |
+| pnpm | `packageManager` fixo e `pnpm.onlyBuiltDependencies` com a lista mínima | nenhum script de instalação roda sem estar na lista (SEC-07, THREAT-05) |
+
+---
+
+## Threat pass
+
+Feito em 13/10/2026 por um agente `security-review` sobre a spec e este design, antes do Tasks: 0 CRITICAL, 1 HIGH, 4 MEDIUM e 9 LOW. Todos aceitos. As ACs emendadas e as novas (SEC-01 a SEC-08) entraram na spec no mesmo commit.
+
+| achado | ameaça | resolução | requisito |
+|---|---|---|---|
+| THREAT-01 · HIGH | `#//evil.example/login` virava `//evil.example/login` e o `router.replace` saía da origem: login falso pelo link do WhatsApp | `caminhoDoHash` monta só caminho de tela conhecida; `useNavegar` recusa outra origem | NAV-02, SEC-01 |
+| THREAT-02 · MEDIUM | a guarda da chave no bundle do cliente fazia o G2.3 nunca passar; JWT `service_role` não contém o texto | lista de permissão no `next.config.ts`; varredura de valor `sb_secret_…` e de JWT com `role` ≠ `anon` | STACK-06, STACK-07, GATE-11 |
+| THREAT-03 · MEDIUM | R$ por mentorado no relatório da paridade e no DOM do UAT iriam para o transcript; snapshot no Time Machine | relatório só com chave e tipo; valores em arquivo `0600`; snapshot endurecido; disciplina do agente | GATE-05, GATE-07, SEC-02 |
+| THREAT-04 · MEDIUM | HAR e token na evidência; contas de UAT sem fim de vida | evidência varrida por teste; rede só com método, caminho e status; contas dedicadas e removidas no G6 | GATE-03, GATE-09 |
+| THREAT-05 · MEDIUM | correção de segurança de `next`/`react` presa à cópia da plataforma; sem auditoria; scripts de instalação livres | exceção de versão no `SNAPSHOT`; `pnpm audit` e conferência do `SNAPSHOT` no G2; pnpm fixo e lista de scripts | SEC-03, SEC-07, SEC-08 |
+| THREAT-06 · LOW | sem cabeçalho de segurança | CSP parcial, `nosniff`, `Referrer-Policy`, sem `X-Powered-By` | SEC-04 |
+| THREAT-07 · LOW | `class` livre na nota cobre a tela com Tailwind; `data-*` e `href` não http(s) passam; colar por `execCommand` fora da varredura | sanitizador mais estreito; varredura de TEST-03 ampliada | NOTE-02, TEST-03 |
+| THREAT-08 · LOW | o `linkOr` sumia no porte e `data:` passa no React | `linkSeguro` em todo link vindo do banco | SEC-05 |
+| THREAT-09 · LOW | sessão vencida manda requisição como `anon`; nota gravada com o JWT de outro usuário | identidade conferida antes de ler e escrever; nota gravada antes do `signOut` | SEC-06 |
+| THREAT-10 · LOW | `detectSessionInUrl` padrão aceita sessão de um link | `detectSessionInUrl: false` | AUTH-10 |
+| THREAT-11 · LOW | escrita parcial anunciada como sucesso | "N de M gravadas" | WRITE-02 |
+| THREAT-12 · LOW | a volta republica o repositório inteiro | `.vercelignore` no commit da volta, conferido no ensaio | GATE-14, GATE-15 |
+| THREAT-13 · LOW | o UAT prova a interface, não o RLS | sonda de escrita proibida com as contas de diretoria e mentor | GATE-08 |
+| THREAT-14 · LOW | a 1:1 do UAT entrava na matriz ao vivo | toda sessão do UAT em 31/12/2099; G3.7 também em "Todos" | GATE-09, GATE-10 |
+
+Conferido e já coberto, segundo o mesmo relatório: enumeração de usuário no login, força bruta (limite do Auth), logout, papel e perfil, middleware, parâmetros de rota, XSS de texto, exposição do repositório, cache de CDN, conferência por `.select`, as 4 rpcs, o isolamento do registro de teste e a cópia do DS por `git show`. O RLS de produção continua fora do escopo: se a sonda do G3.14 achar escrita aceita, vira spec de backend.
 
 ---
 
@@ -532,26 +572,17 @@ Depois de cada passo, o mesmo dado é aberto no app em produção para conferir 
 2. W11 com W11b: salvar o cadastro com o e-mail; a rpc não acha órfã (domínio `.invalid`).
 3. W12: pausar e reativar.
 4. W19, W20, W18, W21: adicionar, editar, marcar paga e excluir uma parcela.
-5. W03, W04, W05: criar uma 1:1 de Diagnóstico, editar, confirmar e excluir.
+5. W03, W04, W05: criar uma 1:1 de Diagnóstico em 31/12/2099 às 23:59, editar, confirmar e excluir. A data fora do mês evita que a reunião entre na matriz de fechamento ao vivo (GATE-09).
 6. W02 e W01: encontro em grupo em 31/12/2099 às 23:59, só com o ZZQ, depois confirmar.
 7. W06, W07, W08, W09: canal, faturamento de um mês, exclusão do faturamento, evolução de um marco.
 8. W10: nota com título, lista e `<img src=x onerror=alert(1)>` colado; reabrir e conferir que a tag saiu.
-9. W13: excluir o ZZQ pelo nome; conferir a matriz do mês (G3.7).
+9. G3.14, antes do W13: `scripts/gates/sondar-rls.mjs` entra com a conta de diretoria e depois com a de mentor (senha digitada pelo Lucas). Tenta no ZZQ cada escrita que o papel não tem no mapeamento §4.2 e imprime só `Wnn | recusada` ou `Wnn | GRAVOU` (GATE-08).
+10. W13: excluir o ZZQ pelo nome; conferir a matriz do mês e a matriz em "Todos" (G3.7).
+
+Regras do agente em todo gate (SEC-02): nada de captura de tela, de DOM ou de HAR. A rede do G3.5 é anotada só com método, caminho sem query e status. Do G3.4 entram só os agregados.
 
 ---
 
-## Ordem de construção (insumo do Tasks)
+## Ordem de construção
 
-| fase | entrega | libera |
-|---|---|---|
-| 0. Pré-voo | casca do repo (`package.json` com versões fixas, `tsconfig`, Tailwind, PostCSS, vitest, `.gitignore`, `.env.example`), `sync-design-system.mjs` com a cópia e o `SNAPSHOT`, `snapshot.mjs` | G0.2, G0.3 → **G0 com o Lucas** |
-| 1. Fundação | layout raiz, `theme-init.js`, globals, `config.ts` com a guarda, varreduras estáticas | STACK, UI-01–03 |
-| 2. Sessão e endereço | PoC do middleware, providers, login, telas de papel, menu, rotas, ponte do hash, guardas | AUTH, NAV |
-| 3. Porta de dados | schemas, `lerPaginado`, `carregarTudo`, escritas W01–W21, `executarEscrita`, `useEscrita` | DATA, WRITE |
-| 4. Primitivos | `SegmentedProgress`, `Pagination`, `SortHeader`, campos de mês e moeda, AD-008 | UI-06 |
-| 5. Telas operacionais | regras e telas: Dashboard e Acompanhamento, Mentorados, Sessões, Ficha (5 abas, notas), Rotas | OPS, NOTE, FIN-05–06 |
-| 6. Telas gerenciais | Financeiro, STLSeller, NPS, IA, Mentores | FIN, GER |
-| 7. Paridade e varreduras | carregador do app antigo, métricas PAR-01…17, `xss.test.tsx`, `diretoria.test.tsx` | GATE-06, GATE-07, TEST-02, WRITE-09 |
-| 8. Corte local | `vercel.json`, sai `index.html` e `tests/`, docs (CUT-03, CUT-04) | G2 |
-
-As regras puras de cada tela entram na mesma fase da tela, cada uma com o teste portado do grupo dela.
+Está no [`tasks.md`](tasks.md): 13 fases, da casca do repo (Fase 0, seguida do G0 com o Lucas) ao corte local (Fase 12). As regras puras de cada tela entram na mesma fase da tela, cada uma com o teste portado do grupo dela.

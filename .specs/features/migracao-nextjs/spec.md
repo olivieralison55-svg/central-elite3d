@@ -1,7 +1,7 @@
 # Migração do front para Next.js e o design system da product-ops — Specification
 
 **Scope:** Complex · **Date:** 2026-10-13 · **Base:** `main@2aea455`; a paridade é medida contra o `index.html` do merge-base com a `main` a cada G2
-**Status:** em execução desde 13/10/2026, a pedido do Lucas. Design pronto em [`design.md`](design.md), com as emendas listadas lá. Próximas fases: threat pass e Tasks. O app só começa a ser escrito com o G0 verde.
+**Status:** em execução desde 13/10/2026, a pedido do Lucas. Design pronto em [`design.md`](design.md), com as emendas listadas lá. Threat pass feito: os 14 achados viraram SEC-01 a SEC-08 e emendas (design, seção "Threat pass"). Próxima fase: aprovação do Tasks. O app só começa a ser escrito com o G0 verde.
 **Insumo:** [`docs/planejamento/mapeamento-migracao-nextjs.md`](../../../docs/planejamento/mapeamento-migracao-nextjs.md) (citado abaixo como "mapeamento §N"). O mapeamento descreve o comportamento de hoje e é o contrato de paridade desta spec.
 
 ## Problem Statement
@@ -57,7 +57,7 @@ Decisões do orquestrador, tomadas pela opção mais segura dentro do pedido. S�
 | Janela do corte | Escolhida pelo Lucas fora dos dias em que a matriz é usada no fechamento dos mentores, com ele disponível de T a T + 2 h | O corte não pode coincidir com o uso que mais pesa | n |
 | Contas de teste para diretoria e mentor | Criadas pelo Lucas no Supabase antes do UAT, se ele não tiver contas que possa usar | Criar usuário é escrita em produção com `service_role`: ação dele | n |
 | Exceções à paridade | Só os defeitos da classe M do mapeamento §10 que perdem ou corrompem dado, mentem sobre o resultado, ou que o React elimina sozinho. Estão na seção "Exceções à paridade" | O resto mudaria números já usados no fechamento | n |
-| Ameaça | Threat pass obrigatório depois do Design e antes do Tasks (auth, entrada externa, RLS) | Regra do Specify para feature que toca autenticação | n |
+| Ameaça | Threat pass obrigatório depois do Design e antes do Tasks (auth, entrada externa, RLS). Feito em 13/10/2026 pelo `security-review`: 1 HIGH, 4 MEDIUM, 9 LOW, todos aceitos | Regra do Specify para feature que toca autenticação | n |
 
 **Open questions:** none — all resolved or logged above (required before the spec is confirmed).
 
@@ -83,6 +83,10 @@ Tudo o mais segue o mapeamento, inclusive os defeitos da classe P.
 | "Concluídas (últimas 30)" são as 30 mais recentes | 15 | OPS-09 |
 | Campo de quem não edita é só leitura | 16 | OPS-12 |
 | Login distingue senha errada de falha de rede | 20 | AUTH-04, AUTH-05 |
+| Sessão não é lida da URL | threat pass (THREAT-10) | AUTH-10 |
+| Nota guarda só `class` `checklist` e `feito`, `href` http(s) e nenhum `data-*` | threat pass (THREAT-07) | NOTE-02 |
+| Escrita parcial não anuncia sucesso | threat pass (THREAT-11) | WRITE-02 |
+| Hash antigo só vira caminho de tela conhecida | threat pass (THREAT-01) | NAV-02, SEC-01 |
 
 Os itens 11, 12, 17, 18 e 19 do §10 somem com a troca de stack, sem requisito próprio.
 
@@ -107,7 +111,7 @@ A Fase 0 do `tasks.md` (casca do repo, cópia do design system e script de snaps
 | G0.1 | `node tests/testes.mjs` na base | exit 0 e 497 asserções |
 | G0.2 | snapshot de paridade (GATE-05) | gravado fora do repo, com a contagem de linhas de R01–R22 na evidência |
 | G0.3 | commit do design system | sha gravado em `src/design-system/SNAPSHOT` e alcançável pela `origin/main` da plataforma |
-| G0.4 | Vercel | o dono confirma por escrito: previews de branch ligados e `main` como branch de produção |
+| G0.4 | Vercel | o dono confirma por escrito: previews de branch ligados, `main` como branch de produção, log do build do preview visível para o Lucas e nenhum Output Directory sobreposto nas Project Settings |
 | G0.5 | contas de UAT | uma conta de diretoria e uma de mentor disponíveis |
 | G0.6 | congelamento e janela | Lucas aprova o congelamento do `index.html` e a janela do corte |
 
@@ -130,12 +134,14 @@ Se falhar: o conserto entra no commit da própria task, nunca num `fix:` por cim
 | ---- | ----------- | ------------ |
 | G2.1 | clone limpo: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm test`, `pnpm build` | os 4 com exit 0 |
 | G2.2 | `git diff --stat <merge-base>..HEAD -- supabase/` | vazio |
-| G2.3 | procurar `service_role`, `sb_secret_` e `SUPABASE_SERVICE_ROLE_KEY` em `.next/static` (GATE-11) | 0 ocorrências |
+| G2.3 | `scripts/gates/verificar-build.mjs`: valor `sb_secret_…` ou JWT com `role` diferente de `anon` em `.next/static` e `.next/server/app` (GATE-11) | 0 ocorrências |
 | G2.4 | classe `__variable_` do `<html>` do HTML do servidor no CSS de `.next/static/css` (GATE-12) | presente |
 | G2.5 | paridade offline (GATE-06) contra o `index.html` do merge-base | 0 divergências fora das exceções do Apêndice A |
 | G2.6 | Verifier do skill: `validation.md` e `validate_state.py` | PASS, evidência `arquivo:linha` por AC, 0 mutantes sobreviventes |
 | G2.7 | threat pass (`security-review`) do diff inteiro | 0 achados HIGH ou CRITICAL abertos; MEDIUM resolvido ou aceito pelo Lucas por escrito |
 | G2.8 | `index.html` da `main` | sem commit novo desde o G2.5 (GATE-16) |
+| G2.9 | `pnpm audit --prod --audit-level=high` (SEC-03) | exit 0, ou exceção aceita pelo Lucas por escrito |
+| G2.10 | cada `blob` do `SNAPSHOT` contra `git ls-tree -r <sha>` da plataforma (SEC-03) | 0 diferenças |
 
 Se falhar: volta para o Execute.
 
@@ -149,14 +155,16 @@ Entrada: G2 verde no mesmo sha e "go" do Lucas para o push da branch.
 | G3.2 | os 5 caminhos de CUT-01 no preview | 404 |
 | G3.3 | leitura por papel (admin, diretoria, mentor), pelo roteiro do Design | as 10 telas e a ficha abrem; 0 erro no console |
 | G3.4 | paridade ao vivo: PAR-01, PAR-03, PAR-06 (mês corrente), PAR-11 (cards) e PAR-14 (geral), lidas no preview e no app em produção no mesmo minuto, por papel | 0 divergências |
-| G3.5 | rede da diretoria (GATE-08) | nenhum POST, PATCH ou DELETE fora do permitido |
+| G3.5 | rede da diretoria (GATE-08), registrada só com método, caminho sem query e status (GATE-03) | nenhum POST, PATCH ou DELETE fora do permitido |
 | G3.6 | escrita do admin no registro de teste (GATE-09): W01–W14 e W18–W21 | cada uma grava o que o app antigo mostra depois; W15–W17 ficam só nos testes, porque exigem cobrança real da Lia |
-| G3.7 | matriz do mês depois de excluir o registro de teste (GATE-10) | idêntica à lida antes do G3.6 |
+| G3.7 | matriz do mês e matriz em "Todos" depois de excluir o registro de teste (GATE-10) | idênticas às lidas antes do G3.6 |
 | G3.8 | link antigo `#/mentorado/<id>/financeiro` | abre a ficha certa na aba Financeiro |
 | G3.9 | tempo até o Dashboard com dados, mediana de 5 cargas frias | no máximo o do app em produção + 1 s |
 | G3.10 | Dashboard, Sessões e Ficha com 390 px de largura | sem rolagem horizontal |
 | G3.11 | fonte computada do `body` | Inter |
 | G3.12 | temas claro e escuro nas 10 telas e na ficha | nenhum texto ilegível |
+| G3.13 | `curl -I` em `/dash` no preview (SEC-04) | os 3 cabeçalhos de SEC-04 presentes e `X-Powered-By` ausente |
+| G3.14 | sonda do RLS com as contas de diretoria e mentor no registro de teste (GATE-08) | cada escrita que o papel não tem volta com erro ou 0 linhas |
 
 Se falhar: volta para o Execute; o registro de teste é excluído mesmo assim.
 
@@ -166,7 +174,7 @@ Se falhar: volta para o Execute; o registro de teste é excluído mesmo assim.
 | ---- | ----------- | ------------ |
 | G4.1 | sha que vai ser mesclado | igual ao do G3 verde |
 | G4.2 | idade do G3 | verde há no máximo 24 h |
-| G4.3 | ensaio da volta: branch descartável a partir da `main`, sem `vercel.json`, publicada como preview | o preview serve o app antigo |
+| G4.3 | ensaio da volta: branch descartável a partir da `main`, sem `vercel.json` e com o `.vercelignore` da volta, publicada como preview (GATE-15) | o preview serve o app antigo e responde 404 nos 5 caminhos de CUT-01 e em `/.specs/features/migracao-nextjs/spec.md` |
 | G4.4 | URL imutável do deploy de produção atual | anotada na evidência |
 | G4.5 | tag `pre-nextjs` no commit atual da `main` | criada e enviada |
 | G4.6 | aviso aos usuários: data, o que muda no visual, mesmo login | enviado pelo Lucas |
@@ -193,7 +201,7 @@ Se falhar: volta para o Execute; o registro de teste é excluído mesmo assim.
 | ---- | ----------- | ------------ |
 | G6.1 | relatos dos usuários | nenhum bloqueio aberto |
 | G6.2 | logs da API do Supabase | taxa de respostas 4xx e 5xx do PostgREST não maior que a dos 7 dias anteriores ao corte |
-| G6.3 | fechamento | branch apagada local e remota; snapshot de paridade apagado; CUT-04 feito |
+| G6.3 | fechamento | branch apagada local e remota; snapshot de paridade e arquivo de valores apagados; contas de UAT de diretoria e mentor removidas ou banidas, com as sessões revogadas; CUT-04 feito |
 
 Depois do G6, problema vira correção para a frente, não revert.
 
@@ -214,8 +222,8 @@ Depois do G6, problema vira correção para a frente, não revert.
 3. WHEN `pnpm typecheck`, `pnpm test` e `pnpm build` rodam THEN cada comando SHALL sair com código 0.  <!-- event-driven -->
 4. The repo SHALL ter `.gitignore` cobrindo (`node_modules/`, `.next/`, `.vercel/`, `.env*` exceto `.env.example`, `supabase/.temp/`), e `git ls-files` SHALL não listar nenhum arquivo `.env*` além de `.env.example`.  <!-- ubiquitous -->
 5. The código em `src/` SHALL ler só as variáveis `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.  <!-- ubiquitous -->
-6. IF a chave configurada começa com `sb_secret_` ou é um JWT cujo `role` é `service_role` THEN o app SHALL recusar iniciar com um erro que nomeia `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.  <!-- unwanted-behavior -->
-7. The código em `src/`, fora de `src/lib/data/config.ts` (que contém a guarda do critério 6), SHALL não conter os textos `service_role`, `SUPABASE_SERVICE_ROLE_KEY` e `sb_secret_`, verificado por teste.  <!-- ubiquitous -->
+6. IF `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` não começa com `sb_publishable_` nem é um JWT com `role` `anon`, ou `NEXT_PUBLIC_SUPABASE_URL` não é `https://matgynpiscyoshnjzolo.supabase.co`, THEN o `next build`, o `next dev` e o `next start` SHALL falhar com um erro que nomeia a variável, numa checagem do `next.config.ts`, fora do bundle do cliente.  <!-- unwanted-behavior -->
+7. The código em `src/` e o `next.config.ts` SHALL não conter os textos `service_role`, `SUPABASE_SERVICE_ROLE_KEY` e `sb_secret_`, verificado por teste.  <!-- ubiquitous -->
 8. The app SHALL não carregar script nem folha de estilo de outra origem em runtime; `@supabase/supabase-js` `2.117.3` e `dompurify` `3.2.6` SHALL vir do npm com versão exata, e o `package.json` SHALL não ter `chart.js`.  <!-- ubiquitous -->
 
 **Independent Test**: `pnpm install && pnpm typecheck && pnpm test && pnpm build` sai com 0 num clone limpo, e `pnpm dev` abre a tela de login.
@@ -239,7 +247,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 7. IF `profiles.role` é nulo ou fora de (`admin`, `diretoria`, `mentor`) THEN o app SHALL mostrar a tela "Papel não reconhecido" com o botão Sair e SHALL não carregar dado.  <!-- unwanted-behavior -->
 8. WHEN o usuário sai THEN o app SHALL descartar da memória os dados carregados, limpar o campo de senha e mostrar a tela de login, e WHEN outra pessoa entra na mesma aba THEN o menu e as telas SHALL refletir só o papel dela.  <!-- event-driven -->
 9. The app SHALL manter a sessão entre recarregamentos no mesmo navegador, pelo armazenamento padrão do supabase-js.  <!-- ubiquitous -->
-10. The app SHALL não oferecer cadastro nem recuperação de senha.  <!-- ubiquitous -->
+10. The app SHALL não oferecer cadastro nem recuperação de senha, e SHALL criar o cliente com `auth.detectSessionInUrl: false`, sem aceitar sessão vinda da URL.  <!-- ubiquitous -->
 
 **Independent Test**: Entrar com uma conta de cada papel, sair, entrar com outra e conferir o menu.
 
@@ -254,7 +262,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 **Acceptance Criteria**:
 
 1. The app SHALL abrir, nos caminhos `/dash`, `/acompanhamento`, `/mentorados`, `/sessoes`, `/rotas`, `/mentores`, `/analise`, `/nps`, `/ia`, `/financeiro`, `/mentorado/<id>` e `/mentorado/<id>/<aba>` (aba em `cadastro`, `financeiro`, `sessoes`, `notas`, `stlseller`, `completo`, `basico`), a mesma tela que o `index.html@2aea455` abre no hash de mesmo nome (mapeamento §3).  <!-- ubiquitous -->
-2. WHEN o app abre com um hash antigo `#/<caminho>` THEN o app SHALL trocar o endereço pelo caminho `/<caminho>` equivalente, sem criar entrada nova no histórico.  <!-- event-driven -->
+2. WHEN o app abre com um hash antigo `#/<caminho>` THEN o app SHALL montar o caminho só a partir de uma tela de `TELAS` ou de `mentorado/<id>[/<aba de ABAS_FICHA>]`, com o id em `encodeURIComponent`, e SHALL trocar o endereço sem criar entrada nova no histórico; IF o hash não casa nenhum desses formatos THEN o app SHALL abrir `/dash`.  <!-- complex -->
 3. WHEN o caminho é `/`, desconhecido ou tem codificação inválida (como `/mentorado/%E0%A4%A`) THEN o app SHALL mostrar o Dashboard sem lançar erro.  <!-- event-driven -->
 4. WHEN um papel sem `verFinanceiro` abre `/financeiro`, `/analise`, `/nps` ou `/mentores` THEN o app SHALL trocar o endereço por `/dash`.  <!-- event-driven -->
 5. WHEN um papel sem `verFinanceiro` abre a ficha nas abas `financeiro` ou `stlseller` THEN o app SHALL mostrar a aba `sessoes`.  <!-- event-driven -->
@@ -299,7 +307,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 **Acceptance Criteria**:
 
 1. WHEN uma escrita W01–W21 listed in mapeamento §4.2 é disparada THEN a porta SHALL enviar a mesma relação, operação, chaves e valores de payload e `onConflict` da tabela do mapeamento, verificado por teste que captura a chamada.  <!-- event-driven -->
-2. WHEN uma escrita W01–W21 volta sem erro e com 0 linhas afetadas THEN o app SHALL mostrar "Nada foi gravado: sem permissão ou registro não encontrado." e SHALL não mostrar sucesso.  <!-- event-driven -->
+2. WHEN uma escrita W01–W21 volta sem erro e com 0 linhas afetadas THEN o app SHALL mostrar "Nada foi gravado: sem permissão ou registro não encontrado." e SHALL não mostrar sucesso, e WHEN uma escrita de várias linhas volta com menos linhas que as pedidas THEN o app SHALL mostrar quantas foram gravadas de quantas e SHALL não mostrar sucesso.  <!-- event-driven -->
 3. WHILE uma escrita está em andamento the botão que a disparou SHALL ficar desabilitado e mostrar Spinner.  <!-- state-driven -->
 4. WHEN o botão de uma escrita recebe dois cliques seguidos THEN a porta SHALL enviar uma escrita só.  <!-- event-driven -->
 5. IF uma escrita falha THEN o app SHALL mostrar a mensagem do erro num toast e SHALL manter aberto o formulário com o que foi digitado.  <!-- unwanted-behavior -->
@@ -373,7 +381,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 **Acceptance Criteria**:
 
 1. The editor SHALL usar `contenteditable` e os comandos de edição do navegador, sem biblioteca de editor.  <!-- ubiquitous -->
-2. The app SHALL sanitizar o HTML da nota com DOMPurify, permitindo só as tags de `NOTA_TAGS` e os atributos `href` e `class`, ao abrir, ao colar e ao salvar.  <!-- ubiquitous -->
+2. The app SHALL sanitizar o HTML da nota com DOMPurify, permitindo só as tags de `NOTA_TAGS`, `href` só com `http:` ou `https:`, `class` só com `checklist` e `feito` e nenhum atributo `data-*`, ao abrir, ao colar e ao salvar.  <!-- ubiquitous -->
 3. IF o sanitizador não está disponível THEN o editor SHALL ficar só leitura, SHALL não exibir o HTML da nota e SHALL não gravar.  <!-- unwanted-behavior -->
 4. WHEN o usuário fica 1 s sem digitar THEN a porta SHALL gravar a nota (W10).  <!-- event-driven -->
 5. WHEN o usuário troca de aba, de ficha ou de tela com gravação pendente THEN o app SHALL gravar a nota antes de desmontar o editor.  <!-- event-driven -->
@@ -437,7 +445,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 
 1. WHEN `tests/` é apagado THEN cada grupo listed in mapeamento §7 SHALL ter pelo menos um teste vitest que afirma o mesmo resultado sobre o código novo.  <!-- event-driven -->
 2. The suíte SHALL renderizar as 10 telas, a ficha e os modais com o nome de mentorado `<img src=x onerror=alert(1)>` e SHALL achar `&lt;img` e não achar `<img src=x` no HTML gerado.  <!-- ubiquitous -->
-3. The código em `src/` SHALL atribuir HTML (`dangerouslySetInnerHTML` ou `innerHTML`) só no editor de notas e sempre com a saída de `sanitizarNota`, verificado por teste.  <!-- ubiquitous -->
+3. The código em `src/` SHALL inserir HTML (`dangerouslySetInnerHTML`, `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `createContextualFragment` ou `execCommand("insertHTML")`) só no editor de notas e sempre com a saída de `sanitizarNota`, verificado por teste.  <!-- ubiquitous -->
 4. The suíte SHALL afirmar, lendo `supabase/functions/sync-google-calendar/index.ts`, que as etapas e ordens de `TRILHA` são as de `ETAPAS`/`ETAPA_ORD` e que cada nome de `MENTORES` aparece como valor de `EMAIL_MENTOR`.  <!-- ubiquitous -->
 5. The suíte SHALL afirmar que `hojeSP()` às 23:30 de Brasília (02:30 UTC do dia seguinte) devolve a data de Brasília.  <!-- ubiquitous -->
 6. WHEN `pnpm test` roda THEN a suíte SHALL sair com 0 sem rede e sem banco.  <!-- event-driven -->
@@ -456,22 +464,43 @@ Depois do G6, problema vira correção para a frente, não revert.
 
 1. The feature SHALL passar pelos gates G0 a G6 da seção "Gates de produção" nessa ordem, e IF um gate falha THEN o gate seguinte SHALL não começar antes de o que falhou ser refeito inteiro e verde.  <!-- complex -->
 2. WHEN um gate roda THEN a evidência SHALL ser gravada em `.specs/features/migracao-nextjs/evidence/G<n>.md` com o sha, a data e hora e o código de saída de cada comando.  <!-- event-driven -->
-3. The evidência SHALL conter só ids e contagens, sem nome, e-mail, comentário ou valor financeiro de mentorado.  <!-- ubiquitous -->
+3. The evidência SHALL conter só ids e contagens, sem nome, e-mail, comentário ou valor financeiro de mentorado, e SHALL não conter HAR, cabeçalho `Authorization`, corpo de `/auth/v1/`, `refresh_token` nem texto em formato JWT, verificado por um teste que varre `evidence/`.  <!-- ubiquitous -->
 4. The branch SHALL ter `vercel.json` com `"framework": "nextjs"`, e WHILE a branch não foi mesclada the `main` SHALL continuar publicando o app estático.  <!-- complex -->
-5. The script de snapshot SHALL ler R01–R22 com a sessão de um admin, pedir e-mail e senha no terminal sem gravá-los, e gravar o resultado fora do repo, numa pasta com permissão `0700`.  <!-- ubiquitous -->
+5. The script de snapshot SHALL ler R01–R22 com a sessão de um admin criada com `persistSession: false`, pedir e-mail e senha no terminal sem gravá-los, gravar o resultado fora do repo numa pasta com permissão `0700` excluída do Time Machine, recusar gravar numa pasta com outra permissão e encerrar a sessão ao terminar.  <!-- ubiquitous -->
 6. The script de paridade SHALL calcular as métricas PAR-01 a PAR-17 do Apêndice A com o `index.html` do merge-base, executado pela técnica do `tests/ambiente.mjs` num carregador que alimenta o `loadAll` com o snapshot, e com o app novo, sobre o mesmo snapshot e a mesma data de "hoje", e SHALL sair com código 1 se houver divergência fora das exceções do Apêndice A.  <!-- ubiquitous -->
-7. WHEN o script de paridade acha divergência THEN o relatório SHALL mostrar a métrica, o id e os dois valores, sem nome, e-mail nem comentário.  <!-- event-driven -->
-8. WHILE o UAT da diretoria roda no preview the navegador SHALL não enviar POST, PATCH nem DELETE a `/rest/v1/` além de `POST /rest/v1/rpc/experiencia_adesao`.  <!-- state-driven -->
-9. WHEN o UAT de escrita roda THEN o admin SHALL usar como único mentorado de toda escrita o registro de teste `ZZQ Migracao Xyzzy` (`zzq-migracao@example.invalid`) e SHALL excluí-lo no fim.  <!-- event-driven -->
-10. WHEN o registro de teste é excluído THEN a matriz do mês corrente SHALL ser idêntica à lida antes do UAT de escrita.  <!-- event-driven -->
-11. WHEN o build termina THEN `.next/static` SHALL não conter `service_role`, `sb_secret_` nem `SUPABASE_SERVICE_ROLE_KEY`.  <!-- event-driven -->
+7. WHEN o script de paridade acha divergência THEN o relatório impresso SHALL mostrar só a métrica, a chave e o tipo (falta, sobra ou valor diferente), e os dois valores SHALL ir só para um arquivo `0600` na pasta do snapshot.  <!-- event-driven -->
+8. WHILE o UAT da diretoria roda no preview the navegador SHALL não enviar POST, PATCH nem DELETE a `/rest/v1/` além de `POST /rest/v1/rpc/experiencia_adesao`, e WHEN o UAT de escrita roda THEN uma chamada direta à API com as contas de diretoria e de mentor SHALL tentar, no registro de teste, cada escrita que o papel não tem no mapeamento §4.2, e cada uma SHALL voltar com erro ou 0 linhas.  <!-- complex -->
+9. WHEN o UAT de escrita roda THEN o admin SHALL usar como único mentorado de toda escrita o registro de teste `ZZQ Migracao Xyzzy` (`zzq-migracao@example.invalid`), SHALL datar toda sessão 1:1 ou em grupo em 31/12/2099 às 23:59 e SHALL excluir o registro no fim, e as contas de diretoria e mentor do UAT SHALL ser dedicadas, com senha digitada só pelo Lucas, e removidas ou banidas no G6.  <!-- event-driven -->
+10. WHEN o registro de teste é excluído THEN a matriz do mês corrente e a matriz em "Todos" SHALL ser idênticas às lidas antes do UAT de escrita.  <!-- event-driven -->
+11. WHEN o build termina THEN `.next/static` e `.next/server/app` SHALL não conter valor `sb_secret_…` nem JWT cujo payload decodificado tenha `role` diferente de `anon`.  <!-- event-driven -->
 12. WHEN o build termina THEN a classe `__variable_` do `<html>` no HTML do servidor SHALL existir no CSS de `.next/static/css`.  <!-- event-driven -->
 13. The merge na `main` SHALL acontecer só depois do "go" escrito do Lucas no G4, e o G2.1 SHALL estar verde na `main` mesclada antes do push.  <!-- ubiquitous -->
-14. IF um gatilho de volta do G5 acontece THEN o app antigo SHALL voltar a responder no domínio de produção entre 0 e 15 minutos depois do gatilho.  <!-- unwanted-behavior -->
-15. The commit da `main` anterior ao merge SHALL ter a tag `pre-nextjs`, e o ensaio da volta (G4.3) SHALL ter servido o app antigo num preview antes do corte.  <!-- ubiquitous -->
+14. IF um gatilho de volta do G5 acontece THEN o app antigo SHALL voltar a responder no domínio de produção entre 0 e 15 minutos depois do gatilho, e o commit da volta SHALL levar um `.vercelignore` que publica só `index.html` e `favicon.png`.  <!-- unwanted-behavior -->
+15. The commit da `main` anterior ao merge SHALL ter a tag `pre-nextjs`, e o ensaio da volta (G4.3) SHALL ter servido o app antigo num preview com o `.vercelignore` da volta, com 404 nos 5 caminhos de CUT-01 e em `/.specs/features/migracao-nextjs/spec.md`, antes do corte.  <!-- ubiquitous -->
 16. IF a `main` recebe commit que muda `index.html` depois do último G2 THEN o G2 SHALL ser refeito contra o novo merge-base antes do G3.  <!-- unwanted-behavior -->
 
 **Independent Test**: Rodar G2 inteiro num clone limpo e ler `evidence/G2.md`: todos os itens com código de saída 0 e nenhum dado pessoal.
+
+---
+
+### P1: Segurança (threat pass de 13/10/2026)
+
+**User Story**: Como Lucas, quero os achados do threat pass do design como requisito, para a migração não abrir uma porta que o app de hoje não tem.
+
+**Why P1**: o app está em produção, sem staging, com dado pessoal e financeiro.
+
+**Acceptance Criteria**:
+
+1. IF o destino pedido a `ir` ou `substituir` resolve para origem diferente de `location.origin` THEN o app SHALL navegar para `/dash` e SHALL não entregar esse destino ao roteador, verificado com `#//evil.example`, `#/\evil.example`, `#/%2F%2Fevil.example`, `#/%09/evil.example` e `#javascript:alert(1)`.  <!-- unwanted-behavior -->
+2. WHILE o agente roda um gate the agente SHALL não ler o snapshot nem o arquivo de valores da paridade, SHALL não capturar DOM, tela ou resposta com nome, e-mail, comentário ou valor financeiro de mentorado, e SHALL registrar só códigos de saída, contagens, os agregados do G3.4 e erros de console.  <!-- state-driven -->
+3. WHEN o G2 roda THEN `pnpm audit --prod --audit-level=high` SHALL sair com 0, salvo exceção aceita pelo Lucas por escrito, e cada `blob` do `SNAPSHOT` SHALL bater com `git ls-tree -r <sha>` da plataforma.  <!-- event-driven -->
+4. The app SHALL responder com `Content-Security-Policy: frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; connect-src 'self' https://matgynpiscyoshnjzolo.supabase.co`, `X-Content-Type-Options: nosniff` e `Referrer-Policy: strict-origin-when-cross-origin`, e SHALL não enviar `X-Powered-By`.  <!-- ubiquitous -->
+5. The app SHALL renderizar link vindo do banco (`link_meet`, `link_gravacao`, `link_anotacoes`, `link_drive`, `link_mapa_mental`, `link_whatsapp` e o `link` de `stlseller_produtos_vendidos`) como `<a href>` só quando começa com `http:` ou `https:`, com `rel="noopener noreferrer"`, e SHALL mostrar outro valor como texto, verificado com `javascript:` e `data:` nos fixtures.  <!-- ubiquitous -->
+6. IF, na hora de uma leitura ou escrita, o supabase-js não tem sessão ou tem a sessão de outro usuário que não o da tela THEN a porta SHALL não enviar a requisição, SHALL descartar a escrita pendente e o app SHALL mostrar a tela da sessão atual (o login, se não houver), e WHEN o usuário sai com nota pendente THEN o app SHALL gravar a nota antes do `signOut`.  <!-- complex -->
+7. The repo SHALL fixar o pnpm em `packageManager` e SHALL não rodar script de instalação de dependência fora da lista `pnpm.onlyBuiltDependencies` do `package.json`.  <!-- ubiquitous -->
+8. IF um aviso de segurança high ou critical atinge a versão fixada de `next`, `react` ou `react-dom` THEN o app SHALL fixar a versão corrigida sem esperar nova cópia do design system, com a exceção registrada no `SNAPSHOT` e aceita pelo teste de versões.  <!-- unwanted-behavior -->
+
+**Independent Test**: `pnpm test` com os vetores de SEC-01 e SEC-05; `curl -I` no preview para SEC-04; `pnpm audit` no G2.
 
 ---
 
@@ -509,7 +538,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | Input validation & bounds | Zod em toda resposta (DATA-02, DATA-03); validações de formulário de hoje (mapeamento §3.5); moeda (OPS-20); limite da nota (EDGE-04) |
 | Failure / partial-failure states | DATA-06, DATA-07, WRITE-05, WRITE-06, WRITE-07 |
 | Idempotency / retry / duplicate handling | WRITE-03, WRITE-04; upserts mantêm o `onConflict` de hoje (WRITE-01) |
-| Auth boundaries & rate limits | RLS como única autorização (STACK-06, STACK-07, DATA-01); capacidades (WRITE-08, WRITE-09, NAV-03, NAV-04); limite de tentativas do Auth (AUTH-05) |
+| Auth boundaries & rate limits | RLS como única autorização (STACK-06, STACK-07, DATA-01); navegação só na mesma origem (SEC-01); sessão nunca vem da URL (AUTH-10); identidade conferida antes de ler e escrever (SEC-06); cabeçalhos de segurança (SEC-04); capacidades (WRITE-08, WRITE-09, NAV-03, NAV-04); limite de tentativas do Auth (AUTH-05) |
 | Concurrency / ordering | DATA-09; notas com último a salvar vence (AD-004, sem mudança) |
 | Data lifecycle / expiry | N/A because o front não guarda dado além da sessão do supabase-js e da preferência de tema; nenhuma retenção muda |
 | Observability | `console.error("[central-elite3d] …", detalhe)` em toda leitura e escrita que falha (DATA-03); sem telemetria nova, porque hoje não há e o escopo é paridade |
@@ -649,8 +678,16 @@ Depois do G6, problema vira correção para a frente, não revert.
 | EDGE-03 | Edge — virada do dia | - | Pending |
 | EDGE-04 | Edge — nota grande demais | - | Pending |
 | EDGE-05 | Edge — status fora do domínio | - | Pending |
+| SEC-01 | P1: Segurança — navegação só na mesma origem (AC1) | - | Pending |
+| SEC-02 | P1: Segurança — o agente não lê dado pessoal nos gates (AC2) | - | Pending |
+| SEC-03 | P1: Segurança — auditoria e cópia conferida no G2 (AC3) | - | Pending |
+| SEC-04 | P1: Segurança — cabeçalhos (AC4) | - | Pending |
+| SEC-05 | P1: Segurança — link do banco só http(s) (AC5) | - | Pending |
+| SEC-06 | P1: Segurança — identidade antes de ler e escrever (AC6) | - | Pending |
+| SEC-07 | P1: Segurança — pnpm fixo e scripts de instalação na lista (AC7) | - | Pending |
+| SEC-08 | P1: Segurança — correção de segurança sem nova cópia do DS (AC8) | - | Pending |
 
-**Coverage:** 127 total, 0 mapped to tasks, 127 unmapped ⚠️ (Design pronto; Tasks ainda não rodou)
+**Coverage:** 135 total, 0 mapped to tasks, 135 unmapped ⚠️ (Design e threat pass prontos; Tasks em rascunho)
 
 ---
 

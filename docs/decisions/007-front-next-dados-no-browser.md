@@ -37,7 +37,10 @@
 ## Consequências
 
 - Teste de varredura falha se `@supabase/supabase-js` for importado fora de `src/lib/data/`, se
-  `service_role` aparecer fora da guarda de `config.ts`, ou se um arquivo copiado mudar.
+  `service_role` aparecer em `src/` ou no `next.config.ts`, ou se um arquivo copiado mudar. A guarda
+  da chave é uma lista de permissão chamada pelo `next.config.ts` no build, sem texto de chave secreta.
+- Navegação só pela `useNavegar`, que recusa destino de outra origem. Link vindo do banco só vira
+  `href` se for `http(s)`.
 - Feature nova que precise de dado no servidor (cron, webhook) vai para `supabase/functions/`, não
   para o Next.
 - Atualizar o design system é rodar o script com um sha novo e passar o gate. Editar arquivo
