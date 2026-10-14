@@ -1373,11 +1373,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Os 12 itens com regra de entrada, papel que vê e link: contratos pendentes; parcelas vencidas em aberto; criados pela Lia sem cadastro completo; sem sessão há +30 dias; sem subir de marco há +30 dias; sem sessão de implementação; aguardando confirmação; sem evento no Google Agenda; cobranças da Lia sem mentorado; pesquisa da sessão não respondida; pesquisa de Experiência não respondida; poucas respostas na Experiência
-- [ ] Os contadores ignoram a busca
-- [ ] Aviso de adesão só para mentor, com denominador > 0 e taxa < 0,7
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 332 → 348
+- [x] Os 12 itens com regra de entrada, papel que vê e link: contratos pendentes; parcelas vencidas em aberto; criados pela Lia sem cadastro completo; sem sessão há +30 dias; sem subir de marco há +30 dias; sem sessão de implementação; aguardando confirmação; sem evento no Google Agenda; cobranças da Lia sem mentorado; pesquisa da sessão não respondida; pesquisa de Experiência não respondida; poucas respostas na Experiência
+- [x] Os contadores ignoram a busca
+- [x] Aviso de adesão só para mentor, com denominador > 0 e taxa < 0,7
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 332 → 348
 
 **Tests**: unit
 **Gate**: quick

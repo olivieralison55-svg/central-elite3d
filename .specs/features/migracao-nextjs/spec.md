@@ -597,7 +597,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | WRITE-07 | P1: Escritas — falha do `lia_refletir_financeiro` (AC7) | Execute | Implementing |
 | WRITE-08 | P1: Escritas — capacidade no handler (AC8) | Execute | Implementing |
 | WRITE-09 | P1: Escritas — diretoria sem controle de escrita (AC9) | - | Pending |
-| OPS-01 | P1: Operação — painel de atenção (AC1) | - | Pending |
+| OPS-01 | P1: Operação — painel de atenção (AC1) | Execute | Implementing |
 | OPS-02 | P1: Operação — matriz conta reunião (AC2) | Execute | Implementing |
 | OPS-03 | P1: Operação — mentor normalizado (AC3) | Execute | Implementing |
 | OPS-04 | P1: Operação — mês padrão (AC4) | Execute | Implementing |
@@ -638,7 +638,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GER-05 | P1: Gerenciais — recorte do mentor na IA (AC5) | - | Pending |
 | GER-06 | P1: Gerenciais — formato antigo da IA (AC6) | - | Pending |
 | GER-07 | P1: Gerenciais — Mentores (AC7) | - | Pending |
-| GER-08 | P1: Gerenciais — aviso de adesão (AC8) | - | Pending |
+| GER-08 | P1: Gerenciais — aviso de adesão (AC8) | Execute | Implementing |
 | UI-01 | P1: Design system — cópia literal (AC1) | Execute | Implementing |
 | UI-02 | P1: Design system — sem cor crua (AC2) | Execute | Implementing |
 | UI-03 | P1: Design system — Inter (AC3) | Execute | Implementing |

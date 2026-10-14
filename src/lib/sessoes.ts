@@ -19,6 +19,26 @@ const sessoesDe = (sessoes: readonly Sessao[], mentoradoId: string) =>
 export const sessoes1a1De = (sessoes: readonly Sessao[], mentoradoId: string): Sessao[] => sessoesDe(sessoes, mentoradoId).filter(eh1a1);
 export const sessoesGrupoDe = (sessoes: readonly Sessao[], mentoradoId: string): Sessao[] => sessoesDe(sessoes, mentoradoId).filter(ehGrupo);
 
+// Os direitos do mentorado nos encontros em grupo (:592–596): uma sessão de implementação (a
+// falta dela é alerta no Dashboard) e plantões de dúvida, só contados, desde o fechamento.
+export const ETAPA_IMPLEMENTACAO = "Sessão de Implementação Mensal";
+const ETAPA_PLANTAO = "Plantão de Dúvida Semanal";
+
+// A primeira presença concluída na implementação, ou null.
+export const implementacaoDe = (sessoes: readonly Sessao[], mentoradoId: string): Sessao | null =>
+  sessoes
+    .filter((s) => s.mentorado_id === mentoradoId && s.etapa === ETAPA_IMPLEMENTACAO && s.status === "Concluída")
+    .sort((a, b) => (String(a.data) < String(b.data) ? -1 : 1))[0] ?? null;
+
+export const plantoesDe = (sessoes: readonly Sessao[], m: { id: string; data_fechamento: string | null }): number =>
+  sessoes.filter(
+    (s) =>
+      s.mentorado_id === m.id &&
+      s.etapa === ETAPA_PLANTAO &&
+      s.status === "Concluída" &&
+      (!m.data_fechamento || !s.data || s.data >= m.data_fechamento),
+  ).length;
+
 // A trilha de 12 segmentos: uma marca por sessão 1:1, no formato do SegmentedProgress.
 export type TomTrilha = "success" | "primary" | "danger" | "neutral";
 const TOM_TRILHA: ReadonlyMap<string, TomTrilha> = new Map([
