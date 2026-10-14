@@ -1731,13 +1731,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `sanitizarNota` chama o `purify` injetado com `ALLOWED_TAGS: NOTA_TAGS`, `ALLOWED_ATTR: ["href", "class"]`, `ALLOW_DATA_ATTR: false` e `ALLOWED_URI_REGEXP` só `http(s)`; devolve `null` sem suporte
-- [ ] `filtrarClasses` deixa só `checklist` e `feito` (`"fixed inset-0 z-50 checklist"` vira `"checklist"`)
-- [ ] Atalhos `#`, `##`, `###`, `-`, `*`, `1.`, `>`, `[]` com espaço; três crases e `---` com Enter
-- [ ] `linkValido` aceita `http:` e `https:` e recusa `javascript:`, `data:` e texto solto
-- [ ] Autosave: grava 1 s depois da última mudança; `descarregar` em 300 ms grava uma vez com o último HTML
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 439 → 455
+- [x] `sanitizarNota` chama o `purify` injetado com `ALLOWED_TAGS: NOTA_TAGS`, `ALLOWED_ATTR: ["href", "class"]`, `ALLOW_DATA_ATTR: false` e `ALLOWED_URI_REGEXP` só `http(s)`; devolve `null` sem suporte
+- [x] `filtrarClasses` deixa só `checklist` e `feito` (`"fixed inset-0 z-50 checklist"` vira `"checklist"`)
+- [x] Atalhos `#`, `##`, `###`, `-`, `*`, `1.`, `>`, `[]` com espaço; três crases e `---` com Enter
+- [x] `linkValido` aceita `http:` e `https:` e recusa `javascript:`, `data:` e texto solto
+- [x] Autosave: grava 1 s depois da última mudança; `descarregar` em 300 ms grava uma vez com o último HTML
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 439 → 455
 
 **Tests**: unit
 **Gate**: quick
