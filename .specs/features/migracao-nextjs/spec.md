@@ -1,7 +1,7 @@
 # Migração do front para Next.js e o design system da product-ops — Specification
 
 **Scope:** Complex · **Date:** 2026-10-13 · **Base:** `main@2aea455`; a paridade é medida contra o `index.html` do merge-base com a `main` a cada G2
-**Status:** em execução desde 13/10/2026, a pedido do Lucas. Design pronto em [`design.md`](design.md), com as emendas listadas lá. Threat pass feito: os 14 achados viraram SEC-01 a SEC-08 e emendas (design, seção "Threat pass"). Tasks aprovado pelo Lucas em 14/10/2026: o texto EARS desta spec e do design está congelado (mudança reabre o Tasks). O Execute começa pela Fase 0; o app só começa a ser escrito com o G0 verde.
+**Status:** em execução desde 13/10/2026, a pedido do Lucas. Design pronto em [`design.md`](design.md), com as emendas listadas lá. Threat pass feito: os 14 achados viraram SEC-01 a SEC-08 e emendas (design, seção "Threat pass"). Tasks aprovado pelo Lucas em 14/10/2026: o texto EARS desta spec e do design está congelado (mudança reabre o Tasks). O Execute começou pela Fase 0. Em 14/10/2026 o Lucas escalonou o G0: cada item fecha antes do que ele protege (seção G0).
 **Insumo:** [`docs/planejamento/mapeamento-migracao-nextjs.md`](../../../docs/planejamento/mapeamento-migracao-nextjs.md) (citado abaixo como "mapeamento §N"). O mapeamento descreve o comportamento de hoje e é o contrato de paridade desta spec.
 
 ## Problem Statement
@@ -100,11 +100,11 @@ O app está em produção, sem staging, e o push na `main` publica. Um gate só 
 - **Comando sem pipe.** Saída em arquivo e `echo exit=$?`, porque `| tail` devolve o código do `tail`. Os comandos rodam sob o `ram-guard`, com `nvm use default` antes: o Node 20.4 de `/usr/local/bin` quebra o vitest 4.
 - **Vermelho para tudo.** Não existe verde com ressalva. Gate que falha é refeito inteiro depois do conserto.
 - **Ação remota só com "go" do Lucas escrito na evidência:** push de branch, push de tag, merge e push na `main`, mudança na Vercel, criação de conta.
-- **Ordem fixa:** G0 → G1 (a cada task) → G2 → G3 → G4 → G5 → G6.
+- **Ordem fixa:** G0 → G1 (a cada task) → G2 → G3 → G4 → G5 → G6, com os itens do G0 nos prazos da seção dele.
 
-### G0 — Pré-voo (antes do primeiro commit do app)
+### G0 — Pré-voo (escalonado: cada item antes do que ele protege)
 
-A Fase 0 do `tasks.md` (casca do repo, cópia do design system e script de snapshot) roda antes do G0, sob o G1: o G0.2 e o G0.3 dependem dela.
+A Fase 0 do `tasks.md` (casca do repo, cópia do design system e script de snapshot) roda antes do G0, sob o G1: o G0.2 e o G0.3 dependem dela. Prazos, escalonados pelo Lucas em 14/10/2026: o G0.1 fecha antes da Fase 1; o G0.2 antes da Fase 4, porque as chaves de desempate que ele confere alimentam a leitura paginada; o G0.3 a G0.6 antes do G2.
 
 | item | verificação | passa quando |
 | ---- | ----------- | ------------ |
@@ -115,7 +115,7 @@ A Fase 0 do `tasks.md` (casca do repo, cópia do design system e script de snaps
 | G0.5 | contas de UAT | uma conta de diretoria e uma de mentor disponíveis |
 | G0.6 | congelamento e janela | Lucas aprova o congelamento do `index.html` e a janela do corte |
 
-Se falhar: a Fase 1 não começa.
+Se falhar: a fase ou o gate que o item precede não começa.
 
 ### G1 — Task (cada commit da branch)
 
@@ -462,7 +462,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 
 **Acceptance Criteria**:
 
-1. The feature SHALL passar pelos gates G0 a G6 da seção "Gates de produção" nessa ordem, e IF um gate falha THEN o gate seguinte SHALL não começar antes de o que falhou ser refeito inteiro e verde.  <!-- complex -->
+1. The feature SHALL passar pelos gates G0 a G6 da seção "Gates de produção" nessa ordem, com cada item do G0 verde antes da fase ou do gate que a seção G0 lhe atribui, e IF um gate falha THEN o gate seguinte SHALL não começar antes de o que falhou ser refeito inteiro e verde.  <!-- complex -->
 2. WHEN um gate roda THEN a evidência SHALL ser gravada em `.specs/features/migracao-nextjs/evidence/G<n>.md` com o sha, a data e hora e o código de saída de cada comando.  <!-- event-driven -->
 3. The evidência SHALL conter só ids e contagens, sem nome, e-mail, comentário ou valor financeiro de mentorado, e SHALL não conter HAR, cabeçalho `Authorization`, corpo de `/auth/v1/`, `refresh_token` nem texto em formato JWT, verificado por um teste que varre `evidence/`.  <!-- ubiquitous -->
 4. The branch SHALL ter `vercel.json` com `"framework": "nextjs"`, e WHILE a branch não foi mesclada the `main` SHALL continuar publicando o app estático.  <!-- complex -->

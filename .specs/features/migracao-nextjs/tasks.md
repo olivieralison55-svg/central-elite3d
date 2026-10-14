@@ -54,7 +54,7 @@ Phases are ordered and run sequentially - each phase completes before the next b
 
 ### Phase 0: Pré-voo
 
-Casca do repo, cópia do design system e script de snapshot. Depois dela, **pausa para o G0 com o Lucas** (spec, G0): nada da Fase 1 começa antes do G0 verde.
+Casca do repo, cópia do design system e script de snapshot. Depois dela vem o G0, escalonado pelo Lucas em 14/10/2026 (spec, G0): o G0.1 fecha antes da Fase 1, o G0.2 antes da Fase 4 e o G0.3 a G0.6 antes do G2.
 
 ```
 T1 → T2 → T3 → T4
@@ -79,6 +79,8 @@ T15 → T16 → T17 → T18 → T19 → T20
 ```
 
 ### Phase 4: Leituras
+
+Começa só com o G0.2 verde: snapshot gravado e as chaves de desempate conferidas no banco.
 
 ```
 T21 → T22 → T23 → T24 → T25
@@ -2508,7 +2510,7 @@ Executados na ordem da spec, com evidência em `.specs/features/migracao-nextjs/
 
 | gate | quando | quem | requisitos conferidos |
 | ---- | ------ | ---- | --------------------- |
-| G0 | entre a Fase 0 e a Fase 1 | Lucas roda `pnpm parity:snapshot` num terminal dele; o dono da Vercel confirma previews, `main` de produção, log liberado e Output Directory sem sobreposição; Lucas empurra a `main` da plataforma, aprova o congelamento e a janela, e separa as contas de UAT | GATE-05, UI-01 (sha alcançável) |
+| G0 | escalonado: G0.1 antes da Fase 1, G0.2 antes da Fase 4, G0.3 a G0.6 antes do G2 | Lucas roda `pnpm parity:snapshot` num terminal dele; o dono da Vercel confirma previews, `main` de produção, log liberado e Output Directory sem sobreposição; Lucas empurra a `main` da plataforma, aprova o congelamento e a janela, e separa as contas de UAT | GATE-05, UI-01 (sha alcançável) |
 | G2 | depois da T84 | agente, sem ler valores (SEC-02) | STACK-03 (clone limpo), GATE-06, GATE-07 (paridade), GATE-11, GATE-12 (build), GATE-16 (congelamento), SEC-03 (`pnpm audit`, `SNAPSHOT` × plataforma), Verifier, threat pass do diff |
 | G3 | depois do "go" do push da branch | agente e Lucas no preview; senhas só pelo Lucas; nada de captura de tela, DOM ou HAR (SEC-02) | CUT-01 (5 caminhos em 404), CUT-02 e NAV-07 (link antigo, voltar e avançar), GATE-08 (rede da diretoria e sonda do RLS), GATE-09 e GATE-10 (escrita no registro de teste, tudo em 31/12/2099), AUTH-09 (recarregar mantém a sessão), UI-04 (temas), SEC-04 (`curl -I`), G3.9 a G3.11 |
 | G4 | antes do corte | Lucas | GATE-13, GATE-15 (tag `pre-nextjs`, ensaio da volta com o `.vercelignore`), janela |
