@@ -478,13 +478,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `entrar` chama `signInWithPassword({ email, password })`; `lerPerfil` faz `from("profiles").select("*").eq("id", id).single()`
-- [ ] `invalid_credentials` ou status 400 → "E-mail ou senha inválidos."; `AuthRetryableFetchError` → mensagem de conexão; 429 → mensagem de limite; outro → "Não foi possível entrar: <mensagem>." — as três últimas sem a palavra "senha"
-- [ ] O cliente é criado com `createClient(URL, KEY, { auth: { detectSessionInUrl: false } })`: storage e chave da sessão padrão, sem ler sessão da URL
-- [ ] `usuarioDaSessao()` devolve o id da sessão atual ou `null`
-- [ ] Nenhuma chamada a `signUp`, `resetPasswordForEmail`, `signInWithOtp` ou `signInWithOAuth` (varredura no teste)
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 113 → 123
+- [x] `entrar` chama `signInWithPassword({ email, password })`; `lerPerfil` faz `from("profiles").select("*").eq("id", id).single()`
+- [x] `invalid_credentials` ou status 400 → "E-mail ou senha inválidos."; `AuthRetryableFetchError` → mensagem de conexão; 429 → mensagem de limite; outro → "Não foi possível entrar: <mensagem>." — as três últimas sem a palavra "senha"
+- [x] O cliente é criado com `createClient(URL, KEY, { auth: { detectSessionInUrl: false } })`: storage e chave da sessão padrão, sem ler sessão da URL
+- [x] `usuarioDaSessao()` devolve o id da sessão atual ou `null`
+- [x] Nenhuma chamada a `signUp`, `resetPasswordForEmail`, `signInWithOtp` ou `signInWithOAuth` (varredura no teste)
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 113 → 123
 
 **Tests**: unit
 **Gate**: quick

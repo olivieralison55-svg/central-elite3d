@@ -560,15 +560,15 @@ Depois do G6, problema vira correção para a frente, não revert.
 | STACK-07 | P1: Fundação — sem `service_role` no código (AC7) | Execute | Implementing |
 | STACK-08 | P1: Fundação — sem CDN, versões exatas (AC8) | Execute | Implementing |
 | AUTH-01 | P1: Login — tela sem sessão (AC1) | - | Pending |
-| AUTH-02 | P1: Login — entrada e papel (AC2) | - | Pending |
+| AUTH-02 | P1: Login — entrada e papel (AC2) | Execute | Implementing |
 | AUTH-03 | P1: Login — Enter envia (AC3) | - | Pending |
-| AUTH-04 | P1: Login — credencial recusada (AC4) | - | Pending |
-| AUTH-05 | P1: Login — falha de rede ou limite (AC5) | - | Pending |
-| AUTH-06 | P1: Login — perfil ausente (AC6) | - | Pending |
+| AUTH-04 | P1: Login — credencial recusada (AC4) | Execute | Implementing |
+| AUTH-05 | P1: Login — falha de rede ou limite (AC5) | Execute | Implementing |
+| AUTH-06 | P1: Login — perfil ausente (AC6) | Execute | Implementing |
 | AUTH-07 | P1: Login — papel não reconhecido (AC7) | Execute | Implementing |
 | AUTH-08 | P1: Login — logout limpa tudo (AC8) | - | Pending |
-| AUTH-09 | P1: Login — sessão persiste (AC9) | - | Pending |
-| AUTH-10 | P1: Login — sem cadastro nem reset (AC10) | - | Pending |
+| AUTH-09 | P1: Login — sessão persiste (AC9) | Execute | Implementing |
+| AUTH-10 | P1: Login — sem cadastro nem reset (AC10) | Execute | Implementing |
 | NAV-01 | P1: Endereço — mesmos caminhos (AC1) | Execute | Implementing |
 | NAV-02 | P1: Endereço — link antigo com hash (AC2) | Execute | Implementing |
 | NAV-03 | P1: Endereço — caminho inválido (AC3) | Execute | Implementing |
@@ -674,7 +674,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | CUT-03 | P2: Corte — um front só (AC3) | Execute | Implementing |
 | CUT-04 | P2: Corte — docs atualizadas (AC4) | - | Pending |
 | EDGE-01 | Edge — ficha excluída por outro admin | - | Pending |
-| EDGE-02 | Edge — sessão não renova | - | Pending |
+| EDGE-02 | Edge — sessão não renova | Execute | Implementing |
 | EDGE-03 | Edge — virada do dia | - | Pending |
 | EDGE-04 | Edge — nota grande demais | - | Pending |
 | EDGE-05 | Edge — status fora do domínio | - | Pending |
@@ -683,7 +683,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | SEC-03 | P1: Segurança — auditoria e cópia conferida no G2 (AC3) | Execute | Implementing |
 | SEC-04 | P1: Segurança — cabeçalhos (AC4) | Execute | Implementing |
 | SEC-05 | P1: Segurança — link do banco só http(s) (AC5) | - | Pending |
-| SEC-06 | P1: Segurança — identidade antes de ler e escrever (AC6) | - | Pending |
+| SEC-06 | P1: Segurança — identidade antes de ler e escrever (AC6) | Execute | Implementing |
 | SEC-07 | P1: Segurança — pnpm fixo e scripts de instalação na lista (AC7) | Execute | Implementing |
 | SEC-08 | P1: Segurança — correção de segurança sem nova cópia do DS (AC8) | Execute | Implementing |
 
