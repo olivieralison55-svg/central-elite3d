@@ -48,10 +48,13 @@ export function lerCaminho(segmentos: readonly string[]): Endereco {
 export function caminhoDoHash(hash: string): string | null {
   const endereco = lerSegmentos(hash.replace(/^#\/?/, "").split("/"));
   if (!endereco) return null;
-  if (endereco.tela !== "mentorado") return `/${endereco.tela}`;
-  const ficha = `/mentorado/${encodeURIComponent(endereco.id)}`;
-  return endereco.aba === "cadastro" ? ficha : `${ficha}/${endereco.aba}`;
+  return endereco.tela === "mentorado" ? caminhoDaFicha(endereco.id, endereco.aba) : `/${endereco.tela}`;
 }
+
+// O caminho da ficha, com o id em encodeURIComponent: um id com `/` ou `?` continua na ficha. O
+// cadastro não leva segmento de aba, como o `openMentorado` de hoje (index.html:3104–3108).
+export const caminhoDaFicha = (id: string, aba: Aba = "cadastro"): string =>
+  `/mentorado/${encodeURIComponent(id)}${aba === "cadastro" ? "" : `/${aba}`}`;
 
 // NAV-04: link colado não abre o que o menu esconde.
 export function telaPermitida(tela: Endereco["tela"], papel: Papel): boolean {

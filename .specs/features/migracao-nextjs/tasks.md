@@ -1400,12 +1400,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Acompanhamento sem números gerais, progressão e detalhe
-- [ ] Os 4 avisos da matriz gravam `foco` e levam a `/sessoes`
-- [ ] Busca recorta listas sem mudar cards, contadores e subtítulos
-- [ ] `EmptyState` em lista vazia
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 348 → 356
+- [x] Acompanhamento sem números gerais, progressão e detalhe
+- [x] Os 4 avisos da matriz gravam `foco` e levam a `/sessoes`
+- [x] Busca recorta listas sem mudar cards, contadores e subtítulos
+- [x] `EmptyState` em lista vazia
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 348 → 356
 
 **Tests**: unit
 **Gate**: quick
