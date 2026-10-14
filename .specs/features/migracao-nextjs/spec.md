@@ -622,7 +622,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | FIN-03 | P1: Dinheiro — motivo da órfã (AC3) | - | Pending |
 | FIN-04 | P1: Dinheiro — descartar e restaurar (AC4) | Execute | Implementing |
 | FIN-05 | P1: Dinheiro — parcela da Lia (AC5) | - | Pending |
-| FIN-06 | P1: Dinheiro — prazo em SP (AC6) | - | Pending |
+| FIN-06 | P1: Dinheiro — prazo em SP (AC6) | Execute | Implementing |
 | NOTE-01 | P1: Notas — contenteditable (AC1) | - | Pending |
 | NOTE-02 | P1: Notas — DOMPurify (AC2) | - | Pending |
 | NOTE-03 | P1: Notas — sem sanitizador, só leitura (AC3) | - | Pending |
@@ -651,7 +651,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | TEST-02 | P1: Testes — XSS em toda tela (AC2) | Execute | Implementing |
 | TEST-03 | P1: Testes — HTML atribuído só nas notas (AC3) | Execute | Implementing |
 | TEST-04 | P1: Testes — listas iguais às da function (AC4) | Execute | Implementing |
-| TEST-05 | P1: Testes — `hojeSP()` às 23:30 (AC5) | - | Pending |
+| TEST-05 | P1: Testes — `hojeSP()` às 23:30 (AC5) | Execute | Implementing |
 | TEST-06 | P1: Testes — offline (AC6) | Execute | Implementing |
 | GATE-01 | P1: Gates — ordem e refazer o que falhou (AC1) | - | Pending |
 | GATE-02 | P1: Gates — evidência por gate (AC2) | - | Pending |
@@ -675,7 +675,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | CUT-04 | P2: Corte — docs atualizadas (AC4) | - | Pending |
 | EDGE-01 | Edge — ficha excluída por outro admin | - | Pending |
 | EDGE-02 | Edge — sessão não renova | Execute | Implementing |
-| EDGE-03 | Edge — virada do dia | - | Pending |
+| EDGE-03 | Edge — virada do dia | Execute | Implementing |
 | EDGE-04 | Edge — nota grande demais | - | Pending |
 | EDGE-05 | Edge — status fora do domínio | Execute | Implementing |
 | SEC-01 | P1: Segurança — navegação só na mesma origem (AC1) | Execute | Implementing |

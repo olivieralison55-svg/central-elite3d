@@ -1077,12 +1077,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `hojeSP()` às 23:30 de Brasília (02:30 UTC do dia seguinte) devolve a data de Brasília
-- [ ] `prazoTexto`: "venceu há N dias", "ontem", "hoje", "amanhã", "em N dias", por dia de calendário em America/Sao_Paulo
-- [ ] Dois `hojeSP()` com o relógio virando a meia-noite de Brasília devolvem dias diferentes (nada fica congelado)
-- [ ] Os casos de data do grupo "Formatadores e campo de data" do mapeamento §7
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 260 → 272
+- [x] `hojeSP()` às 23:30 de Brasília (02:30 UTC do dia seguinte) devolve a data de Brasília
+- [x] `prazoTexto`: "venceu há N dias", "ontem", "hoje", "amanhã", "em N dias", por dia de calendário em America/Sao_Paulo
+- [x] Dois `hojeSP()` com o relógio virando a meia-noite de Brasília devolvem dias diferentes (nada fica congelado)
+- [x] Os casos de data do grupo "Formatadores e campo de data" do mapeamento §7
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 260 → 272
 
 **Tests**: unit
 **Gate**: quick
