@@ -579,14 +579,14 @@ Depois do G6, problema vira correção para a frente, não revert.
 | NAV-08 | P1: Endereço — Skeleton na 1ª carga (AC8) | - | Pending |
 | NAV-09 | P1: Endereço — ficha não encontrada (AC9) | - | Pending |
 | NAV-10 | P1: Endereço — foco dos avisos (AC10) | - | Pending |
-| DATA-01 | P1: Porta — só ela importa o supabase-js (AC1) | - | Pending |
+| DATA-01 | P1: Porta — só ela importa o supabase-js (AC1) | Execute | Implementing |
 | DATA-02 | P1: Porta — Zod em R01–R23 (AC2) | - | Pending |
 | DATA-03 | P1: Porta — schema mismatch (AC3) | - | Pending |
 | DATA-04 | P1: Porta — paginação estável (AC4) | Execute | Implementing |
 | DATA-05 | P1: Porta — 2.500 linhas (AC5) | - | Pending |
 | DATA-06 | P1: Porta — carga inicial com erro (AC6) | - | Pending |
 | DATA-07 | P1: Porta — erro isolado por relação (AC7) | - | Pending |
-| DATA-08 | P1: Porta — só 4 rpcs (AC8) | - | Pending |
+| DATA-08 | P1: Porta — só 4 rpcs (AC8) | Execute | Implementing |
 | DATA-09 | P1: Porta — última recarga vence (AC9) | - | Pending |
 | WRITE-01 | P1: Escritas — payload igual (AC1) | - | Pending |
 | WRITE-02 | P1: Escritas — 0 linhas não é sucesso (AC2) | - | Pending |
@@ -640,16 +640,16 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GER-07 | P1: Gerenciais — Mentores (AC7) | - | Pending |
 | GER-08 | P1: Gerenciais — aviso de adesão (AC8) | - | Pending |
 | UI-01 | P1: Design system — cópia literal (AC1) | Execute | Implementing |
-| UI-02 | P1: Design system — sem cor crua (AC2) | - | Pending |
+| UI-02 | P1: Design system — sem cor crua (AC2) | Execute | Implementing |
 | UI-03 | P1: Design system — Inter (AC3) | Execute | Implementing |
 | UI-04 | P1: Design system — dois temas (AC4) | Execute | Implementing |
-| UI-05 | P1: Design system — ConfirmDialog (AC5) | - | Pending |
+| UI-05 | P1: Design system — ConfirmDialog (AC5) | Execute | Implementing |
 | UI-06 | P1: Design system — lacunas com AD (AC6) | - | Pending |
 | UI-07 | P1: Design system — EmptyState e Skeleton (AC7) | - | Pending |
 | UI-08 | P1: Design system — casca com primitivos do DS (AC8) | - | Pending |
 | TEST-01 | P1: Testes — 20 grupos portados (AC1) | - | Pending |
 | TEST-02 | P1: Testes — XSS em toda tela (AC2) | - | Pending |
-| TEST-03 | P1: Testes — HTML atribuído só nas notas (AC3) | - | Pending |
+| TEST-03 | P1: Testes — HTML atribuído só nas notas (AC3) | Execute | Implementing |
 | TEST-04 | P1: Testes — listas iguais às da function (AC4) | - | Pending |
 | TEST-05 | P1: Testes — `hojeSP()` às 23:30 (AC5) | - | Pending |
 | TEST-06 | P1: Testes — offline (AC6) | Execute | Implementing |

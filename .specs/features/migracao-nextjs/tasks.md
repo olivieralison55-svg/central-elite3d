@@ -355,19 +355,19 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] DATA-01: nenhum import de `@supabase/supabase-js` fora de `src/lib/data/`
-- [ ] DATA-08: nenhum `.functions.invoke(` em `src/`; `.rpc(` só com `experiencia_adesao`, `analise_ia_mentor`, `lia_adotar_orfas` e `lia_refletir_financeiro`
-- [ ] STACK-05: `process.env.` só com os dois nomes `NEXT_PUBLIC_*`
-- [ ] STACK-07: nenhum `service_role`, `SUPABASE_SERVICE_ROLE_KEY` nem `sb_secret_` em `src/` nem no `next.config.ts`
-- [ ] STACK-08: nenhum `<script src="http`, `<link href="http` ou `fonts.googleapis`; `@supabase/supabase-js` `2.117.3` e `dompurify` `3.2.6` exatos; `chart.js` ausente do `package.json`
-- [ ] TEST-03: `dangerouslySetInnerHTML`, `.innerHTML =`, `.outerHTML =`, `insertAdjacentHTML`, `createContextualFragment` e `execCommand("insertHTML"` só em `src/components/modules/ficha/editor-notas.tsx`, e só com `sanitizarNota(`
-- [ ] GATE-03: nenhum arquivo de `.specs/features/migracao-nextjs/evidence/` com HAR, `Authorization`, `/auth/v1/`, `refresh_token` ou texto em formato JWT
-- [ ] SEC-07: `packageManager` presente com versão exata; `pnpm.onlyBuiltDependencies` presente
-- [ ] UI-02: em `src/components/modules/` e `src/app/`, nenhum hexa de cor, `rgb(`, `rgba(` ou classe da paleta padrão do Tailwind (`slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose`-número)
-- [ ] UI-03: nenhum `next/font/google` nem `Manrope` em `src/`
-- [ ] UI-05: nenhum `window.confirm`, `window.prompt`, `window.alert`, `confirm(`, `prompt(` ou `alert(` em `src/`
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 79 → 89
+- [x] DATA-01: nenhum import de `@supabase/supabase-js` fora de `src/lib/data/`
+- [x] DATA-08: nenhum `.functions.invoke(` em `src/`; `.rpc(` só com `experiencia_adesao`, `analise_ia_mentor`, `lia_adotar_orfas` e `lia_refletir_financeiro`
+- [x] STACK-05: `process.env.` só com os dois nomes `NEXT_PUBLIC_*`
+- [x] STACK-07: nenhum `service_role`, `SUPABASE_SERVICE_ROLE_KEY` nem `sb_secret_` em `src/` nem no `next.config.ts`
+- [x] STACK-08: nenhum `<script src="http`, `<link href="http` ou `fonts.googleapis`; `@supabase/supabase-js` `2.117.3` e `dompurify` `3.2.6` exatos; `chart.js` ausente do `package.json`
+- [x] TEST-03: `dangerouslySetInnerHTML`, `.innerHTML =`, `.outerHTML =`, `insertAdjacentHTML`, `createContextualFragment` e `execCommand("insertHTML"` só em `src/components/modules/ficha/editor-notas.tsx`, e só com `sanitizarNota(`
+- [x] GATE-03: nenhum arquivo de `.specs/features/migracao-nextjs/evidence/` com HAR, `Authorization`, `/auth/v1/`, `refresh_token` ou texto em formato JWT
+- [x] SEC-07: `packageManager` presente com versão exata; `pnpm.onlyBuiltDependencies` presente
+- [x] UI-02: em `src/components/modules/` e `src/app/`, nenhum hexa de cor, `rgb(`, `rgba(` ou classe da paleta padrão do Tailwind (`slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose`-número)
+- [x] UI-03: nenhum `next/font/google` nem `Manrope` em `src/`
+- [x] UI-05: nenhum `window.confirm`, `window.prompt`, `window.alert`, `confirm(`, `prompt(` ou `alert(` em `src/`
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 79 → 89
 
 **Tests**: unit
 **Gate**: build
