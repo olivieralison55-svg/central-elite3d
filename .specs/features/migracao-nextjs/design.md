@@ -1,7 +1,7 @@
 # Migração do front para Next.js — Design
 
 **Spec**: `.specs/features/migracao-nextjs/spec.md`
-**Status**: Draft · 2026-10-13 · branch `feat/migracao-nextjs`
+**Status**: Approved (Lucas, 14/10/2026, com o `tasks.md`) · branch `feat/migracao-nextjs`
 **Decisões duráveis**: [AD-007](../../../docs/decisions/007-front-next-dados-no-browser.md). O que só vale para esta migração fica na tabela "Tech Decisions".
 **Insumo**: o mapeamento (`docs/planejamento/mapeamento-migracao-nextjs.md`, citado como "mapeamento §N"). `:NNNN` é `index.html:NNNN` em `main@2aea455`.
 

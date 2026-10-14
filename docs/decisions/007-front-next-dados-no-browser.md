@@ -1,6 +1,6 @@
 # AD-007 — Front em Next.js: dados só no browser, por uma porta única
 
-- **Status**: proposed. Vira active quando o Lucas aprovar o `tasks.md` da migração.
+- **Status**: active (o Lucas aprovou o `tasks.md` da migração em 14/10/2026).
 - **Date**: 2026-10-13
 - **Scope**: todo código em `src/`; `.specs/features/migracao-nextjs/`.
 - **Decided by**: o orquestrador, no Design da migração, pela opção mais segura dentro da spec.

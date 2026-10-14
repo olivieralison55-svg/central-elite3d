@@ -14,7 +14,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Design**: `.specs/features/migracao-nextjs/design.md`
 **Spec**: `.specs/features/migracao-nextjs/spec.md`
-**Status**: Draft
+**Status**: Approved (Lucas, 14/10/2026)
 **Worktree**: `~/.worktrees/central-elite3d-migracao`, branch `feat/migracao-nextjs`. Push, deploy e banco só com o "go" do Lucas (spec, "Gates de produção").
 
 ---

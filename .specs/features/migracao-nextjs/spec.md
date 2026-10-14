@@ -1,7 +1,7 @@
 # Migração do front para Next.js e o design system da product-ops — Specification
 
 **Scope:** Complex · **Date:** 2026-10-13 · **Base:** `main@2aea455`; a paridade é medida contra o `index.html` do merge-base com a `main` a cada G2
-**Status:** em execução desde 13/10/2026, a pedido do Lucas. Design pronto em [`design.md`](design.md), com as emendas listadas lá. Threat pass feito: os 14 achados viraram SEC-01 a SEC-08 e emendas (design, seção "Threat pass"). Próxima fase: aprovação do Tasks. O app só começa a ser escrito com o G0 verde.
+**Status:** em execução desde 13/10/2026, a pedido do Lucas. Design pronto em [`design.md`](design.md), com as emendas listadas lá. Threat pass feito: os 14 achados viraram SEC-01 a SEC-08 e emendas (design, seção "Threat pass"). Tasks aprovado pelo Lucas em 14/10/2026: o texto EARS desta spec e do design está congelado (mudança reabre o Tasks). O Execute começa pela Fase 0; o app só começa a ser escrito com o G0 verde.
 **Insumo:** [`docs/planejamento/mapeamento-migracao-nextjs.md`](../../../docs/planejamento/mapeamento-migracao-nextjs.md) (citado abaixo como "mapeamento §N"). O mapeamento descreve o comportamento de hoje e é o contrato de paridade desta spec.
 
 ## Problem Statement
