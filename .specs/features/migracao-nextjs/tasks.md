@@ -1023,10 +1023,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `ocupado` é `true` durante a escrita e vai para o `loading` do `Button`
-- [ ] A capacidade vem do papel da sessão
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 253 → 255
+- [x] `ocupado` é `true` durante a escrita e vai para o `loading` do `Button`
+- [x] A capacidade vem do papel da sessão
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 253 → 255
 
 **Tests**: unit
 **Gate**: build
