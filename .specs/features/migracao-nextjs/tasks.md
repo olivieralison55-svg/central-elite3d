@@ -1760,14 +1760,14 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] O JSX do editor não tem filho; o HTML entra só por `ref.current.innerHTML = sanitizarNota(…)`
-- [ ] Desmontar com gravação pendente grava a partir do `htmlRef`; `visibilitychange` para `hidden` também
-- [ ] O `descarregar` do autosave fica em `registrarPendencia` enquanto o editor está montado
-- [ ] Diretoria: sem barra e sem `contentEditable`
-- [ ] Sem sanitizador: `Alert`, sem HTML e sem gravar
-- [ ] Erro do banco no toast; o texto fica no editor
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 455 → 461
+- [x] O JSX do editor não tem filho; o HTML entra só por `ref.current.innerHTML = sanitizarNota(…)`
+- [x] Desmontar com gravação pendente grava a partir do `htmlRef`; `visibilitychange` para `hidden` também
+- [x] O `descarregar` do autosave fica em `registrarPendencia` enquanto o editor está montado
+- [x] Diretoria: sem barra e sem `contentEditable`
+- [x] Sem sanitizador: `Alert`, sem HTML e sem gravar
+- [x] Erro do banco no toast; o texto fica no editor
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 455 → 461
 
 **Tests**: unit
 **Gate**: quick

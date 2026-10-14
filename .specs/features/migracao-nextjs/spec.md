@@ -623,12 +623,12 @@ Depois do G6, problema vira correção para a frente, não revert.
 | FIN-04 | P1: Dinheiro — descartar e restaurar (AC4) | Execute | Implementing |
 | FIN-05 | P1: Dinheiro — parcela da Lia (AC5) | Execute | Implementing |
 | FIN-06 | P1: Dinheiro — prazo em SP (AC6) | Execute | Implementing |
-| NOTE-01 | P1: Notas — contenteditable (AC1) | - | Pending |
+| NOTE-01 | P1: Notas — contenteditable (AC1) | Execute | Implementing |
 | NOTE-02 | P1: Notas — DOMPurify (AC2) | Execute | Implementing |
 | NOTE-03 | P1: Notas — sem sanitizador, só leitura (AC3) | Execute | Implementing |
 | NOTE-04 | P1: Notas — grava em 1 s (AC4) | Execute | Implementing |
 | NOTE-05 | P1: Notas — grava ao sair (AC5) | Execute | Implementing |
-| NOTE-06 | P1: Notas — diretoria só lê (AC6) | - | Pending |
+| NOTE-06 | P1: Notas — diretoria só lê (AC6) | Execute | Implementing |
 | NOTE-07 | P1: Notas — atalhos (AC7) | Execute | Implementing |
 | NOTE-08 | P1: Notas — link http/https (AC8) | Execute | Implementing |
 | GER-01 | P1: Gerenciais — STLSeller (AC1) | - | Pending |
@@ -676,7 +676,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | EDGE-01 | Edge — ficha excluída por outro admin | Execute | Implementing |
 | EDGE-02 | Edge — sessão não renova | Execute | Implementing |
 | EDGE-03 | Edge — virada do dia | Execute | Implementing |
-| EDGE-04 | Edge — nota grande demais | - | Pending |
+| EDGE-04 | Edge — nota grande demais | Execute | Implementing |
 | EDGE-05 | Edge — status fora do domínio | Execute | Implementing |
 | SEC-01 | P1: Segurança — navegação só na mesma origem (AC1) | Execute | Implementing |
 | SEC-02 | P1: Segurança — o agente não lê dado pessoal nos gates (AC2) | - | Pending |

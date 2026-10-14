@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { diasAte, diaSP, dpLabel, fmtD, hojeSP, mesDe, prazoTexto, segundaDe } from "./datas";
+import { diasAte, diaSP, dpLabel, fmtD, fmtInstante, hojeSP, mesDe, prazoTexto, segundaDe } from "./datas";
 
 // Brasília é UTC−3 o ano inteiro: 02:30 UTC é 23:30 do dia anterior lá.
 const relogio = (instante: string) => vi.setSystemTime(new Date(instante));
@@ -68,6 +68,12 @@ describe("formatadores de data (grupo 'Formatadores e campo de data')", () => {
     expect(fmtD("2026-08-20")).toBe("20/08/2026");
     expect(fmtD(null)).toBe("—");
     expect(fmtD("")).toBe("—");
+  });
+
+  it("fmtInstante mostra o instante em horário de Brasília; vazio, inválido ou epoch zero viram '—'", () => {
+    expect(fmtInstante("2026-08-06T21:52:45.995+00:00")).toBe("06/08/2026, 18:52");
+    expect(fmtInstante("2026-10-14T02:30:00Z")).toBe("13/10/2026, 23:30");
+    for (const nada of [null, undefined, "", "não é data", "1970-01-01T00:00:00Z"]) expect(fmtInstante(nada), String(nada)).toBe("—");
   });
 
   it("dpLabel: o modo mês rotula Mês/Ano, o modo dia é o fmtD, e vazio fica vazio", () => {

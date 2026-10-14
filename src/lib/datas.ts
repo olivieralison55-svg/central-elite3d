@@ -15,6 +15,14 @@ export const hojeSP = (): string => diaEmSP(new Date());
 // O dia de Brasília de um timestamp do banco (o `respondido_em` do NPS).
 export const diaSP = (instante: string): string => diaEmSP(new Date(instante));
 
+// Um instante do banco em horário de Brasília, "DD/MM/AAAA, HH:MM" (fmtInstante, index.html:3125).
+// Sem valor, inválido ou do epoch para trás: "—", e o dado nulo não vira 31/12/1969.
+export function fmtInstante(valor: string | null | undefined): string {
+  const instante = valor ? new Date(valor) : null;
+  if (!instante || Number.isNaN(instante.getTime()) || instante.getTime() <= 0) return "—";
+  return instante.toLocaleString("pt-BR", { timeZone: FUSO, dateStyle: "short", timeStyle: "short" });
+}
+
 // "AAAA-MM-DD" vira "DD/MM/AAAA"; sem data, "—".
 export const fmtD = (data: string | null | undefined): string => (data ? data.split("-").reverse().join("/") : "—");
 
