@@ -1651,10 +1651,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Colar "2000.50" mostra R$ 2.000,50 e entrega 2000,5
-- [ ] O `NumberInput` do DS não é usado para dinheiro
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 420 → 423
+- [x] Colar "2000.50" mostra R$ 2.000,50 e entrega 2000,5
+- [x] O `NumberInput` do DS não é usado para dinheiro
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 420 → 423
 
 **Tests**: unit
 **Gate**: quick
