@@ -561,7 +561,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | STACK-08 | P1: Fundação — sem CDN, versões exatas (AC8) | Execute | Implementing |
 | AUTH-01 | P1: Login — tela sem sessão (AC1) | Execute | Implementing |
 | AUTH-02 | P1: Login — entrada e papel (AC2) | Execute | Implementing |
-| AUTH-03 | P1: Login — Enter envia (AC3) | - | Pending |
+| AUTH-03 | P1: Login — Enter envia (AC3) | Execute | Implementing |
 | AUTH-04 | P1: Login — credencial recusada (AC4) | Execute | Implementing |
 | AUTH-05 | P1: Login — falha de rede ou limite (AC5) | Execute | Implementing |
 | AUTH-06 | P1: Login — perfil ausente (AC6) | Execute | Implementing |

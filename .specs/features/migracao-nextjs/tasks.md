@@ -594,12 +594,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Campos com `label` ligado por `htmlFor`; Entrar é `type="submit"` (Enter no campo de senha envia)
-- [ ] Mostra as quatro mensagens da T12 conforme o erro
-- [ ] Sem link de cadastro nem de recuperação de senha
-- [ ] Ao desmontar, a senha some (estado local)
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 141 → 147
+- [x] Campos com `label` ligado por `htmlFor`; Entrar é `type="submit"` (Enter no campo de senha envia)
+- [x] Mostra as quatro mensagens da T12 conforme o erro
+- [x] Sem link de cadastro nem de recuperação de senha
+- [x] Ao desmontar, a senha some (estado local)
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 141 → 147
 
 **Tests**: unit
 **Gate**: quick
