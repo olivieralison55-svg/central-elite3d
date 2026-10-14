@@ -1105,11 +1105,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] "2000.50" vale 2000,50; "1.234,56" vale 1234,56; vazio vale vazio
-- [ ] `mascaraBRL(v, true)` fecha as casas no blur
-- [ ] Os casos de moeda do grupo "Formatadores e campo de data"
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 272 → 280
+- [x] "2000.50" vale 2000,50; "1.234,56" vale 1234,56; vazio vale vazio
+- [x] `mascaraBRL(v, true)` fecha as casas no blur
+- [x] Os casos de moeda do grupo "Formatadores e campo de data"
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 272 → 280
 
 **Tests**: unit
 **Gate**: quick

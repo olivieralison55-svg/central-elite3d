@@ -616,7 +616,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | OPS-17 | P1: Operação — um marco aberto (AC17) | - | Pending |
 | OPS-18 | P1: Operação — critérios por texto (AC18) | Execute | Implementing |
 | OPS-19 | P1: Operação — régua por unidade (AC19) | - | Pending |
-| OPS-20 | P1: Operação — moeda BRL (AC20) | - | Pending |
+| OPS-20 | P1: Operação — moeda BRL (AC20) | Execute | Implementing |
 | FIN-01 | P1: Dinheiro — busca não esconde (AC1) | - | Pending |
 | FIN-02 | P1: Dinheiro — vincular com 1 cadastro (AC2) | - | Pending |
 | FIN-03 | P1: Dinheiro — motivo da órfã (AC3) | - | Pending |
