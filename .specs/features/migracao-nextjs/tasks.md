@@ -1159,9 +1159,9 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `http:` e `https:` passam; `javascript:`, `data:`, `mailto:`, caminho relativo e vazio devolvem `null`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 290 → 294
+- [x] `http:` e `https:` passam; `javascript:`, `data:`, `mailto:`, caminho relativo e vazio devolvem `null`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 290 → 294
 
 **Tests**: unit
 **Gate**: quick

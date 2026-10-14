@@ -682,7 +682,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | SEC-02 | P1: Segurança — o agente não lê dado pessoal nos gates (AC2) | - | Pending |
 | SEC-03 | P1: Segurança — auditoria e cópia conferida no G2 (AC3) | Execute | Implementing |
 | SEC-04 | P1: Segurança — cabeçalhos (AC4) | Execute | Implementing |
-| SEC-05 | P1: Segurança — link do banco só http(s) (AC5) | - | Pending |
+| SEC-05 | P1: Segurança — link do banco só http(s) (AC5) | Execute | Implementing |
 | SEC-06 | P1: Segurança — identidade antes de ler e escrever (AC6) | Execute | Implementing |
 | SEC-07 | P1: Segurança — pnpm fixo e scripts de instalação na lista (AC7) | Execute | Implementing |
 | SEC-08 | P1: Segurança — correção de segurança sem nova cópia do DS (AC8) | Execute | Implementing |
