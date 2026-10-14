@@ -1,9 +1,10 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import Badge, { type BadgeVariant } from "@/components/ui/badge";
 import type { Mentorado } from "@/lib/data/esquemas";
 import { type Aba, caminhoDaFicha } from "@/lib/endereco";
+import { linkSeguro } from "@/lib/links";
 import { situacaoDe } from "@/lib/mentorados";
 
 // Células que várias tabelas repetem (index.html:847–877).
@@ -61,4 +62,46 @@ export function SituacaoMentorado({ mentorado }: { mentorado: Pick<Mentorado, "s
   if (situacao === "cancelado") return <Badge variant="danger">cancelado</Badge>;
   if (situacao === "pausado") return <Badge variant="warning">pausado</Badge>;
   return null;
+}
+
+// Link vindo do banco (linkOr, index.html:965–969): `href` só para http(s), em aba nova e com
+// rel="noopener noreferrer"; outro valor aparece como texto, com o valor no title (SEC-05).
+export function LinkExterno({ url, rotulo }: { url: string; rotulo: string }) {
+  const href = linkSeguro(url);
+  if (!href) {
+    return (
+      <span className="text-muted" title={url}>
+        {`${rotulo}*`}
+      </span>
+    );
+  }
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline">
+      {rotulo}
+    </a>
+  );
+}
+
+type ComLinks = { link_meet: string | null; link_gravacao: string | null; link_anotacoes: string | null };
+
+// Os links de uma sessão ou de um encontro: meet, gravação e anotações; sem nenhum, "—".
+export function LinksSessao({ links }: { links: ComLinks }) {
+  const presentes = (
+    [
+      [links.link_meet, "meet"],
+      [links.link_gravacao, "gravação"],
+      [links.link_anotacoes, "anotações"],
+    ] as const
+  ).flatMap(([url, rotulo]) => (url ? [{ url, rotulo }] : []));
+  if (!presentes.length) return <>—</>;
+  return (
+    <span className="whitespace-nowrap">
+      {presentes.map(({ url, rotulo }, i) => (
+        <Fragment key={rotulo}>
+          {i > 0 && " · "}
+          <LinkExterno url={url} rotulo={rotulo} />
+        </Fragment>
+      ))}
+    </span>
+  );
 }

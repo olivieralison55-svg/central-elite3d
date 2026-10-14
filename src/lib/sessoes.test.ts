@@ -3,7 +3,20 @@ import { describe, expect, it } from "vitest";
 import { datasetDeTeste } from "@/test/fixtures";
 
 import type { Sessao } from "./data/esquemas";
-import { agruparGrupo, blocos1a1, casaEncontro, eh1a1, ehGrupo, resumoStatusGrupo, sessoes1a1De, sessoesGrupoDe, statusGrupo, trilhaDe } from "./sessoes";
+import {
+  agruparGrupo,
+  blocos1a1,
+  casaEncontro,
+  casaSessao,
+  eh1a1,
+  ehGrupo,
+  recortarSessoes,
+  resumoStatusGrupo,
+  sessoes1a1De,
+  sessoesGrupoDe,
+  statusGrupo,
+  trilhaDe,
+} from "./sessoes";
 
 // Os fixtures do harness antigo: m1 tem s1, s2 (1:1) e g1, g4 (grupo); o plantão de 06/08 reúne
 // g1, g2 e g3 (uma presença bloqueada); a implementação de 2099 reúne g4 e g5.
@@ -164,5 +177,76 @@ describe("sessões 1:1 e em grupo (OPS-05, OPS-07, OPS-09, EDGE-05)", () => {
     ]);
     const blocos = blocos1a1([sessao({ id: "y1", status: "Remarcada" }), sessao({ id: "y2", status: null })], false);
     expect(blocos.map((b) => b.itens.length)).toEqual([0, 0, 0, 0]);
+  });
+});
+
+describe("recortes da tela Sessões (NAV-10, OPS-07, OPS-10)", () => {
+  const recortar = (focoIds: string[] | null, mentor = "", tipo = "", busca = "") => recortarSessoes(SESSOES, { focoIds, mentor, tipo, busca }, nomeDe);
+  const idsDe = (r: ReturnType<typeof recortar>) => ({
+    individuais: r.individuais.map((s) => s.id),
+    grupos: r.grupos.map(({ categoria, encontros }) => [categoria, encontros.map((e) => e.itens.map((s) => s.id))]),
+    mostra: [r.mostraIndividuais, r.mostraGrupo],
+  });
+
+  it("NAV-10: os recortes vão nesta ordem: o foco (ids do aviso) antes do mentor, depois o tipo e a busca; sob foco, seção vazia some", () => {
+    expect(idsDe(recortar(null))).toEqual({
+      individuais: ["s1", "s2", "s3", "s4", "s5"],
+      grupos: [
+        ["Plantão de Dúvida Semanal", [["g1", "g2", "g3"]]],
+        ["Sessão de Implementação Mensal", [["g4", "g5"]]],
+      ],
+      mostra: [true, true],
+    });
+    // O foco recorta primeiro; o mentor recorta o que o foco deixou.
+    expect(idsDe(recortar(["s1", "s5", "g1"], "Evaldo"))).toEqual({
+      individuais: ["s1"],
+      grupos: [
+        ["Plantão de Dúvida Semanal", []],
+        ["Sessão de Implementação Mensal", []],
+      ],
+      mostra: [true, false],
+    });
+    expect(idsDe(recortar(null, "Evaldo")).individuais).toEqual(["s1", "s2"]);
+    expect(idsDe(recortar(null, "__sem__")).individuais).toEqual(["s3"]);
+    expect(idsDe(recortar(["s1", "g1"], "", "grupo")).mostra).toEqual([false, true]);
+    expect(idsDe(recortar(["s1", "g1"], "", "individual")).mostra).toEqual([true, false]);
+    expect(idsDe(recortar(null, "", "", "bruno"))).toEqual({
+      individuais: ["s3", "s4"],
+      grupos: [
+        ["Plantão de Dúvida Semanal", [["g1", "g2", "g3"]]],
+        ["Sessão de Implementação Mensal", [["g4", "g5"]]],
+      ],
+      mostra: [true, true],
+    });
+    expect(idsDe(recortar(["nada"])).mostra).toEqual([false, false]);
+  });
+
+  it("NAV-10 e OPS-07: sob foco, o encontro em grupo é montado só com as linhas do aviso, que recorta antes de agrupar (index.html:1863–1878)", () => {
+    // g3 é a presença bloqueada do plantão; a gravação é de g1, que o aviso não aponta.
+    const [plantao] = recortar(["g3"]).grupos;
+    expect(plantao.encontros.map((e) => [e.itens.map((s) => s.id), statusGrupo(e), e.link_gravacao])).toEqual([[["g3"], "Bloqueada", null]]);
+    expect(idsDe(recortar(["g1", "g3"])).grupos).toEqual([
+      ["Plantão de Dúvida Semanal", [["g1", "g3"]]],
+      ["Sessão de Implementação Mensal", []],
+    ]);
+  });
+
+  it("Busca por data: a 1:1 casa pela data como a tela mostra, com o ano, pelo mês, como o banco guarda e pela hora; linha sem data não casa", () => {
+    const s1 = SESSOES.find((s) => s.id === "s1");
+    const s4 = SESSOES.find((s) => s.id === "s4");
+    if (!s1 || !s4) throw new Error("fixtures sem s1 ou s4");
+    for (const termo of ["01/02", "01/02/2026", "02/2026", "2026-02-01", "10:00", "evaldo", "ana", "diagnostico"]) expect(casaSessao(s1, termo, nomeDe), termo).toBe(true);
+    for (const termo of ["31/12/2099", "bruno", "11:00"]) expect(casaSessao(s1, termo, nomeDe), termo).toBe(false);
+    expect(casaSessao(s4, "01/02", nomeDe)).toBe(false);
+    expect(recortar(null, "", "", "01/02/2026").individuais.map((s) => s.id)).toEqual(["s1"]);
+  });
+
+  it("OPS-10: o selo conta 1:1 por linha e encontro por encontro, só do tipo mostrado; os totais do topo são da operação inteira", () => {
+    expect(recortar(null, "", "", "bruno").selo).toEqual({ n: 4, total: 7 });
+    expect(recortar(null, "", "grupo", "bruno").selo).toEqual({ n: 2, total: 2 });
+    expect(recortar(null, "", "individual", "bruno").selo).toEqual({ n: 2, total: 5 });
+    const totais = { concluidas1a1: 2, agendadas1a1: 1, encontros: 2 };
+    expect(recortar(null).totais).toEqual(totais);
+    expect(recortar(["s1"], "Luan", "grupo", "zzz").totais).toEqual(totais);
   });
 });

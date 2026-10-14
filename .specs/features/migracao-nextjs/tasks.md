@@ -1509,12 +1509,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Recortes nesta ordem: foco, mentor, tipo, busca
-- [ ] `link_meet`, `link_gravacao` e `link_anotacoes` por `linkSeguro`, com `rel="noopener noreferrer"`
-- [ ] Blocos Aguardando confirmação, Agendadas, Concluídas (últimas 30) e Bloqueadas
-- [ ] Marcas por linha: contada, ignorada, sem data, sem mentor, etapa deduzida
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 376 → 384
+- [x] Recortes nesta ordem: foco, mentor, tipo, busca
+- [x] `link_meet`, `link_gravacao` e `link_anotacoes` por `linkSeguro`, com `rel="noopener noreferrer"`
+- [x] Blocos Aguardando confirmação, Agendadas, Concluídas (últimas 30) e Bloqueadas
+- [x] Marcas por linha: contada, ignorada, sem data, sem mentor, etapa deduzida
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 376 → 384
 
 **Tests**: unit
 **Gate**: quick

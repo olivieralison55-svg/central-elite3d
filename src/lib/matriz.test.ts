@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { datasetDeTeste } from "@/test/fixtures";
 
 import type { Sessao } from "./data/esquemas";
-import { AVISOS, focoDoAviso, matrizMentores, reunioesConcluidas1a1 } from "./matriz";
+import { AVISOS, focoDoAviso, marcadorDeLinhas, matrizMentores, reunioesConcluidas1a1 } from "./matriz";
 
 const sessao = (campos: Partial<Sessao> & { id: string }): Sessao => ({
   mentorado_id: "m1",
@@ -166,6 +166,21 @@ describe("matriz mentor × etapa (OPS-02, OPS-03, OPS-04, NAV-10)", () => {
     // O par de julho não entra no recorte de agosto (o mês corrente, então oferecido no seletor).
     const agosto = matrizMentores(ALERTAS, "2026-08", "2026-08-20");
     expect([agosto.mes, agosto.focos.dobradas, agosto.avisos.dobradas]).toEqual(["2026-08", [], 0]);
+  });
+
+  it("as marcas por linha de Sessões saem do mesmo helper da matriz: uma por linha, a primeira que casa", () => {
+    const marca = marcadorDeLinhas(ALERTAS);
+    expect(ALERTAS.map((s) => marca(s)?.rotulo ?? null)).toEqual(["ignorada · mesma reunião", "contada", "sem data", "sem mentor", null, "etapa deduzida", "sem mentor"]);
+    expect(marca(ALERTAS[1])).toEqual({ rotulo: "contada", tom: "success", dica: "Das linhas desta mesma reunião, é esta que entra na contagem do mentor" });
+    expect(marca(ALERTAS[0])?.tom).toBe("warning");
+    expect(marca(ALERTAS[5])).toEqual({
+      rotulo: "etapa deduzida",
+      tom: "info",
+      dica: "O título do evento não dizia a etapa; o sync deduziu pela trilha. Abra a sessão e salve para confirmar ou corrigir.",
+    });
+    // A linha do par também deduzida mostra a marca do par.
+    const deduzidaNoPar = ALERTAS.map((s) => (s.id === "x2" ? { ...s, etapa_deduzida: true } : s));
+    expect(marcadorDeLinhas(deduzidaNoPar)(deduzidaNoPar[1])?.rotulo).toBe("contada");
   });
 
   it("NAV-10: o foco é escolhido pelo nome do aviso: os ids daquele aviso, com o título e a dica dele", () => {

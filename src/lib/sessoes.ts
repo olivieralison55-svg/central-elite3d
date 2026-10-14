@@ -153,3 +153,57 @@ export function blocos1a1(sessoes: readonly Sessao[], comFoco: boolean): Bloco[]
     { chave: "bloqueadas", titulo: "Bloqueadas", itens: em("Bloqueada") },
   ];
 }
+
+// A busca de Sessões na linha 1:1: mentorado, etapa, mentor e a data nos formatos em que se digita
+// (alvoBuscaData). Linha sem data não casa com busca de data nenhuma.
+export const casaSessao = (s: Sessao, termo: string, nomeDe: (id: string | null) => string): boolean =>
+  casaBusca(termo, nomeDe(s.mentorado_id), s.etapa, s.mentor, alvoBuscaData(s.data, s.hora));
+
+export interface RecorteSessoes {
+  focoIds: readonly string[] | null; // os ids do aviso do Dashboard
+  mentor: string; // "" = todos; "__sem__" = sem mentor; senão o texto exato
+  tipo: string; // "" = todos; "individual"; "grupo"
+  busca: string;
+}
+
+export interface SessoesRecortadas {
+  linhas: Sessao[]; // depois do foco e do mentor
+  individuais: Sessao[]; // as 1:1 que a busca deixou
+  grupos: { categoria: string; encontros: Encontro[] }[]; // por categoria, depois de agrupar e buscar
+  mostraIndividuais: boolean;
+  mostraGrupo: boolean;
+  selo: { n: number; total: number }; // 1:1 por linha e encontro por encontro, só do tipo mostrado
+  totais: { concluidas1a1: number; agendadas1a1: number; encontros: number }; // o topo: a operação inteira
+}
+
+// Os recortes de Sessões nesta ordem: foco, mentor, tipo e busca (mapeamento §3.3). O foco vem
+// antes dos filtros: o aviso aponta linhas, e um filtro não deveria conseguir escondê-las (NAV-10).
+// Sob foco, a seção que ficaria vazia não aparece. Os totais do topo não encolhem (OPS-10).
+export function recortarSessoes(sessoes: readonly Sessao[], recorte: RecorteSessoes, nomeDe: (id: string | null) => string): SessoesRecortadas {
+  const ids = recorte.focoIds ? new Set(recorte.focoIds) : null;
+  const doMentor = (s: Sessao) => (recorte.mentor === "__sem__" ? !s.mentor : !recorte.mentor || s.mentor === recorte.mentor);
+  const linhas = sessoes.filter((s) => (!ids || ids.has(s.id)) && doMentor(s));
+  const individuais = linhas.filter((s) => eh1a1(s) && casaSessao(s, recorte.busca, nomeDe));
+  const grupo = linhas.filter(ehGrupo);
+  const mostraIndividuais = recorte.tipo !== "grupo" && (!ids || individuais.length > 0);
+  const mostraGrupo = recorte.tipo !== "individual" && (!ids || grupo.length > 0);
+  const encontros = agruparGrupo(grupo);
+  const casam = encontros.filter((e) => casaEncontro(e, recorte.busca, nomeDe));
+  const todas1a1 = sessoes.filter(eh1a1);
+  return {
+    linhas,
+    individuais,
+    grupos: ETAPAS_GRUPO.map((categoria) => ({ categoria, encontros: casam.filter((e) => e.etapa === categoria) })),
+    mostraIndividuais,
+    mostraGrupo,
+    selo: {
+      n: (mostraIndividuais ? individuais.length : 0) + (mostraGrupo ? casam.length : 0),
+      total: (mostraIndividuais ? linhas.filter(eh1a1).length : 0) + (mostraGrupo ? encontros.length : 0),
+    },
+    totais: {
+      concluidas1a1: todas1a1.filter((s) => s.status === "Concluída").length,
+      agendadas1a1: todas1a1.filter((s) => s.status === "Agendada").length,
+      encontros: agruparGrupo(sessoes.filter(ehGrupo)).length,
+    },
+  };
+}

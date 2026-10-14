@@ -39,6 +39,41 @@ export function reunioesConcluidas1a1(sessoes: readonly Sessao[]): Reunioes {
   };
 }
 
+// As marcas por linha de Sessões (index.html:1888–1903), do mesmo helper que conta a matriz: as duas
+// telas não divergem. Uma marca por linha, a primeira que casa, com ou sem foco.
+export interface Marca {
+  rotulo: string;
+  tom: "success" | "warning" | "info";
+  dica: string;
+}
+
+const CONTADA: Marca = { rotulo: "contada", tom: "success", dica: "Das linhas desta mesma reunião, é esta que entra na contagem do mentor" };
+const IGNORADA: Marca = {
+  rotulo: "ignorada · mesma reunião",
+  tom: "warning",
+  dica: "Mesma reunião (mesmo mentorado, data, hora e mentor) de outra linha já contada — esta ficou fora para não contar em dobro",
+};
+const SEM_DATA: Marca = { rotulo: "sem data", tom: "warning", dica: "Concluída sem data não entra em nenhum mês do fechamento" };
+const SEM_MENTOR: Marca = { rotulo: "sem mentor", tom: "warning", dica: "Sem mentor na linha, a sessão não será creditada a ninguém" };
+// Palpite do sync não confirmado não pode passar por certeza: a marca fica até alguém salvar a sessão.
+const ETAPA_DEDUZIDA: Marca = {
+  rotulo: "etapa deduzida",
+  tom: "info",
+  dica: "O título do evento não dizia a etapa; o sync deduziu pela trilha. Abra a sessão e salve para confirmar ou corrigir.",
+};
+
+export function marcadorDeLinhas(sessoes: readonly Sessao[]): (s: Sessao) => Marca | null {
+  const { dobradas, contadas } = reunioesConcluidas1a1(sessoes);
+  const emDobro = new Set(dobradas.flatMap((d) => d.itens.map((s) => s.id)));
+  return (s) => {
+    if (emDobro.has(s.id)) return contadas.has(s.id) ? CONTADA : IGNORADA;
+    if (s.status === "Concluída" && !s.data) return SEM_DATA;
+    if (s.status === "Aguardando confirmação" && !s.mentor) return SEM_MENTOR;
+    if (s.etapa_deduzida) return ETAPA_DEDUZIDA;
+    return null;
+  };
+}
+
 // `sessoes.mentor` é texto livre. Para agrupar, a chave sem acento, sem caixa e com os espaços
 // colapsados; para exibir, a grafia de TODOS_MENTORES, ou o nome como veio, com o espaço
 // normalizado (OPS-03).

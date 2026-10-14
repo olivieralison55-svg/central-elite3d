@@ -1,6 +1,7 @@
 "use client";
 
 import { LinkFicha, SituacaoMentorado, StatusContrato } from "@/components/modules/comum/celulas";
+import { CabecalhoOrdenavel, ordemEscolhida } from "@/components/modules/comum/ordenacao";
 import { SeloBusca } from "@/components/modules/comum/selo-busca";
 import { type Ui, useDados, useSessao, useUi } from "@/components/shell/contexto";
 import Badge from "@/components/ui/badge";
@@ -10,11 +11,10 @@ import PageHeader from "@/components/ui/page-header";
 import SearchInput from "@/components/ui/search-input";
 import SegmentedControl from "@/components/ui/segmented-control";
 import SegmentedProgress from "@/components/ui/segmented-progress";
-import SortHeader from "@/components/ui/sort-header";
 import type { Mentorado } from "@/lib/data/esquemas";
 import { fmtD } from "@/lib/datas";
 import { ehAtivo, filtrarMentorados } from "@/lib/mentorados";
-import { alternarOrdem, aplicarOrdem, type Ordem } from "@/lib/ordem";
+import { aplicarOrdem, type Ordem } from "@/lib/ordem";
 import { concluidas1a1De, trilhaDe } from "@/lib/sessoes";
 
 import { BotaoNovoMentorado } from "./novo-mentorado";
@@ -45,24 +45,13 @@ export default function Mentorados() {
   const filtrar = (campos: Partial<Ui["filtro"]>) => mudar({ filtro: { ...ui.filtro, ...campos } });
 
   const { lista, antesDaBusca } = filtrarMentorados(dados.mentorados, statusFin, q);
-  const escolhida = ui.sortState[TABELA];
-  const ordem: Ordem | null = escolhida ? { campo: escolhida.coluna, direcao: escolhida.direcao } : null;
-  const linhas = aplicarOrdem(lista, ordem ?? PADRAO, {
+  const linhas = aplicarOrdem(lista, ordemEscolhida(ui, TABELA) ?? PADRAO, {
     nome: (m) => m.nome,
     fechamento: (m) => m.data_fechamento ?? "",
     contrato: (m) => m.contrato_status ?? "",
     sessoes: (m) => concluidas1a1De(dados.sessoes, m.id),
   });
-  const cabecalho = (campo: string, rotulo: string) => (
-    <SortHeader
-      label={rotulo}
-      direction={ordem?.campo === campo ? ordem.direcao : null}
-      onToggle={() => {
-        const nova = alternarOrdem(ordem, campo);
-        mudar({ sortState: { ...ui.sortState, [TABELA]: { coluna: nova.campo, direcao: nova.direcao } } });
-      }}
-    />
-  );
+  const cabecalho = (campo: string, rotulo: string) => <CabecalhoOrdenavel tabela={TABELA} campo={campo} rotulo={rotulo} />;
   // Não ativo aparece com opacidade reduzida. O DataTable não tem classe de linha: cada célula apaga.
   const celula = (m: Mentorado, conteudo: React.ReactNode) => <span className={ehAtivo(m) ? undefined : "opacity-60"}>{conteudo}</span>;
 
