@@ -303,9 +303,9 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `src/test/cabecalhos.test.ts` importa a config: os 3 cabeçalhos com os valores acima em `/:path*`; `poweredByHeader` falso
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 74 → 76
+- [x] `src/test/cabecalhos.test.ts` importa a config: os 3 cabeçalhos com os valores acima em `/:path*`; `poweredByHeader` falso
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 74 → 76
 
 **Tests**: unit
 **Gate**: quick
