@@ -555,9 +555,9 @@ Depois do G6, problema vira correção para a frente, não revert.
 | STACK-02 | P1: Fundação — onde mora cada camada (AC2) | Execute | Implementing |
 | STACK-03 | P1: Fundação — gate verde (AC3) | Execute | Implementing |
 | STACK-04 | P1: Fundação — `.gitignore` (AC4) | Execute | Implementing |
-| STACK-05 | P1: Fundação — só 2 variáveis públicas (AC5) | - | Pending |
-| STACK-06 | P1: Fundação — recusa chave secreta (AC6) | - | Pending |
-| STACK-07 | P1: Fundação — sem `service_role` no código (AC7) | - | Pending |
+| STACK-05 | P1: Fundação — só 2 variáveis públicas (AC5) | Execute | Implementing |
+| STACK-06 | P1: Fundação — recusa chave secreta (AC6) | Execute | Implementing |
+| STACK-07 | P1: Fundação — sem `service_role` no código (AC7) | Execute | Implementing |
 | STACK-08 | P1: Fundação — sem CDN, versões exatas (AC8) | Execute | Implementing |
 | AUTH-01 | P1: Login — tela sem sessão (AC1) | - | Pending |
 | AUTH-02 | P1: Login — entrada e papel (AC2) | - | Pending |

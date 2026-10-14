@@ -274,13 +274,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Aceita a chave `sb_publishable_` de produção e um JWT com `role` `anon`
-- [ ] Recusa qualquer outra chave (um JWT com `role` diferente de `anon`, um texto qualquer), com erro que nomeia `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- [ ] Recusa URL diferente de `https://matgynpiscyoshnjzolo.supabase.co`, com erro que nomeia `NEXT_PUBLIC_SUPABASE_URL`
-- [ ] Nenhum texto `sb_secret_`, `service_role` nem `SUPABASE_SERVICE_ROLE_KEY` em `config.ts` nem no `next.config.ts`
-- [ ] Lê só `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 68 → 74
+- [x] Aceita a chave `sb_publishable_` de produção e um JWT com `role` `anon`
+- [x] Recusa qualquer outra chave (um JWT com `role` diferente de `anon`, um texto qualquer), com erro que nomeia `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- [x] Recusa URL diferente de `https://matgynpiscyoshnjzolo.supabase.co`, com erro que nomeia `NEXT_PUBLIC_SUPABASE_URL`
+- [x] Nenhum texto `sb_secret_`, `service_role` nem `SUPABASE_SERVICE_ROLE_KEY` em `config.ts` nem no `next.config.ts`
+- [x] Lê só `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 68 → 74
 
 **Tests**: unit
 **Gate**: quick
