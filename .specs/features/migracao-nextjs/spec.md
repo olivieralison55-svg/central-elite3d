@@ -580,8 +580,8 @@ Depois do G6, problema vira correção para a frente, não revert.
 | NAV-09 | P1: Endereço — ficha não encontrada (AC9) | - | Pending |
 | NAV-10 | P1: Endereço — foco dos avisos (AC10) | Execute | Implementing |
 | DATA-01 | P1: Porta — só ela importa o supabase-js (AC1) | Execute | Implementing |
-| DATA-02 | P1: Porta — Zod em R01–R23 (AC2) | - | Pending |
-| DATA-03 | P1: Porta — schema mismatch (AC3) | - | Pending |
+| DATA-02 | P1: Porta — Zod em R01–R23 (AC2) | Execute | Implementing |
+| DATA-03 | P1: Porta — schema mismatch (AC3) | Execute | Implementing |
 | DATA-04 | P1: Porta — paginação estável (AC4) | Execute | Implementing |
 | DATA-05 | P1: Porta — 2.500 linhas (AC5) | - | Pending |
 | DATA-06 | P1: Porta — carga inicial com erro (AC6) | - | Pending |
@@ -677,7 +677,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | EDGE-02 | Edge — sessão não renova | Execute | Implementing |
 | EDGE-03 | Edge — virada do dia | - | Pending |
 | EDGE-04 | Edge — nota grande demais | - | Pending |
-| EDGE-05 | Edge — status fora do domínio | - | Pending |
+| EDGE-05 | Edge — status fora do domínio | Execute | Implementing |
 | SEC-01 | P1: Segurança — navegação só na mesma origem (AC1) | Execute | Implementing |
 | SEC-02 | P1: Segurança — o agente não lê dado pessoal nos gates (AC2) | - | Pending |
 | SEC-03 | P1: Segurança — auditoria e cópia conferida no G2 (AC3) | Execute | Implementing |

@@ -1,21 +1,12 @@
 import { type AuthChangeEvent, type AuthError, isAuthRetryableFetchError, type SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
 
 import { cliente } from "./cliente";
+import { ESQUEMAS, type Perfil, type Resultado } from "./esquemas";
+
+export type { Perfil, Resultado } from "./esquemas";
 
 // Login, saída, eventos da sessão e o perfil (R01), porte de index.html:672–720. Toda função
 // recebe o cliente por último, com `cliente()` de padrão: os testes passam um falso.
-
-export type Resultado<T> = { ok: true; dados: T } | { ok: false; erro: string };
-
-// R01. O `role` chega nulo ou com texto fora da lista: quem decide é a sessão (AUTH-07).
-const esquemaPerfil = z.object({
-  id: z.string(),
-  role: z.string().nullable(),
-  nome: z.string().nullable(),
-  email: z.string().nullable(),
-});
-export type Perfil = z.infer<typeof esquemaPerfil>;
 
 export interface EventoSessao {
   tipo: AuthChangeEvent;
@@ -65,7 +56,7 @@ export async function lerPerfil(userId: string, db: SupabaseClient = cliente()):
     console.error("[central-elite3d] profiles", error);
     return { ok: false, erro: error.message };
   }
-  const lido = esquemaPerfil.safeParse(data);
+  const lido = ESQUEMAS.profiles.safeParse(data);
   if (!lido.success) {
     console.error("[central-elite3d] profiles: schema mismatch", lido.error.issues);
     return { ok: false, erro: "profiles: schema mismatch" };

@@ -731,11 +731,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Um schema para cada uma de: `profiles`, `mentorados`, `mentorados_basic`, `parcelas`, `lia_cobrancas`, `sessoes`, `rotas`, `marcos_definicao`, `mentorado_marcos`, `faturamento_mensal`, `canais`, `mentorado_canais`, `sessoes_orfas`, `stlseller_mentorados`, `stlseller_pedidos_marketplace`, `stlseller_produtos_vendidos`, `nps_respostas`, `experiencia_respostas`, `nps_analises` (com o formato antigo de GER-06), `experiencia_adesao`, `analise_ia_mentor`, `transcricoes`, `mentorado_notas`
-- [ ] `sessoes.status` aceita texto fora de `S_STATUS`; `numeric` que o PostgREST entrega como string é aceito
-- [ ] Linha inválida falha com o caminho do campo
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 160 → 172
+- [x] Um schema para cada uma de: `profiles`, `mentorados`, `mentorados_basic`, `parcelas`, `lia_cobrancas`, `sessoes`, `rotas`, `marcos_definicao`, `mentorado_marcos`, `faturamento_mensal`, `canais`, `mentorado_canais`, `sessoes_orfas`, `stlseller_mentorados`, `stlseller_pedidos_marketplace`, `stlseller_produtos_vendidos`, `nps_respostas`, `experiencia_respostas`, `nps_analises` (com o formato antigo de GER-06), `experiencia_adesao`, `analise_ia_mentor`, `transcricoes`, `mentorado_notas`
+- [x] `sessoes.status` aceita texto fora de `S_STATUS`; `numeric` que o PostgREST entrega como string é aceito
+- [x] Linha inválida falha com o caminho do campo
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 160 → 172
 
 **Tests**: unit
 **Gate**: quick
