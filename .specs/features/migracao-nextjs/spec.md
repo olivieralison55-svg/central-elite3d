@@ -575,10 +575,10 @@ Depois do G6, problema vira correção para a frente, não revert.
 | NAV-04 | P1: Endereço — guarda de tela (AC4) | Execute | Implementing |
 | NAV-05 | P1: Endereço — guarda de aba (AC5) | Execute | Implementing |
 | NAV-06 | P1: Endereço — menu por papel (AC6) | Execute | Implementing |
-| NAV-07 | P1: Endereço — voltar e avançar (AC7) | - | Pending |
+| NAV-07 | P1: Endereço — voltar e avançar (AC7) | Execute | Implementing |
 | NAV-08 | P1: Endereço — Skeleton na 1ª carga (AC8) | - | Pending |
 | NAV-09 | P1: Endereço — ficha não encontrada (AC9) | - | Pending |
-| NAV-10 | P1: Endereço — foco dos avisos (AC10) | - | Pending |
+| NAV-10 | P1: Endereço — foco dos avisos (AC10) | Execute | Implementing |
 | DATA-01 | P1: Porta — só ela importa o supabase-js (AC1) | Execute | Implementing |
 | DATA-02 | P1: Porta — Zod em R01–R23 (AC2) | - | Pending |
 | DATA-03 | P1: Porta — schema mismatch (AC3) | - | Pending |

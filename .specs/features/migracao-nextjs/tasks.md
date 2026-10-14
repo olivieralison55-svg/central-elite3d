@@ -675,12 +675,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Tela sem permissão → `substituir("/dash")`
-- [ ] Sair de `/sessoes` zera `foco`; sair de `/mentorado/*` grava `voltarPara`
-- [ ] A navegação usa só o roteador do Next (voltar e avançar nativos)
-- [ ] O servidor renderiza só `Skeleton` (nada de sessão, dado ou relógio)
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 155 → 160
+- [x] Tela sem permissão → `substituir("/dash")`
+- [x] Sair de `/sessoes` zera `foco`; sair de `/mentorado/*` grava `voltarPara`
+- [x] A navegação usa só o roteador do Next (voltar e avançar nativos)
+- [x] O servidor renderiza só `Skeleton` (nada de sessão, dado ou relógio)
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 155 → 160
 
 **Tests**: unit
 **Gate**: quick
