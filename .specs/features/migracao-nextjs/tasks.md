@@ -648,11 +648,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] admin e diretoria: 10 itens; mentor: 6 itens (lista da T10)
-- [ ] Na ficha, o item aceso é o `voltarPara`
-- [ ] `ThemeToggle` presente; nenhum CSS próprio na casca
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 150 → 155
+- [x] admin e diretoria: 10 itens; mentor: 6 itens (lista da T10)
+- [x] Na ficha, o item aceso é o `voltarPara`
+- [x] `ThemeToggle` presente; nenhum CSS próprio na casca
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 150 → 155
 
 **Tests**: unit
 **Gate**: quick
