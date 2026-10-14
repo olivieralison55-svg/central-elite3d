@@ -622,10 +622,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Cada tela com o texto do AC e o botão Sair
-- [ ] Nenhuma leitura de dado nessas fases
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 147 → 150
+- [x] Cada tela com o texto do AC e o botão Sair
+- [x] Nenhuma leitura de dado nessas fases
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 147 → 150
 
 **Tests**: unit
 **Gate**: quick
