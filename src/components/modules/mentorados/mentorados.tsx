@@ -4,7 +4,6 @@ import { LinkFicha, SituacaoMentorado, StatusContrato } from "@/components/modul
 import { SeloBusca } from "@/components/modules/comum/selo-busca";
 import { type Ui, useDados, useSessao, useUi } from "@/components/shell/contexto";
 import Badge from "@/components/ui/badge";
-import Button from "@/components/ui/button";
 import DataTable, { type Column } from "@/components/ui/data-table";
 import EmptyState from "@/components/ui/empty-state";
 import PageHeader from "@/components/ui/page-header";
@@ -17,6 +16,8 @@ import { fmtD } from "@/lib/datas";
 import { ehAtivo, filtrarMentorados } from "@/lib/mentorados";
 import { alternarOrdem, aplicarOrdem, type Ordem } from "@/lib/ordem";
 import { concluidas1a1De, trilhaDe } from "@/lib/sessoes";
+
+import { BotaoNovoMentorado } from "./novo-mentorado";
 
 // A tela Mentorados (renderMentorados, index.html:1803–1850, mapeamento §3.2). Filtro e busca
 // vêm de src/lib/mentorados.ts; a ordem, de src/lib/ordem.ts. O mentor lê a view sem colunas
@@ -109,7 +110,7 @@ export default function Mentorados() {
       <PageHeader
         title="Mentorados"
         subtitle={`${linhas.length} de ${dados.mentorados.length} registro(s) · dados financeiros ficam em Financeiro`}
-        actions={pode("criarMentorado") && <Button data-escrita="W14">+ Novo mentorado</Button>}
+        actions={<BotaoNovoMentorado />}
       />
       <div className="flex flex-wrap items-center gap-3">
         <SearchInput

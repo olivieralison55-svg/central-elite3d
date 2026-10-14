@@ -465,9 +465,9 @@ describe("escritas de mentorado W11–W14 (WRITE-01, WRITE-02, OPS-13, OPS-15)",
     expect(f.pedidos).toEqual([[["from", "mentorados"], ["delete"], ["eq", "id", "m3"], ["select", "id"]]]);
   });
 
-  it("W14: insert de nome, email, data_fechamento, os status, a forma da entrada e cancelado: false, com .select().single()", async () => {
+  it("W14: insert de nome, email, data_fechamento, os status, a forma da entrada e cancelado: false, com .select().single(); o sucesso traz o id da linha criada", async () => {
     const f = clienteFalso({ mentorados: { data: { id: "m9", nome: "ZZQ Migracao Xyzzy" }, error: null } });
-    expect(await criarMentorado(NOVO, f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(await criarMentorado(NOVO, f.db)).toEqual({ ok: true, linhas: 1, id: "m9" });
     expect(f.pedidos).toEqual([
       [
         ["from", "mentorados"],
@@ -488,6 +488,13 @@ describe("escritas de mentorado W11–W14 (WRITE-01, WRITE-02, OPS-13, OPS-15)",
         ["single"],
       ],
     ]);
+  });
+
+  it("W14: a linha criada sem id de texto é schema mismatch no console; o que gravou continua sucesso, sem id", async () => {
+    const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const f = clienteFalso({ mentorados: { data: { id: 9, nome: "ZZQ Migracao Xyzzy" }, error: null } });
+    expect(await criarMentorado(NOVO, f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(erroNoConsole.mock.calls.at(-1)?.[0]).toBe("[central-elite3d] mentorados: schema mismatch");
   });
 
   it("WRITE-02: resposta sem erro e com 0 linhas é { ok: false, zeroLinhas: true }, em W11, W12 e W13", async () => {

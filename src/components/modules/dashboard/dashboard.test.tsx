@@ -241,6 +241,13 @@ describe("Dashboard e Acompanhamento (OPS-01, OPS-04, OPS-10, NAV-10, GER-08, UI
     expect(semSessoes).toContain(vazio("Nenhuma sessão agendada. Agende pela ficha do mentorado."));
   });
 
+  it("WRITE-09: '+ Novo mentorado' no Dashboard e no Acompanhamento só com criarMentorado, com data-escrita=\"W14\"", () => {
+    for (const modo of ["completo", "acompanhamento"] as const) {
+      expect(tela(<Dashboard modo={modo} />, "admin").html, modo).toMatch(/<button[^>]*data-escrita="W14"[^>]*>\+ Novo mentorado<\/button>/);
+      for (const papel of ["diretoria", "mentor"] as const) expect(tela(<Dashboard modo={modo} />, papel).html, `${modo} ${papel}`).not.toContain('data-escrita="W14"');
+    }
+  });
+
   it("DATA-07: relação complementar que falhou vira aviso no topo, e o resto do Dashboard renderiza", () => {
     const html = tela(<Dashboard modo="completo" />, "admin", { erros: { sessoes_orfas: "permission denied" } }).html;
     expect(html).toContain("Parte dos dados não carregou");

@@ -1,5 +1,6 @@
 import { casaBusca } from "./busca";
 import type { Dataset, Mentorado } from "./data/esquemas";
+import type { NovoMentorado } from "./data/escritas";
 
 // Mentorados do index.html (:811, :937–962, :1803–1812, :3691–3700).
 
@@ -58,3 +59,45 @@ export const msgErroMentorado = (erro: string): string =>
   erro.includes("mentorados_email_unico")
     ? "Esse e-mail já está em outro mentorado. Dois cadastros com o mesmo e-mail fariam o sync descartar o evento em vez de escolher um."
     : erro;
+
+// O formulário de Novo mentorado como a tela o tem (W14, mapeamento §3.5).
+export interface CamposNovoMentorado {
+  nome: string;
+  email: string;
+  data_fechamento: string;
+  entrada_status: string;
+  entrada_forma_pgto: string;
+  contrato_status: string;
+  restante_status: string;
+}
+
+// Os padrões de hoje: fechamento hoje, entrada Pago, contrato e restante "Ainda não". `hoje` é
+// lido por quem abre o formulário.
+export const camposNovoMentorado = (hoje: string): CamposNovoMentorado => ({
+  nome: "",
+  email: "",
+  data_fechamento: hoje,
+  entrada_status: "Pago",
+  entrada_forma_pgto: "",
+  contrato_status: "Ainda não",
+  restante_status: "Ainda não",
+});
+
+// Nome obrigatório e e-mail normalizado (OPS-13). Campo vazio vai como null, como o `value || null`
+// de hoje.
+export function montarNovoMentorado(campos: CamposNovoMentorado): { ok: true; novo: NovoMentorado } | { ok: false; erro: string } {
+  const nome = campos.nome.trim();
+  if (!nome) return { ok: false, erro: "Informe o nome" };
+  return {
+    ok: true,
+    novo: {
+      nome,
+      email: normalizaEmail(campos.email),
+      data_fechamento: campos.data_fechamento || null,
+      entrada_status: campos.entrada_status,
+      entrada_forma_pgto: campos.entrada_forma_pgto || null,
+      contrato_status: campos.contrato_status,
+      restante_status: campos.restante_status,
+    },
+  };
+}

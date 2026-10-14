@@ -13,6 +13,8 @@ export interface Escrita {
   avisar(mensagem: string, tipo: "sucesso" | "erro"): void;
   recarregar(): Promise<void>;
   sucesso?: string; // sem ele, sucesso não tem toast, como W18 e W19 hoje
+  // O passo da tela depois de gravar e recarregar, com o resultado: abrir a ficha criada (W14).
+  depois?(gravado: Extract<ResultadoEscrita, { ok: true }>): void;
 }
 
 // Devolve true só quando a escrita gravou; o modal só fecha com true.
@@ -38,6 +40,7 @@ export async function executarEscrita(o: Escrita): Promise<boolean> {
       if (r.aviso) o.avisar(r.aviso, "erro");
       else if (o.sucesso) o.avisar(o.sucesso, "sucesso");
       await o.recarregar();
+      o.depois?.(r);
       return true;
     }
     // WRITE-05: o formulário fica aberto com o que foi digitado.

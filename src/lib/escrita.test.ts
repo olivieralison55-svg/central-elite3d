@@ -95,6 +95,20 @@ describe("executor de escrita (WRITE-02, WRITE-04, WRITE-05, WRITE-06, WRITE-07,
     expect(sem.chamadas).toEqual([["escrever"], ["recarregar"]]);
   });
 
+  it("W14: `depois` recebe o resultado do sucesso, com o id, só depois da recarga; erro, 0 linhas e escrita parcial não o chamam", async () => {
+    const depois = (gravado: Extract<ResultadoEscrita, { ok: true }>, chamadas: unknown[][]) => chamadas.push(["depois", gravado]);
+    const sucesso = escrita({ ok: true, linhas: 1, id: "m9" }, { sucesso: "Mentorado criado" });
+    sucesso.o.depois = (gravado) => depois(gravado, sucesso.chamadas);
+    expect(await executarEscrita(sucesso.o)).toBe(true);
+    expect(sucesso.chamadas).toEqual([["escrever"], ["avisar", "Mentorado criado", "sucesso"], ["recarregar"], ["depois", { ok: true, linhas: 1, id: "m9" }]]);
+    for (const falha of [{ ok: false, erro: "falhou" }, { ok: false, zeroLinhas: true }, { ok: false, linhas: 1, esperadas: 2 }] as const) {
+      const { o, chamadas } = escrita(falha);
+      o.depois = (gravado) => depois(gravado, chamadas);
+      expect(await executarEscrita(o), JSON.stringify(falha)).toBe(false);
+      expect(chamadas.some(([nome]) => nome === "depois"), JSON.stringify(falha)).toBe(false);
+    }
+  });
+
   it("WRITE-06: W11 que grava seguido de W11b que falha mostra 'Cadastro salvo, mas as cobranças da Lia não foram puxadas:' e o erro", async () => {
     const adotar = vi.fn<() => Promise<Resultado<null>>>(() => Promise.resolve({ ok: false, erro: "permission denied for table lia_cobrancas" }));
     const { o, chamadas } = escrita({ ok: true, linhas: 1 }, { sucesso: "Mentorado atualizado" });

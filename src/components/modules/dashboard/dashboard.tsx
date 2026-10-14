@@ -4,6 +4,7 @@ import { CircleCheck, TriangleAlert } from "lucide-react";
 
 import { DataHora, LinkFicha, StatusSessao } from "@/components/modules/comum/celulas";
 import { SeloBusca } from "@/components/modules/comum/selo-busca";
+import { BotaoNovoMentorado } from "@/components/modules/mentorados/novo-mentorado";
 import { type Ui, useDados, useNavegar, useSessao, useUi } from "@/components/shell/contexto";
 import { AvisoRelacoes } from "@/components/shell/dados";
 import Alert from "@/components/ui/alert";
@@ -423,6 +424,7 @@ function Conteudo({ modo }: { modo: "completo" | "acompanhamento" }) {
       <PageHeader
         title={acompanhamento ? "Acompanhamento" : "Dashboard"}
         subtitle={`${acompanhamento ? "O que precisa de atenção agora, com as listas de cada alerta" : "Visão geral da operação"} · ${resumo.ativos} mentorados ativos`}
+        actions={<BotaoNovoMentorado />}
       />
       <div className="flex flex-wrap items-center gap-3">
         <SearchInput

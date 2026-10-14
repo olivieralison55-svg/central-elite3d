@@ -145,6 +145,29 @@ describe("hook de escrita (WRITE-03, WRITE-04, WRITE-08, SEC-06)", () => {
     expect(escrever).toHaveBeenCalledTimes(1);
   });
 
+  it("W14: o `depois` passado ao hook recebe o resultado do sucesso, com o id, depois da recarga da tela", async () => {
+    const ordem: unknown[][] = [];
+    function BotaoCriar() {
+      const { executar } = useEscrita(
+        "criarMentorado",
+        (_id: string) => Promise.resolve<ResultadoEscrita>({ ok: true, linhas: 1, id: "m9" }),
+        "Mentorado criado",
+        (gravado) => ordem.push(["depois", gravado]),
+      );
+      visto.executar = executar;
+      return null;
+    }
+    estado.proximo = 0;
+    renderToStaticMarkup(
+      <Contextos papel="admin" recarregar={async () => void ordem.push(["recarregar"])}>
+        <BotaoCriar />
+      </Contextos>,
+    );
+    expect(await clicar("x")).toBe(true);
+    expect(ordem).toEqual([["recarregar"], ["depois", { ok: true, linhas: 1, id: "m9" }]]);
+    expect(toastSucesso.mock.calls).toEqual([["Mentorado criado"]]);
+  });
+
   it("WRITE-08: a capacidade que a escrita pede é a que chega ao executor: sem ela o mentor não chama a porta, e o admin chama", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     // As capacidades de escrita do admin que o mentor não tem (src/lib/papeis.ts).

@@ -1482,11 +1482,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Padrões de hoje: fechamento hoje, entrada Pago, contrato e restante "Ainda não"
-- [ ] Nome obrigatório; e-mail normalizado; e-mail duplicado com a mensagem própria
-- [ ] Erro mantém o formulário aberto com o que foi digitado
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 372 → 376
+- [x] Padrões de hoje: fechamento hoje, entrada Pago, contrato e restante "Ainda não"
+- [x] Nome obrigatório; e-mail normalizado; e-mail duplicado com a mensagem própria
+- [x] Erro mantém o formulário aberto com o que foi digitado
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 372 → 376
 
 **Tests**: unit
 **Gate**: quick

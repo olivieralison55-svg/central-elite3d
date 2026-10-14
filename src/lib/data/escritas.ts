@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
 import { ordemDaEtapa } from "@/lib/constantes";
 
@@ -13,9 +14,9 @@ import type { Parcela, Resultado } from "./esquemas";
 
 // O RLS filtra `update` e `delete` sem permissão sem devolver erro: 0 linhas não é sucesso. A
 // escrita de várias linhas que volta com menos do que pediu também não (THREAT-11). `aviso` é a
-// falha de um passo depois da escrita, que já gravou (WRITE-07).
+// falha de um passo depois da escrita, que já gravou (WRITE-07). `id` é o da linha criada (W14).
 export type ResultadoEscrita =
-  | { ok: true; linhas: number; aviso?: string }
+  | { ok: true; linhas: number; aviso?: string; id?: string }
   | { ok: false; erro: string }
   | { ok: false; zeroLinhas: true }
   | { ok: false; linhas: number; esperadas: number };
@@ -278,8 +279,11 @@ export function excluirMentorado(id: string, db: SupabaseClient = cliente()): Pr
   return conferir("mentorados", db.from("mentorados").delete().eq("id", id).select("id"));
 }
 
-// W14 (index.html:3769).
-export function criarMentorado(novo: NovoMentorado, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+const LINHA_CRIADA = z.object({ id: z.string() });
+
+// W14 (index.html:3769). O id da linha criada volta no sucesso: a tela abre a ficha dela, como o
+// `openMentorado(data.id)` de hoje. Linha sem id não desfaz o que gravou: volta sem id.
+export async function criarMentorado(novo: NovoMentorado, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
   const payload = {
     nome: novo.nome,
     email: novo.email,
@@ -290,7 +294,15 @@ export function criarMentorado(novo: NovoMentorado, db: SupabaseClient = cliente
     restante_status: novo.restante_status,
     cancelado: false,
   };
-  return conferir("mentorados", db.from("mentorados").insert(payload).select().single());
+  const resposta = await db.from("mentorados").insert(payload).select().single();
+  const gravado = await conferir("mentorados", Promise.resolve(resposta));
+  if (!gravado.ok) return gravado;
+  const linha = LINHA_CRIADA.safeParse(resposta.data);
+  if (!linha.success) {
+    console.error("[central-elite3d] mentorados: schema mismatch", linha.error.issues);
+    return gravado;
+  }
+  return { ...gravado, id: linha.data.id };
 }
 
 // W20: o formulário de parcela, com o número ≥ 1 e único no mentorado já conferido por ele.
