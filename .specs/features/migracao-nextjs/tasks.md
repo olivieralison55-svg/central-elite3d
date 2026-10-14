@@ -392,12 +392,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] PoC registrada em `.specs/features/migracao-nextjs/evidence/poc-middleware.md`: o `curl` devolve 307 para `/dash`, e um id válido devolve a página
-- [ ] `src/middleware.test.ts`: codificação inválida → redirect para `/dash`; caminho válido → segue; o `matcher` é só `/mentorado/:path*`
-- [ ] O middleware não lê cookie nem sessão
-- [ ] Se a PoC falhar: parar e reabrir o NAV-03 como emenda (Critical Rule 6)
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 89 → 92
+- [x] PoC registrada em `.specs/features/migracao-nextjs/evidence/poc-middleware.md`: o `curl` devolve 307 para `/dash`, e um id válido devolve a página
+- [x] `src/middleware.test.ts`: codificação inválida → redirect para `/dash`; caminho válido → segue; o `matcher` é só `/mentorado/:path*`
+- [x] O middleware não lê cookie nem sessão
+- [x] Se a PoC falhar: parar e reabrir o NAV-03 como emenda (Critical Rule 6)
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 89 → 92
 
 **Tests**: unit
 **Gate**: quick

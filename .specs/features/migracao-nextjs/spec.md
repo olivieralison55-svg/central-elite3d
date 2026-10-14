@@ -571,7 +571,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | AUTH-10 | P1: Login — sem cadastro nem reset (AC10) | - | Pending |
 | NAV-01 | P1: Endereço — mesmos caminhos (AC1) | - | Pending |
 | NAV-02 | P1: Endereço — link antigo com hash (AC2) | - | Pending |
-| NAV-03 | P1: Endereço — caminho inválido (AC3) | - | Pending |
+| NAV-03 | P1: Endereço — caminho inválido (AC3) | Execute | Implementing |
 | NAV-04 | P1: Endereço — guarda de tela (AC4) | - | Pending |
 | NAV-05 | P1: Endereço — guarda de aba (AC5) | - | Pending |
 | NAV-06 | P1: Endereço — menu por papel (AC6) | - | Pending |
