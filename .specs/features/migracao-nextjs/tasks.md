@@ -449,13 +449,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `/dash`, `/acompanhamento`, `/mentorados`, `/sessoes`, `/rotas`, `/mentores`, `/analise`, `/nps`, `/ia`, `/financeiro` resolvem para a tela de mesmo nome
-- [ ] `/mentorado/<id>` e `/mentorado/<id>/<aba>` com aba em `cadastro`, `financeiro`, `sessoes`, `notas`, `stlseller`; `completo`, `basico` e qualquer outra viram `cadastro`
-- [ ] `caminhoDoHash` só monta tela de `TELAS` ou `mentorado/<id>[/<aba>]`, com o id em `encodeURIComponent`; `#`, `#/`, vazio e codificação inválida (`#/mentorado/%E0%A4%A`) → `null`
-- [ ] Vetores do THREAT-01 devolvem `null`: `#//evil.example/login`, `#/\\evil.example`, `#/%2F%2Fevil.example`, `#/%09/evil.example`, `#javascript:alert(1)`
-- [ ] `/financeiro`, `/analise`, `/nps` e `/mentores` sem `verFinanceiro` → `/dash`; abas `financeiro` e `stlseller` sem `verFinanceiro` → `sessoes`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 98 → 113
+- [x] `/dash`, `/acompanhamento`, `/mentorados`, `/sessoes`, `/rotas`, `/mentores`, `/analise`, `/nps`, `/ia`, `/financeiro` resolvem para a tela de mesmo nome
+- [x] `/mentorado/<id>` e `/mentorado/<id>/<aba>` com aba em `cadastro`, `financeiro`, `sessoes`, `notas`, `stlseller`; `completo`, `basico` e qualquer outra viram `cadastro`
+- [x] `caminhoDoHash` só monta tela de `TELAS` ou `mentorado/<id>[/<aba>]`, com o id em `encodeURIComponent`; `#`, `#/`, vazio e codificação inválida (`#/mentorado/%E0%A4%A`) → `null`
+- [x] Vetores do THREAT-01 devolvem `null`: `#//evil.example/login`, `#/\\evil.example`, `#/%2F%2Fevil.example`, `#/%09/evil.example`, `#javascript:alert(1)`
+- [x] `/financeiro`, `/analise`, `/nps` e `/mentores` sem `verFinanceiro` → `/dash`; abas `financeiro` e `stlseller` sem `verFinanceiro` → `sessoes`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 98 → 113
 
 **Tests**: unit
 **Gate**: quick

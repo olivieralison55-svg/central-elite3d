@@ -569,11 +569,11 @@ Depois do G6, problema vira correção para a frente, não revert.
 | AUTH-08 | P1: Login — logout limpa tudo (AC8) | - | Pending |
 | AUTH-09 | P1: Login — sessão persiste (AC9) | - | Pending |
 | AUTH-10 | P1: Login — sem cadastro nem reset (AC10) | - | Pending |
-| NAV-01 | P1: Endereço — mesmos caminhos (AC1) | - | Pending |
-| NAV-02 | P1: Endereço — link antigo com hash (AC2) | - | Pending |
+| NAV-01 | P1: Endereço — mesmos caminhos (AC1) | Execute | Implementing |
+| NAV-02 | P1: Endereço — link antigo com hash (AC2) | Execute | Implementing |
 | NAV-03 | P1: Endereço — caminho inválido (AC3) | Execute | Implementing |
 | NAV-04 | P1: Endereço — guarda de tela (AC4) | Execute | Implementing |
-| NAV-05 | P1: Endereço — guarda de aba (AC5) | - | Pending |
+| NAV-05 | P1: Endereço — guarda de aba (AC5) | Execute | Implementing |
 | NAV-06 | P1: Endereço — menu por papel (AC6) | Execute | Implementing |
 | NAV-07 | P1: Endereço — voltar e avançar (AC7) | - | Pending |
 | NAV-08 | P1: Endereço — Skeleton na 1ª carga (AC8) | - | Pending |
@@ -670,7 +670,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GATE-15 | P1: Gates — tag e ensaio da volta (AC15) | - | Pending |
 | GATE-16 | P1: Gates — congelamento do `index.html` (AC16) | - | Pending |
 | CUT-01 | P2: Corte — arquivos do repo em 404 (AC1) | - | Pending |
-| CUT-02 | P2: Corte — link antigo (AC2) | - | Pending |
+| CUT-02 | P2: Corte — link antigo (AC2) | Execute | Implementing |
 | CUT-03 | P2: Corte — um front só (AC3) | Execute | Implementing |
 | CUT-04 | P2: Corte — docs atualizadas (AC4) | - | Pending |
 | EDGE-01 | Edge — ficha excluída por outro admin | - | Pending |
@@ -678,7 +678,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | EDGE-03 | Edge — virada do dia | - | Pending |
 | EDGE-04 | Edge — nota grande demais | - | Pending |
 | EDGE-05 | Edge — status fora do domínio | - | Pending |
-| SEC-01 | P1: Segurança — navegação só na mesma origem (AC1) | - | Pending |
+| SEC-01 | P1: Segurança — navegação só na mesma origem (AC1) | Execute | Implementing |
 | SEC-02 | P1: Segurança — o agente não lê dado pessoal nos gates (AC2) | - | Pending |
 | SEC-03 | P1: Segurança — auditoria e cópia conferida no G2 (AC3) | Execute | Implementing |
 | SEC-04 | P1: Segurança — cabeçalhos (AC4) | Execute | Implementing |
