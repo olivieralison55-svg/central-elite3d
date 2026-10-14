@@ -577,7 +577,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | NAV-06 | P1: Endereço — menu por papel (AC6) | Execute | Implementing |
 | NAV-07 | P1: Endereço — voltar e avançar (AC7) | Execute | Implementing |
 | NAV-08 | P1: Endereço — Skeleton na 1ª carga (AC8) | Execute | Implementing |
-| NAV-09 | P1: Endereço — ficha não encontrada (AC9) | - | Pending |
+| NAV-09 | P1: Endereço — ficha não encontrada (AC9) | Execute | Implementing |
 | NAV-10 | P1: Endereço — foco dos avisos (AC10) | Execute | Implementing |
 | DATA-01 | P1: Porta — só ela importa o supabase-js (AC1) | Execute | Implementing |
 | DATA-02 | P1: Porta — Zod em R01–R23 (AC2) | Execute | Implementing |
@@ -673,7 +673,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | CUT-02 | P2: Corte — link antigo (AC2) | Execute | Implementing |
 | CUT-03 | P2: Corte — um front só (AC3) | Execute | Implementing |
 | CUT-04 | P2: Corte — docs atualizadas (AC4) | - | Pending |
-| EDGE-01 | Edge — ficha excluída por outro admin | - | Pending |
+| EDGE-01 | Edge — ficha excluída por outro admin | Execute | Implementing |
 | EDGE-02 | Edge — sessão não renova | Execute | Implementing |
 | EDGE-03 | Edge — virada do dia | Execute | Implementing |
 | EDGE-04 | Edge — nota grande demais | - | Pending |

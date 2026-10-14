@@ -1566,12 +1566,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Topo: fechamento, parcelas pagas (só `verFinanceiro`), N de M 1:1 concluídas, implementação, plantões
-- [ ] Id fora dos mentorados carregados → "Ficha não encontrada"
-- [ ] Abas `financeiro` e `stlseller` sem `verFinanceiro` desenham `sessoes`
-- [ ] Voltar aponta para `voltarPara`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 390 → 398
+- [x] Topo: fechamento, parcelas pagas (só `verFinanceiro`), N de M 1:1 concluídas, implementação, plantões
+- [x] Id fora dos mentorados carregados → "Ficha não encontrada"
+- [x] Abas `financeiro` e `stlseller` sem `verFinanceiro` desenham `sessoes`
+- [x] Voltar aponta para `voltarPara`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 390 → 398
 
 **Tests**: unit
 **Gate**: quick
