@@ -535,13 +535,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `Ui` com as chaves do design (`filtro` inteiro, `mesMatriz`, `foco`, `rotaAtual`, `rotaMentoradoId`, `marcoAberto`, `voltarPara = "/mentorados"`, `sortState`)
-- [ ] `useNavegar` embrulha `useRouter` e `usePathname`; o teste injeta um stub
-- [ ] `useNavegar` manda para `/dash` todo destino que resolve para outra origem (os 5 vetores da T11, como caminho) e entrega ao roteador o destino da mesma origem
-- [ ] `src/test/render.test.tsx`: `renderTela` entrega os quatro valores; o stub de navegação registra `ir` e `substituir`
-- [ ] `fixtures.ts` monta um `Dataset` com os mentorados m1–m4, as sessões s1–s5 e g1–g5, as parcelas p1–p3, a rota rica, as cobranças, o STLSeller, o NPS, a Experiência e a análise de `tests/ambiente.mjs`
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 133 → 137
+- [x] `Ui` com as chaves do design (`filtro` inteiro, `mesMatriz`, `foco`, `rotaAtual`, `rotaMentoradoId`, `marcoAberto`, `voltarPara = "/mentorados"`, `sortState`)
+- [x] `useNavegar` embrulha `useRouter` e `usePathname`; o teste injeta um stub
+- [x] `useNavegar` manda para `/dash` todo destino que resolve para outra origem (os 5 vetores da T11, como caminho) e entrega ao roteador o destino da mesma origem
+- [x] `src/test/render.test.tsx`: `renderTela` entrega os quatro valores; o stub de navegação registra `ir` e `substituir`
+- [x] `fixtures.ts` monta um `Dataset` com os mentorados m1–m4, as sessões s1–s5 e g1–g5, as parcelas p1–p3, a rota rica, as cobranças, o STLSeller, o NPS, a Experiência e a análise de `tests/ambiente.mjs`
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 133 → 137
 
 **Tests**: unit
 **Gate**: build
