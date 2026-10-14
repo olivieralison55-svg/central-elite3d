@@ -758,11 +758,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Fixture de 2.500 linhas: devolve as 2.500, cada uma uma vez, em 3 páginas
-- [ ] `order` acumula a coluna de hoje e o desempate; `range` de 1.000 em 1.000; para na página com menos de 1.000
-- [ ] Erro numa página devolve `{ ok: false }`; linha fora do schema escreve `[central-elite3d] <relação>: schema mismatch` e devolve falha
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 172 → 178
+- [x] Fixture de 2.500 linhas: devolve as 2.500, cada uma uma vez, em 3 páginas
+- [x] `order` acumula a coluna de hoje e o desempate; `range` de 1.000 em 1.000; para na página com menos de 1.000
+- [x] Erro numa página devolve `{ ok: false }`; linha fora do schema escreve `[central-elite3d] <relação>: schema mismatch` e devolve falha
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 172 → 178
 
 **Tests**: unit
 **Gate**: quick

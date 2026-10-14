@@ -583,7 +583,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | DATA-02 | P1: Porta — Zod em R01–R23 (AC2) | Execute | Implementing |
 | DATA-03 | P1: Porta — schema mismatch (AC3) | Execute | Implementing |
 | DATA-04 | P1: Porta — paginação estável (AC4) | Execute | Implementing |
-| DATA-05 | P1: Porta — 2.500 linhas (AC5) | - | Pending |
+| DATA-05 | P1: Porta — 2.500 linhas (AC5) | Execute | Implementing |
 | DATA-06 | P1: Porta — carga inicial com erro (AC6) | - | Pending |
 | DATA-07 | P1: Porta — erro isolado por relação (AC7) | - | Pending |
 | DATA-08 | P1: Porta — só 4 rpcs (AC8) | Execute | Implementing |
