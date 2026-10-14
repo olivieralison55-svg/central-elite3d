@@ -434,13 +434,21 @@ describe("escritas de mentorado W11–W14 (WRITE-01, WRITE-02, OPS-13, OPS-15)",
 
   it("W11b e OPS-13: rpc('lia_adotar_orfas', { p_mentorado }), e o erro dela volta para quem chama", async () => {
     const f = clienteFalso();
-    expect(await adotarOrfas("m1", f.db)).toEqual({ ok: true, dados: null });
+    expect(await adotarOrfas("m1", f.db)).toEqual({ ok: true, dados: 0 });
     expect(f.pedidos).toEqual([[["rpc", "lia_adotar_orfas", { p_mentorado: "m1" }]]]);
 
     const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const comErro = clienteFalso({ lia_adotar_orfas: falha("permission denied for table lia_cobrancas") });
     expect(await adotarOrfas("m1", comErro.db)).toEqual({ ok: false, erro: "permission denied for table lia_cobrancas" });
     expect(erroNoConsole.mock.calls.at(-1)).toEqual(["[central-elite3d] lia_adotar_orfas", { message: "permission denied for table lia_cobrancas" }]);
+  });
+
+  it("W11b devolve quantas cobranças adotou, o inteiro da rpc; nulo vale 0, e contagem fora do formato vale 0 com o aviso no console", async () => {
+    expect(await adotarOrfas("m1", clienteFalso({ lia_adotar_orfas: { data: 3, error: null } }).db)).toEqual({ ok: true, dados: 3 });
+    expect(await adotarOrfas("m1", clienteFalso({ lia_adotar_orfas: { data: null, error: null } }).db)).toEqual({ ok: true, dados: 0 });
+    const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await adotarOrfas("m1", clienteFalso({ lia_adotar_orfas: { data: "três", error: null } }).db)).toEqual({ ok: true, dados: 0 });
+    expect(erroNoConsole.mock.calls.at(-1)?.[0]).toBe("[central-elite3d] lia_adotar_orfas: schema mismatch");
   });
 
   it("W12: situacao, pausado_em (hoje se vazio) e retorno_previsto; fora de 'pausado', as duas datas vão nulas", async () => {

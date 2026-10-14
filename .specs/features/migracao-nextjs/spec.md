@@ -608,7 +608,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | OPS-09 | P1: Operação — últimas 30 concluídas (AC9) | Execute | Implementing |
 | OPS-10 | P1: Operação — busca (AC10) | Execute | Implementing |
 | OPS-11 | P1: Operação — exclusão pelo nome (AC11) | Execute | Implementing |
-| OPS-12 | P1: Operação — só leitura sem permissão (AC12) | - | Pending |
+| OPS-12 | P1: Operação — só leitura sem permissão (AC12) | Execute | Implementing |
 | OPS-13 | P1: Operação — cadastro e Lia (AC13) | Execute | Implementing |
 | OPS-14 | P1: Operação — status nulo visível (AC14) | - | Pending |
 | OPS-15 | P1: Operação — status nulo preservado (AC15) | Execute | Implementing |

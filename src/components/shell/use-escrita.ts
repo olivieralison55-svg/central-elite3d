@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 
 import { usuarioDaSessao } from "@/lib/data/auth";
 import type { ResultadoEscrita } from "@/lib/data/escritas";
-import { executarEscrita } from "@/lib/escrita";
+import { type Escrita, executarEscrita } from "@/lib/escrita";
 import type { Capacidade } from "@/lib/papeis";
 
 import { useDados, useSessao } from "./contexto";
@@ -16,7 +16,7 @@ import { useDados, useSessao } from "./contexto";
 export function useEscrita<A extends unknown[]>(
   cap: Capacidade,
   escrever: (...args: A) => Promise<ResultadoEscrita>,
-  sucesso?: string,
+  sucesso?: Escrita["sucesso"],
   depois?: (gravado: Extract<ResultadoEscrita, { ok: true }>) => void,
 ): { executar(...args: A): Promise<boolean>; ocupado: boolean } {
   const { usuario, pode } = useSessao();

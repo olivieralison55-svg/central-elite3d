@@ -110,7 +110,7 @@ describe("executor de escrita (WRITE-02, WRITE-04, WRITE-05, WRITE-06, WRITE-07,
   });
 
   it("WRITE-06: W11 que grava seguido de W11b que falha mostra 'Cadastro salvo, mas as cobranças da Lia não foram puxadas:' e o erro", async () => {
-    const adotar = vi.fn<() => Promise<Resultado<null>>>(() => Promise.resolve({ ok: false, erro: "permission denied for table lia_cobrancas" }));
+    const adotar = vi.fn<() => Promise<Resultado<number>>>(() => Promise.resolve({ ok: false, erro: "permission denied for table lia_cobrancas" }));
     const { o, chamadas } = escrita({ ok: true, linhas: 1 }, { sucesso: "Mentorado atualizado" });
     const salvar = o.escrever;
     expect(await executarEscrita({ ...o, escrever: () => comAdocao(salvar, adotar) })).toBe(true);
@@ -121,12 +121,19 @@ describe("executor de escrita (WRITE-02, WRITE-04, WRITE-05, WRITE-06, WRITE-07,
     ]);
     expect(adotar).toHaveBeenCalledTimes(1);
 
-    // W11b que dá certo deixa o sucesso; W11 que falha não chama o W11b.
-    adotar.mockResolvedValueOnce({ ok: true, dados: null });
-    expect(await comAdocao(() => Promise.resolve({ ok: true, linhas: 1 }), adotar)).toEqual({ ok: true, linhas: 1 });
+    // W11b que dá certo deixa o sucesso, com quantas cobranças puxou; W11 que falha não chama o W11b.
+    adotar.mockResolvedValueOnce({ ok: true, dados: 2 });
+    expect(await comAdocao(() => Promise.resolve({ ok: true, linhas: 1 }), adotar)).toEqual({ ok: true, linhas: 1, adotadas: 2 });
     adotar.mockClear();
     expect(await comAdocao(() => Promise.resolve({ ok: false, erro: "timeout" }), adotar)).toEqual({ ok: false, erro: "timeout" });
     expect(adotar).not.toHaveBeenCalled();
+  });
+
+  it("o sucesso pode ser uma função do que foi gravado: o W11 conta no toast as cobranças da Lia que o W11b puxou", async () => {
+    const texto = (gravado: Extract<ResultadoEscrita, { ok: true }>) => `gravou ${gravado.linhas}, adotou ${gravado.adotadas ?? "nada"}`;
+    const { o, chamadas } = escrita({ ok: true, linhas: 1, adotadas: 3 }, { sucesso: texto });
+    expect(await executarEscrita(o)).toBe(true);
+    expect(chamadas).toEqual([["escrever"], ["avisar", "gravou 1, adotou 3", "sucesso"], ["recarregar"]]);
   });
 
   it("WRITE-07: falha do lia_refletir_financeiro depois da escrita vira toast com o erro, no lugar do sucesso", async () => {

@@ -1594,12 +1594,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Sem `editarMentorado`: `DescriptionList` só leitura e bloco Situação oculto
-- [ ] Salvar com e-mail na tela: W11 e depois W11b
-- [ ] Excluir mostra o `resumoExclusao` e libera o botão só com o nome que casa por `chaveNome`
-- [ ] `link_drive`, `link_mapa_mental` e `link_whatsapp` por `linkSeguro`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 398 → 406
+- [x] Sem `editarMentorado`: `DescriptionList` só leitura e bloco Situação oculto
+- [x] Salvar com e-mail na tela: W11 e depois W11b
+- [x] Excluir mostra o `resumoExclusao` e libera o botão só com o nome que casa por `chaveNome`
+- [x] `link_drive`, `link_mapa_mental` e `link_whatsapp` por `linkSeguro`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 398 → 406
 
 **Tests**: unit
 **Gate**: quick

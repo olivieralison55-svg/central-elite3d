@@ -15,8 +15,9 @@ import type { Parcela, Resultado } from "./esquemas";
 // O RLS filtra `update` e `delete` sem permissão sem devolver erro: 0 linhas não é sucesso. A
 // escrita de várias linhas que volta com menos do que pediu também não (THREAT-11). `aviso` é a
 // falha de um passo depois da escrita, que já gravou (WRITE-07). `id` é o da linha criada (W14).
+// `adotadas` é quantas cobranças da Lia o W11b puxou para o mentorado.
 export type ResultadoEscrita =
-  | { ok: true; linhas: number; aviso?: string; id?: string }
+  | { ok: true; linhas: number; aviso?: string; id?: string; adotadas?: number }
   | { ok: false; erro: string }
   | { ok: false; zeroLinhas: true }
   | { ok: false; linhas: number; esperadas: number };
@@ -256,10 +257,25 @@ export function salvarMentorado(id: string, campos: CadastroMentorado | Financei
   return conferir("mentorados", db.from("mentorados").update(payload).eq("id", id).select("id"));
 }
 
-// W11b (index.html:3490): adota as cobranças órfãs da Lia com o e-mail do mentorado. Hoje o erro
-// é ignorado; aqui ele volta para quem chama.
-export function adotarOrfas(mentoradoId: string, db: SupabaseClient = cliente()): Promise<Resultado<null>> {
-  return chamar("lia_adotar_orfas", db.rpc("lia_adotar_orfas", { p_mentorado: mentoradoId }));
+// A rpc devolve `integer` (20260918_lia_refletir_financeiro.sql:150); nulo vale 0, como o
+// `data || 0` de hoje.
+const ADOTADAS = z.number().int().nonnegative().nullable();
+
+// W11b (index.html:3490): adota as cobranças órfãs da Lia com o e-mail do mentorado e devolve
+// quantas adotou. Hoje o erro é ignorado; aqui ele volta para quem chama.
+export async function adotarOrfas(mentoradoId: string, db: SupabaseClient = cliente()): Promise<Resultado<number>> {
+  const { data, error } = await db.rpc("lia_adotar_orfas", { p_mentorado: mentoradoId });
+  if (error) {
+    console.error("[central-elite3d] lia_adotar_orfas", error);
+    return { ok: false, erro: error.message };
+  }
+  const adotadas = ADOTADAS.safeParse(data);
+  // A rpc rodou: uma contagem fora do formato não desfaz a adoção, só deixa o aviso sem número.
+  if (!adotadas.success) {
+    console.error("[central-elite3d] lia_adotar_orfas: schema mismatch", adotadas.error.issues);
+    return { ok: true, dados: 0 };
+  }
+  return { ok: true, dados: adotadas.data ?? 0 };
 }
 
 // W12 (index.html:3533): só "pausado" guarda as datas, e a pausa sem data vale hoje. `hoje` vem

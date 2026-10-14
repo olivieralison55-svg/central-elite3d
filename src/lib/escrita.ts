@@ -12,7 +12,9 @@ export interface Escrita {
   escrever(): Promise<ResultadoEscrita>;
   avisar(mensagem: string, tipo: "sucesso" | "erro"): void;
   recarregar(): Promise<void>;
-  sucesso?: string; // sem ele, sucesso não tem toast, como W18 e W19 hoje
+  // Sem ele, sucesso não tem toast, como W18 e W19 hoje. Função quando o texto depende do que foi
+  // gravado: o W11 conta as cobranças da Lia que o W11b puxou.
+  sucesso?: string | ((gravado: Extract<ResultadoEscrita, { ok: true }>) => string);
   // O passo da tela depois de gravar e recarregar, com o resultado: abrir a ficha criada (W14).
   depois?(gravado: Extract<ResultadoEscrita, { ok: true }>): void;
 }
@@ -38,7 +40,7 @@ export async function executarEscrita(o: Escrita): Promise<boolean> {
     if (r.ok) {
       // WRITE-06 e WRITE-07: gravou, e um passo seguinte falhou.
       if (r.aviso) o.avisar(r.aviso, "erro");
-      else if (o.sucesso) o.avisar(o.sucesso, "sucesso");
+      else if (o.sucesso) o.avisar(typeof o.sucesso === "function" ? o.sucesso(r) : o.sucesso, "sucesso");
       await o.recarregar();
       o.depois?.(r);
       return true;
@@ -57,10 +59,11 @@ export async function executarEscrita(o: Escrita): Promise<boolean> {
   }
 }
 
-// WRITE-06: o W11 e depois o W11b. A falha da adoção não desfaz o cadastro salvo: vira aviso.
-export async function comAdocao(salvar: () => Promise<ResultadoEscrita>, adotar: () => Promise<Resultado<null>>): Promise<ResultadoEscrita> {
+// WRITE-06: o W11 e depois o W11b. A falha da adoção não desfaz o cadastro salvo: vira aviso. A
+// adoção que dá certo leva junto quantas cobranças puxou (index.html:3488–3495).
+export async function comAdocao(salvar: () => Promise<ResultadoEscrita>, adotar: () => Promise<Resultado<number>>): Promise<ResultadoEscrita> {
   const salvo = await salvar();
   if (!salvo.ok) return salvo;
   const adocao = await adotar();
-  return adocao.ok ? salvo : { ...salvo, aviso: `Cadastro salvo, mas as cobranças da Lia não foram puxadas: ${adocao.erro}` };
+  return adocao.ok ? { ...salvo, adotadas: adocao.dados } : { ...salvo, aviso: `Cadastro salvo, mas as cobranças da Lia não foram puxadas: ${adocao.erro}` };
 }
