@@ -328,11 +328,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `src/test/theme-init.test.ts` roda o script num `vm` com `localStorage` e `matchMedia` falsos: preferência `dark` salva liga a classe; `light` salva não liga; sem preferência segue o sistema
-- [ ] Nenhum `dangerouslySetInnerHTML` no layout
-- [ ] `pnpm build` gera o HTML de `/` com o `<script src="/theme-init.js">` dentro do `<head>`
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 76 → 79
+- [x] `src/test/theme-init.test.ts` roda o script num `vm` com `localStorage` e `matchMedia` falsos: preferência `dark` salva liga a classe; `light` salva não liga; sem preferência segue o sistema
+- [x] Nenhum `dangerouslySetInnerHTML` no layout
+- [x] `pnpm build` gera o HTML de `/` com o `<script src="/theme-init.js">` dentro do `<head>`
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 76 → 79
 
 **Tests**: unit
 **Gate**: build

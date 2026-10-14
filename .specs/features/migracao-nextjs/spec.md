@@ -642,7 +642,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | UI-01 | P1: Design system — cópia literal (AC1) | Execute | Implementing |
 | UI-02 | P1: Design system — sem cor crua (AC2) | - | Pending |
 | UI-03 | P1: Design system — Inter (AC3) | Execute | Implementing |
-| UI-04 | P1: Design system — dois temas (AC4) | - | Pending |
+| UI-04 | P1: Design system — dois temas (AC4) | Execute | Implementing |
 | UI-05 | P1: Design system — ConfirmDialog (AC5) | - | Pending |
 | UI-06 | P1: Design system — lacunas com AD (AC6) | - | Pending |
 | UI-07 | P1: Design system — EmptyState e Skeleton (AC7) | - | Pending |
@@ -671,7 +671,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GATE-16 | P1: Gates — congelamento do `index.html` (AC16) | - | Pending |
 | CUT-01 | P2: Corte — arquivos do repo em 404 (AC1) | - | Pending |
 | CUT-02 | P2: Corte — link antigo (AC2) | - | Pending |
-| CUT-03 | P2: Corte — um front só (AC3) | - | Pending |
+| CUT-03 | P2: Corte — um front só (AC3) | Execute | Implementing |
 | CUT-04 | P2: Corte — docs atualizadas (AC4) | - | Pending |
 | EDGE-01 | Edge — ficha excluída por outro admin | - | Pending |
 | EDGE-02 | Edge — sessão não renova | - | Pending |
