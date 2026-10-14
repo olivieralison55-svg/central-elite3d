@@ -4,6 +4,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 
 import { LinksSessao, StatusSessao } from "@/components/modules/comum/celulas";
+import { SessaoDialogo } from "@/components/modules/ficha/aba-sessoes";
 import { useDados, useSessao } from "@/components/shell/contexto";
 import { useEscrita } from "@/components/shell/use-escrita";
 import Button from "@/components/ui/button";
@@ -17,6 +18,7 @@ import SectionLabel from "@/components/ui/section-label";
 import Select from "@/components/ui/select";
 import { casaBusca } from "@/lib/busca";
 import { ETAPAS_GRUPO, MENTORES, S_STATUS } from "@/lib/constantes";
+import type { Sessao } from "@/lib/data/esquemas";
 import { confirmarGrupo, criarSessaoGrupo, type EncontroGrupo as CamposEncontro } from "@/lib/data/escritas";
 import { fmtD, hojeSP } from "@/lib/datas";
 import { ehAtivo, nomeDe } from "@/lib/mentorados";
@@ -53,7 +55,7 @@ function ConfirmarEncontro({ encontro, aoConfirmar }: { encontro: Encontro; aoCo
           {`Marcar ${ids.length} como concluída`}
         </Button>
       </div>
-      <p className="text-xs text-muted">Marca de uma vez todos os participantes que ainda não estão concluídos.</p>
+      <p className="text-xs text-muted">Marca de uma vez todos os participantes que ainda não estão concluídos. Ausências individuais ficam em Editar.</p>
     </section>
   );
 }
@@ -65,6 +67,9 @@ export function DetalheEncontro({ encontro, aoConfirmar }: { encontro: Encontro;
   const presencas = [...encontro.itens].sort((a, b) => nome(a.mentorado_id).localeCompare(nome(b.mentorado_id), "pt-BR"));
   const temLinks = !!(encontro.link_meet || encontro.link_gravacao || encontro.link_anotacoes);
   const pendentes = encontro.itens.some((s) => s.status !== "Concluída");
+  // Cada presença se corrige pelo formulário da sessão (W03). Gravada, o encontro fecha: o objeto
+  // dele é de antes da recarga.
+  const [editando, setEditando] = useState<Sessao | null>(null);
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
@@ -77,12 +82,24 @@ export function DetalheEncontro({ encontro, aoConfirmar }: { encontro: Encontro;
           {presencas.map((s) => (
             <li key={s.id} className="flex items-center justify-between gap-3 py-2 text-sm">
               <span className="text-ink">{nome(s.mentorado_id)}</span>
-              <StatusSessao status={s.status} />
+              <span className="flex items-center gap-2">
+                <StatusSessao status={s.status} />
+                {pode("escreverSessao") && s.mentorado_id && (
+                  <Button variant="outline" size="sm" data-escrita="W03" onClick={() => setEditando(s)}>
+                    Editar
+                  </Button>
+                )}
+              </span>
             </li>
           ))}
         </ul>
       </section>
       {pode("escreverSessao") && pendentes && <ConfirmarEncontro encontro={encontro} aoConfirmar={aoConfirmar} />}
+      <SessaoDialogo
+        alvo={editando?.mentorado_id ? { sessao: editando, mentoradoId: editando.mentorado_id } : null}
+        onClose={() => setEditando(null)}
+        aoTerminar={aoConfirmar}
+      />
     </div>
   );
 }

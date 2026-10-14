@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DadosContexto, type Navegador } from "@/components/shell/contexto";
 import EmptyState from "@/components/ui/empty-state";
 import type { Dataset } from "@/lib/data/esquemas";
-import type { EncontroGrupo, ResultadoEscrita } from "@/lib/data/escritas";
+import type { CamposSessao, EncontroGrupo, ResultadoEscrita } from "@/lib/data/escritas";
 import { hojeSP } from "@/lib/datas";
 import type { Papel } from "@/lib/papeis";
 import { agruparGrupo, ehGrupo } from "@/lib/sessoes";
@@ -40,10 +40,12 @@ const sessaoDoCliente = vi.hoisted(() => ({ id: "usuario-admin" }));
 vi.mock("@/lib/data/auth", () => ({ usuarioDaSessao: () => Promise.resolve(sessaoDoCliente.id) }));
 const confirmar = vi.hoisted(() => vi.fn<(ids: string[], mentor: string) => Promise<ResultadoEscrita>>());
 const registrar = vi.hoisted(() => vi.fn<(ids: string[], encontro: EncontroGrupo) => Promise<ResultadoEscrita>>());
+const salvarSessao = vi.hoisted(() => vi.fn<(id: string | null, campos: CamposSessao) => Promise<ResultadoEscrita>>());
 vi.mock("@/lib/data/escritas", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/data/escritas")>()),
   confirmarGrupo: confirmar,
   criarSessaoGrupo: registrar,
+  salvarSessao,
 }));
 
 // Os primitivos anotam as props e desenham o de verdade; o Dialog, que devolve null sem
@@ -117,6 +119,7 @@ describe("encontros em grupo (OPS-06, WRITE-03, WRITE-04)", () => {
     estado.valores.length = 0;
     confirmar.mockReset();
     registrar.mockReset();
+    salvarSessao.mockReset();
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -302,6 +305,35 @@ describe("encontros em grupo (OPS-06, WRITE-03, WRITE-04)", () => {
     terminar({ ok: true, linhas: 1 });
     await vi.waitFor(() => expect(toastSucesso).toHaveBeenCalledTimes(1));
     expect(registrar).toHaveBeenCalledTimes(1);
+  });
+
+  it("cada presença tem Editar (W03), que abre o formulário da sessão daquela linha; gravado, o encontro fecha depois de recarregar", async () => {
+    salvarSessao.mockResolvedValue({ ok: true, linhas: 1 });
+    expect(render(<DetalheEncontro encontro={PLANTAO} aoConfirmar={() => undefined} />, { papel: "diretoria" }).html).not.toContain(">Editar<");
+    const editar = (lista: typeof vistos) => lista.filter((v) => v.tipo === "button" && v.props.children === "Editar");
+    for (const papel of ["admin", "mentor"] as const) {
+      expect(editar(render(<DetalheEncontro encontro={PLANTAO} aoConfirmar={() => undefined} />, { papel }).vistos).map((v) => v.props["data-escrita"]), papel).toEqual(["W03", "W03", "W03"]);
+    }
+    const ordem: string[] = [];
+    const fechar = () => void ordem.push("fechar");
+    const fechado = render(<DetalheEncontro encontro={PLANTAO} aoConfirmar={fechar} />, { ordem });
+    expect(fechado.html).not.toContain("dialog-falso");
+    // As presenças vêm por nome: Ana Clara, Bruno Dias, Carla.
+    chamar(editar(fechado.vistos)[1].props.onClick);
+    const aberto = render(<DetalheEncontro encontro={PLANTAO} aoConfirmar={fechar} />, { ordem });
+    expect(aberto.html).toContain('<dialog-falso data-titulo="Editar sessão · Bruno Dias">');
+    const selecionado = (id: string) => prop(aberto.vistos, "select", (p) => p.id === id, "value");
+    expect(["sessao-etapa", "sessao-status", "sessao-mentor"].map(selecionado)).toEqual(["Plantão de Dúvida Semanal", "Concluída", "Sergio"]);
+    chamar(prop(aberto.vistos, "select", (p) => p.id === "sessao-status", "onChange"), "Bloqueada");
+    chamar(botao(render(<DetalheEncontro encontro={PLANTAO} aoConfirmar={fechar} />, { ordem }).vistos, "Salvar sessão"));
+    await vi.waitFor(() => expect(ordem).toContain("fechar"));
+    expect(salvarSessao.mock.calls).toEqual([
+      [
+        "g2",
+        { mentorado_id: "m2", etapa: "Plantão de Dúvida Semanal", status: "Bloqueada", mentor: "Sergio", data: "2026-08-06", hora: "19:00", link_meet: "", link_gravacao: "", link_anotacoes: "" },
+      ],
+    ]);
+    expect(ordem).toEqual(["recarregar", "fechar"]);
   });
 
   it("WRITE-09: '+ Sessão em grupo' só com criarSessao, com data-escrita=\"W02\", e abre e fecha o modal de registro", () => {

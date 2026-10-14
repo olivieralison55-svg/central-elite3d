@@ -1704,11 +1704,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Legenda da trilha conta só 1:1
-- [ ] Mentor edita e confirma; não cria nem exclui; "+ Nova sessão" só com `criarSessao`
-- [ ] Excluir sessão por `ConfirmDialog`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 431 → 439
+- [x] Legenda da trilha conta só 1:1
+- [x] Mentor edita e confirma; não cria nem exclui; "+ Nova sessão" só com `criarSessao`
+- [x] Excluir sessão por `ConfirmDialog`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 431 → 439
 
 **Tests**: unit
 **Gate**: quick
