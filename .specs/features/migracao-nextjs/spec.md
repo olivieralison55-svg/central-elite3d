@@ -565,16 +565,16 @@ Depois do G6, problema vira correção para a frente, não revert.
 | AUTH-04 | P1: Login — credencial recusada (AC4) | - | Pending |
 | AUTH-05 | P1: Login — falha de rede ou limite (AC5) | - | Pending |
 | AUTH-06 | P1: Login — perfil ausente (AC6) | - | Pending |
-| AUTH-07 | P1: Login — papel não reconhecido (AC7) | - | Pending |
+| AUTH-07 | P1: Login — papel não reconhecido (AC7) | Execute | Implementing |
 | AUTH-08 | P1: Login — logout limpa tudo (AC8) | - | Pending |
 | AUTH-09 | P1: Login — sessão persiste (AC9) | - | Pending |
 | AUTH-10 | P1: Login — sem cadastro nem reset (AC10) | - | Pending |
 | NAV-01 | P1: Endereço — mesmos caminhos (AC1) | - | Pending |
 | NAV-02 | P1: Endereço — link antigo com hash (AC2) | - | Pending |
 | NAV-03 | P1: Endereço — caminho inválido (AC3) | Execute | Implementing |
-| NAV-04 | P1: Endereço — guarda de tela (AC4) | - | Pending |
+| NAV-04 | P1: Endereço — guarda de tela (AC4) | Execute | Implementing |
 | NAV-05 | P1: Endereço — guarda de aba (AC5) | - | Pending |
-| NAV-06 | P1: Endereço — menu por papel (AC6) | - | Pending |
+| NAV-06 | P1: Endereço — menu por papel (AC6) | Execute | Implementing |
 | NAV-07 | P1: Endereço — voltar e avançar (AC7) | - | Pending |
 | NAV-08 | P1: Endereço — Skeleton na 1ª carga (AC8) | - | Pending |
 | NAV-09 | P1: Endereço — ficha não encontrada (AC9) | - | Pending |
@@ -595,7 +595,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | WRITE-05 | P1: Escritas — erro mantém o formulário (AC5) | - | Pending |
 | WRITE-06 | P1: Escritas — falha do `lia_adotar_orfas` (AC6) | - | Pending |
 | WRITE-07 | P1: Escritas — falha do `lia_refletir_financeiro` (AC7) | - | Pending |
-| WRITE-08 | P1: Escritas — capacidade no handler (AC8) | - | Pending |
+| WRITE-08 | P1: Escritas — capacidade no handler (AC8) | Execute | Implementing |
 | WRITE-09 | P1: Escritas — diretoria sem controle de escrita (AC9) | - | Pending |
 | OPS-01 | P1: Operação — painel de atenção (AC1) | - | Pending |
 | OPS-02 | P1: Operação — matriz conta reunião (AC2) | - | Pending |

@@ -420,13 +420,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] admin: `verFinanceiro`, `criarMentorado`, `editarMentorado`, `editarFinanceiro`, `escreverSessao`, `criarSessao`, `escreverRotas`, `escreverNotas`, `excluir`, `verIa`
-- [ ] diretoria: `verFinanceiro`, `verIa`
-- [ ] mentor: `escreverSessao`, `escreverRotas`, `escreverNotas`, `verIa`
-- [ ] papel nulo ou fora de (`admin`, `diretoria`, `mentor`): nenhuma capacidade e `ehPapel` falso
-- [ ] Menu: Dashboard, Acompanhamento, Mentorados, Sessões, Rotas e Análise IA para os 3 papéis; Mentores, STLSeller, NPS e Financeiro só para admin e diretoria
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 92 → 98
+- [x] admin: `verFinanceiro`, `criarMentorado`, `editarMentorado`, `editarFinanceiro`, `escreverSessao`, `criarSessao`, `escreverRotas`, `escreverNotas`, `excluir`, `verIa`
+- [x] diretoria: `verFinanceiro`, `verIa`
+- [x] mentor: `escreverSessao`, `escreverRotas`, `escreverNotas`, `verIa`
+- [x] papel nulo ou fora de (`admin`, `diretoria`, `mentor`): nenhuma capacidade e `ehPapel` falso
+- [x] Menu: Dashboard, Acompanhamento, Mentorados, Sessões, Rotas e Análise IA para os 3 papéis; Mentores, STLSeller, NPS e Financeiro só para admin e diretoria
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 92 → 98
 
 **Tests**: unit
 **Gate**: quick
