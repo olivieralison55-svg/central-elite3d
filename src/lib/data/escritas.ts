@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ETAPA_ORD } from "@/lib/constantes";
 
 import { cliente } from "./cliente";
-import type { Resultado } from "./esquemas";
+import type { Parcela, Resultado } from "./esquemas";
 
 // As escritas W01–W21 (mapeamento §4.2), uma função por escrita, com os nomes de hoje. Relação,
 // operação, payload e `onConflict` são os do index.html (WRITE-01). O que muda é o `.select`,
@@ -12,9 +12,10 @@ import type { Resultado } from "./esquemas";
 // último, com `cliente()` de padrão: os testes passam um falso.
 
 // O RLS filtra `update` e `delete` sem permissão sem devolver erro: 0 linhas não é sucesso. A
-// escrita de várias linhas que volta com menos do que pediu também não (THREAT-11).
+// escrita de várias linhas que volta com menos do que pediu também não (THREAT-11). `aviso` é a
+// falha de um passo depois da escrita, que já gravou (WRITE-07).
 export type ResultadoEscrita =
-  | { ok: true; linhas: number }
+  | { ok: true; linhas: number; aviso?: string }
   | { ok: false; erro: string }
   | { ok: false; zeroLinhas: true }
   | { ok: false; linhas: number; esperadas: number };
@@ -291,4 +292,77 @@ export function criarMentorado(novo: NovoMentorado, db: SupabaseClient = cliente
     cancelado: false,
   };
   return conferir("mentorados", db.from("mentorados").insert(payload).select().single());
+}
+
+// W20: o formulário de parcela, com o número ≥ 1 e único no mentorado já conferido por ele.
+export interface CamposParcela {
+  numero: number;
+  vencimento: string | null;
+  valor: number | null;
+  status: string;
+}
+
+// O reflexo das cobranças da Lia no financeiro do mentorado: a mesma função do banco que o
+// webhook usa (20260918_lia_refletir_financeiro.sql).
+export function refletirFinanceiro(mentoradoId: string, db: SupabaseClient = cliente()): Promise<Resultado<null>> {
+  return chamar("lia_refletir_financeiro", db.rpc("lia_refletir_financeiro", { p_mentorado: mentoradoId }));
+}
+
+// W15–W17: a cobrança gravada e, com dono, o reflexo no financeiro dele. A falha do reflexo não
+// desfaz o que já gravou: volta à parte, como `aviso` (WRITE-07).
+async function comReflexo(escrita: Promise<ResultadoEscrita>, dono: string | null, db: SupabaseClient): Promise<ResultadoEscrita> {
+  const gravada = await escrita;
+  if (!gravada.ok || dono === null) return gravada;
+  const reflexo = await refletirFinanceiro(dono, db);
+  return reflexo.ok ? gravada : { ...gravada, aviso: reflexo.erro };
+}
+
+const cobranca = (billId: string, payload: { mentorado_id: string } | { ignorada: boolean }, db: SupabaseClient) =>
+  conferir("lia_cobrancas", db.from("lia_cobrancas").update(payload).eq("lia_bill_id", billId).select("lia_bill_id"));
+
+// W15 (index.html:3501): vincula à mão uma cobrança órfã ao mentorado.
+export function vincularCobranca(billId: string, mentoradoId: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return comReflexo(cobranca(billId, { mentorado_id: mentoradoId }, db), mentoradoId, db);
+}
+
+// W16 (index.html:3513): descartar em vez de apagar, porque o próximo webhook recriaria a linha.
+// `dono` é o mentorado_id da cobrança, null quando ela é órfã.
+export function descartarCobranca(billId: string, dono: string | null, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return comReflexo(cobranca(billId, { ignorada: true }, db), dono, db);
+}
+
+// W17 (index.html:3522).
+export function restaurarCobranca(billId: string, dono: string | null, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return comReflexo(cobranca(billId, { ignorada: false }, db), dono, db);
+}
+
+// W18 (index.html:3542): alterna aberta ↔ paga a partir do status que a tela mostra.
+export function toggleParcela(id: string, status: string | null, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("parcelas", db.from("parcelas").update({ status: status === "paga" ? "aberta" : "paga" }).eq("id", id).select("id"));
+}
+
+// W19 (index.html:3549): o número é o maior do mentorado + 1, contado nas parcelas que a tela
+// tem, como hoje. A 13ª é recusada antes de sair.
+export async function addParcela(
+  mentoradoId: string,
+  parcelas: readonly Parcela[],
+  vencimento: string | null,
+  valor: number | null,
+  db: SupabaseClient = cliente(),
+): Promise<ResultadoEscrita> {
+  const numero = Math.max(0, ...parcelas.filter((p) => p.mentorado_id === mentoradoId).map((p) => p.numero ?? 0)) + 1;
+  if (numero > 12) return { ok: false, erro: "Limite de 12 parcelas atingido" };
+  const payload = { mentorado_id: mentoradoId, numero, status: "aberta", vencimento: ouNulo(vencimento), valor };
+  return conferir("parcelas", db.from("parcelas").insert(payload).select("id"));
+}
+
+// W20 (index.html:3578).
+export function salvarParcela(id: string, parcela: CamposParcela, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  const payload = { numero: parcela.numero, vencimento: ouNulo(parcela.vencimento), valor: parcela.valor, status: parcela.status };
+  return conferir("parcelas", db.from("parcelas").update(payload).eq("id", id).select("id"));
+}
+
+// W21 (index.html:3589).
+export function delParcela(id: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("parcelas", db.from("parcelas").delete().eq("id", id).select("id"));
 }

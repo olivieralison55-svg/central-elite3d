@@ -962,12 +962,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] W15: `update({ mentorado_id }).eq("lia_bill_id", bill)` e depois `rpc("lia_refletir_financeiro", { p_mentorado })`
-- [ ] W16 e W17: `ignorada: true` e `ignorada: false`; a rpc só com dono; o erro da rpc devolvido à parte
-- [ ] W18: `status` aberta ↔ paga; W19: `insert` com `numero` = maior + 1 e `status: "aberta"`; W20: `numero`, `vencimento`, `valor`, `status`; W21: `delete`
-- [ ] 0 linhas → `zeroLinhas`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 231 → 243
+- [x] W15: `update({ mentorado_id }).eq("lia_bill_id", bill)` e depois `rpc("lia_refletir_financeiro", { p_mentorado })`
+- [x] W16 e W17: `ignorada: true` e `ignorada: false`; a rpc só com dono; o erro da rpc devolvido à parte
+- [x] W18: `status` aberta ↔ paga; W19: `insert` com `numero` = maior + 1 e `status: "aberta"`; W20: `numero`, `vencimento`, `valor`, `status`; W21: `delete`
+- [x] 0 linhas → `zeroLinhas`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 231 → 243
 
 **Tests**: unit
 **Gate**: quick

@@ -594,7 +594,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | WRITE-04 | P1: Escritas — clique duplo (AC4) | - | Pending |
 | WRITE-05 | P1: Escritas — erro mantém o formulário (AC5) | - | Pending |
 | WRITE-06 | P1: Escritas — falha do `lia_adotar_orfas` (AC6) | - | Pending |
-| WRITE-07 | P1: Escritas — falha do `lia_refletir_financeiro` (AC7) | - | Pending |
+| WRITE-07 | P1: Escritas — falha do `lia_refletir_financeiro` (AC7) | Execute | Implementing |
 | WRITE-08 | P1: Escritas — capacidade no handler (AC8) | Execute | Implementing |
 | WRITE-09 | P1: Escritas — diretoria sem controle de escrita (AC9) | - | Pending |
 | OPS-01 | P1: Operação — painel de atenção (AC1) | - | Pending |
@@ -620,7 +620,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | FIN-01 | P1: Dinheiro — busca não esconde (AC1) | - | Pending |
 | FIN-02 | P1: Dinheiro — vincular com 1 cadastro (AC2) | - | Pending |
 | FIN-03 | P1: Dinheiro — motivo da órfã (AC3) | - | Pending |
-| FIN-04 | P1: Dinheiro — descartar e restaurar (AC4) | - | Pending |
+| FIN-04 | P1: Dinheiro — descartar e restaurar (AC4) | Execute | Implementing |
 | FIN-05 | P1: Dinheiro — parcela da Lia (AC5) | - | Pending |
 | FIN-06 | P1: Dinheiro — prazo em SP (AC6) | - | Pending |
 | NOTE-01 | P1: Notas — contenteditable (AC1) | - | Pending |

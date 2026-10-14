@@ -2,24 +2,33 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  addParcela,
   adotarOrfas,
   confirmarGrupo,
   confirmarSessao,
   criarMentorado,
   criarSessaoGrupo,
+  delParcela,
   delSessao,
+  descartarCobranca,
   type EncontroGrupo,
   excluirFaturamento,
   excluirMentorado,
+  refletirFinanceiro,
+  restaurarCobranca,
   type ResultadoEscrita,
   salvarCanalMentorado,
   salvarFaturamento,
   salvarMarco,
   salvarMentorado,
   salvarNota,
+  salvarParcela,
   salvarSessao,
   salvarSituacao,
+  toggleParcela,
+  vincularCobranca,
 } from "./escritas";
+import type { Parcela } from "./esquemas";
 
 type Resposta = { data: unknown; error: { message: string } | null };
 
@@ -495,6 +504,140 @@ describe("escritas de mentorado W11–W14 (WRITE-01, WRITE-02, OPS-13, OPS-15)",
     for (const [w, escrever] of [...MENTORADOS, ["W14", (db: SupabaseClient) => criarMentorado(NOVO, db)] as const]) {
       expect(await escrever(clienteFalso({ mentorados: falha(mensagem) }).db), w).toEqual({ ok: false, erro: mensagem });
       expect(erroNoConsole.mock.calls.at(-1), w).toEqual(["[central-elite3d] mentorados", { message: mensagem }]);
+    }
+  });
+});
+
+// Duas parcelas de m1 (números 1 e 3) e uma de m2 com número maior, que não conta para m1.
+const PARCELAS: Parcela[] = [
+  { id: "p1", mentorado_id: "m1", numero: 1, status: "paga", vencimento: "2026-01-01", valor: 500, lia_bill_id: null },
+  { id: "p4", mentorado_id: "m1", numero: 3, status: "aberta", vencimento: "2026-03-01", valor: 500, lia_bill_id: null },
+  { id: "p7", mentorado_id: "m2", numero: 7, status: "aberta", vencimento: "2026-03-01", valor: 800, lia_bill_id: null },
+];
+
+// Cada escrita financeira, a relação dela e a chamada com o cliente que o teste passa.
+const FINANCEIRAS: Array<[string, string, (db: SupabaseClient) => Promise<ResultadoEscrita>]> = [
+  ["W15", "lia_cobrancas", (db) => vincularCobranca("bill_9", "m2", db)],
+  ["W16", "lia_cobrancas", (db) => descartarCobranca("bill_1", "m2", db)],
+  ["W17", "lia_cobrancas", (db) => restaurarCobranca("bill_1", "m2", db)],
+  ["W18", "parcelas", (db) => toggleParcela("p1", "aberta", db)],
+  ["W19", "parcelas", (db) => addParcela("m1", PARCELAS, null, 100, db)],
+  ["W20", "parcelas", (db) => salvarParcela("p4", { numero: 2, vencimento: null, valor: 100, status: "aberta" }, db)],
+  ["W21", "parcelas", (db) => delParcela("p4", db)],
+];
+
+const rpcsDe = (pedidos: unknown[][][]) => pedidos.flat().filter((chamada) => chamada[0] === "rpc");
+
+describe("escritas financeiras W15–W21 (WRITE-01, WRITE-02, WRITE-07, FIN-04)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("W15: update({ mentorado_id }).eq('lia_bill_id', bill) e depois rpc('lia_refletir_financeiro', { p_mentorado })", async () => {
+    const f = clienteFalso();
+    expect(await vincularCobranca("bill_9", "m2", f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([
+      [["from", "lia_cobrancas"], ["update", { mentorado_id: "m2" }], ["eq", "lia_bill_id", "bill_9"], ["select", "lia_bill_id"]],
+      [["rpc", "lia_refletir_financeiro", { p_mentorado: "m2" }]],
+    ]);
+  });
+
+  it("W16, W17 e FIN-04: grava `ignorada: true` e `ignorada: false`, e a rpc sai só quando a cobrança tem dono", async () => {
+    for (const [w, escrever, ignorada] of [
+      ["W16", descartarCobranca, true],
+      ["W17", restaurarCobranca, false],
+    ] as const) {
+      const comDono = clienteFalso();
+      expect(await escrever("bill_1", "m2", comDono.db), w).toEqual({ ok: true, linhas: 1 });
+      expect(comDono.pedidos, w).toEqual([
+        [["from", "lia_cobrancas"], ["update", { ignorada }], ["eq", "lia_bill_id", "bill_1"], ["select", "lia_bill_id"]],
+        [["rpc", "lia_refletir_financeiro", { p_mentorado: "m2" }]],
+      ]);
+      const orfa = clienteFalso();
+      expect(await escrever("bill_3", null, orfa.db), w).toEqual({ ok: true, linhas: 1 });
+      expect(orfa.pedidos, w).toEqual([[["from", "lia_cobrancas"], ["update", { ignorada }], ["eq", "lia_bill_id", "bill_3"], ["select", "lia_bill_id"]]]);
+    }
+  });
+
+  it("WRITE-07: em W15, W16 e W17, o erro da rpc volta à parte, como aviso, e a cobrança gravada continua { ok: true }", async () => {
+    const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    for (const [w, , escrever] of FINANCEIRAS.slice(0, 3)) {
+      const f = clienteFalso({ lia_refletir_financeiro: falha("permission denied for table parcelas") });
+      expect(await escrever(f.db), w).toEqual({ ok: true, linhas: 1, aviso: "permission denied for table parcelas" });
+      expect(erroNoConsole.mock.calls.at(-1), w).toEqual(["[central-elite3d] lia_refletir_financeiro", { message: "permission denied for table parcelas" }]);
+    }
+  });
+
+  it("refletirFinanceiro: rpc('lia_refletir_financeiro', { p_mentorado }), e o erro volta para quem chama", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const f = clienteFalso();
+    expect(await refletirFinanceiro("m2", f.db)).toEqual({ ok: true, dados: null });
+    expect(f.pedidos).toEqual([[["rpc", "lia_refletir_financeiro", { p_mentorado: "m2" }]]]);
+    expect(await refletirFinanceiro("m2", clienteFalso({ lia_refletir_financeiro: falha("timeout") }).db)).toEqual({ ok: false, erro: "timeout" });
+  });
+
+  it("W18: o status alterna entre aberta e paga, por id", async () => {
+    for (const [atual, novo] of [
+      ["paga", "aberta"],
+      ["aberta", "paga"],
+    ] as const) {
+      const f = clienteFalso();
+      expect(await toggleParcela("p1", atual, f.db), atual).toEqual({ ok: true, linhas: 1 });
+      expect(f.pedidos, atual).toEqual([[["from", "parcelas"], ["update", { status: novo }], ["eq", "id", "p1"], ["select", "id"]]]);
+    }
+  });
+
+  it("W19: insert com `numero` = maior número do mentorado + 1, `status: 'aberta'`, vencimento e valor", async () => {
+    const f = clienteFalso();
+    expect(await addParcela("m1", PARCELAS, "2026-11-10", 750.5, f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([
+      [["from", "parcelas"], ["insert", { mentorado_id: "m1", numero: 4, status: "aberta", vencimento: "2026-11-10", valor: 750.5 }], ["select", "id"]],
+    ]);
+  });
+
+  it("W19: a primeira parcela é a 1, e a 13ª é recusada antes de sair", async () => {
+    const primeira = clienteFalso();
+    await addParcela("m3", PARCELAS, "", null, primeira.db);
+    expect(primeira.pedidos).toEqual([
+      [["from", "parcelas"], ["insert", { mentorado_id: "m3", numero: 1, status: "aberta", vencimento: null, valor: null }], ["select", "id"]],
+    ]);
+
+    const doze = Array.from({ length: 12 }, (_, i) => ({ ...PARCELAS[0], id: `q${i}`, numero: i + 1 }));
+    const cheia = clienteFalso();
+    expect(await addParcela("m1", doze, null, 100, cheia.db)).toEqual({ ok: false, erro: "Limite de 12 parcelas atingido" });
+    expect(cheia.pedidos).toEqual([]);
+  });
+
+  it("W20: update por id de numero, vencimento, valor e status, vencimento vazio como null", async () => {
+    const f = clienteFalso();
+    expect(await salvarParcela("p4", { numero: 2, vencimento: "", valor: 1234.56, status: "paga" }, f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([[["from", "parcelas"], ["update", { numero: 2, vencimento: null, valor: 1234.56, status: "paga" }], ["eq", "id", "p4"], ["select", "id"]]]);
+  });
+
+  it("W21: delete por id", async () => {
+    const f = clienteFalso();
+    expect(await delParcela("p4", f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([[["from", "parcelas"], ["delete"], ["eq", "id", "p4"], ["select", "id"]]]);
+  });
+
+  it("WRITE-02: resposta sem erro e com 0 linhas é { ok: false, zeroLinhas: true } em W15–W21, e a rpc não sai", async () => {
+    const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    for (const [w, rel, escrever] of FINANCEIRAS) {
+      const f = clienteFalso({ [rel]: linhas(0) });
+      expect(await escrever(f.db), w).toEqual({ ok: false, zeroLinhas: true });
+      expect(erroNoConsole.mock.calls.at(-1)?.[0], w).toBe(`[central-elite3d] ${rel}`);
+      expect(rpcsDe(f.pedidos), w).toEqual([]);
+    }
+  });
+
+  it("erro do banco em W15–W21 devolve { ok: false, erro } com a mensagem, escreve no console, e a rpc não sai", async () => {
+    const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    for (const [w, rel, escrever] of FINANCEIRAS) {
+      const mensagem = `permission denied for table ${rel} (${w})`;
+      const f = clienteFalso({ [rel]: falha(mensagem) });
+      expect(await escrever(f.db), w).toEqual({ ok: false, erro: mensagem });
+      expect(erroNoConsole.mock.calls.at(-1), w).toEqual([`[central-elite3d] ${rel}`, { message: mensagem }]);
+      expect(rpcsDe(f.pedidos), w).toEqual([]);
     }
   });
 });
