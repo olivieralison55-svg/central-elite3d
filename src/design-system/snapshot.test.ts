@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -13,15 +13,27 @@ const SNAPSHOT = lerSnapshot(readFileSync(join(RAIZ, "src/design-system/SNAPSHOT
 
 // Arquivos deste repo dentro das pastas copiadas.
 const PROPRIOS = ["src/design-system/SNAPSHOT", "src/design-system/snapshot.test.ts"];
-// Primitivos genéricos novos em src/components/ui/, um por lacuna fechada no AD-008.
-const PRIMITIVOS_NOVOS: string[] = [
-  "src/components/ui/segmented-progress.tsx",
-  "src/components/ui/segmented-progress.test.tsx",
-  "src/components/ui/pagination.tsx",
-  "src/components/ui/pagination.test.tsx",
-  "src/components/ui/sort-header.tsx",
-  "src/components/ui/sort-header.test.tsx",
-];
+// Os primitivos genéricos novos em src/components/ui/ vêm da lista do AD-008. Cada item aceita o
+// primitivo e o teste dele ao lado.
+const AD_008 = "docs/decisions/008-lacunas-do-design-system.md";
+const ITEM_DO_AD = /^- `src\/components\/ui\/[a-z0-9-]+\.tsx`$/;
+
+// Os itens da seção "## Primitivos novos". Seção ausente, lista vazia ou item fora do formato
+// reprova com o motivo, em vez de virar uma lista vazia.
+function primitivosDoAd(texto: string): string[] {
+  const linhas = texto.split("\n");
+  const inicio = linhas.indexOf("## Primitivos novos");
+  if (inicio < 0) throw new Error(`${AD_008} não tem a seção "## Primitivos novos"`);
+  const fim = linhas.findIndex((linha, i) => i > inicio && linha.startsWith("## "));
+  const itens = linhas.slice(inicio + 1, fim < 0 ? linhas.length : fim).filter((linha) => linha.startsWith("- "));
+  const foraDoFormato = itens.filter((linha) => !ITEM_DO_AD.test(linha));
+  if (foraDoFormato.length > 0) throw new Error(`${AD_008}: item fora do formato: ${foraDoFormato.join(" | ")}`);
+  if (itens.length === 0) throw new Error(`${AD_008}: a lista de primitivos novos está vazia`);
+  return itens.flatMap((linha) => {
+    const base = linha.slice("- `".length, -".tsx`".length);
+    return [`${base}.tsx`, `${base}.test.tsx`];
+  });
+}
 // SEC-08: só um aviso high ou critical nestes três fixa versão fora da cópia.
 const PODEM_TER_EXCECAO = ["next", "react", "react-dom"];
 
@@ -75,13 +87,24 @@ describe("cópia do design system (UI-01, STACK-01, SEC-08)", () => {
     ]);
   });
 
-  it("nenhum arquivo em src/design-system/ ou src/components/ui/ fica fora do SNAPSHOT, salvo os primitivos do AD-008", () => {
+  it("nenhum arquivo em src/design-system/ ou src/components/ui/ fica fora do SNAPSHOT, salvo os primitivos que o AD-008 lista", () => {
+    // A lista reprova antes de aceitar qualquer arquivo: sem a seção, vazia (o item de outra
+    // seção não conta) ou com item fora do formato.
+    expect(() => primitivosDoAd("# AD-008\n\n## Decisão\n")).toThrow(/não tem a seção/);
+    expect(() => primitivosDoAd("## Primitivos novos\n\nNenhum.\n\n## Por quê\n- `src/components/ui/x.tsx`\n")).toThrow(/vazia/);
+    expect(() => primitivosDoAd("## Primitivos novos\n- src/components/ui/x.tsx\n")).toThrow(/fora do formato/);
+    expect(() => primitivosDoAd("## Primitivos novos\n- `src/lib/x.tsx`\n")).toThrow(/fora do formato/);
+
+    const novos = primitivosDoAd(readFileSync(join(RAIZ, AD_008), "utf8"));
+    const primitivos = novos.filter((c) => !c.endsWith(".test.tsx"));
+    expect(primitivos.filter((c) => !existsSync(join(RAIZ, c)))).toEqual([]);
+
     const locais = ["src/design-system", "src/components/ui"].flatMap((pasta) =>
       readdirSync(join(RAIZ, pasta), { recursive: true, withFileTypes: true })
         .filter((e) => e.isFile())
         .map((e) => relative(RAIZ, join(e.parentPath, e.name))),
     );
-    const sobrando = locais.filter((c) => !SNAPSHOT.blobs.has(c) && !PROPRIOS.includes(c) && !PRIMITIVOS_NOVOS.includes(c));
+    const sobrando = locais.filter((c) => !SNAPSHOT.blobs.has(c) && !PROPRIOS.includes(c) && !novos.includes(c));
     expect(sobrando).toEqual([]);
   });
 });

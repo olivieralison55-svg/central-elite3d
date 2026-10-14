@@ -1287,10 +1287,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Uma linha para cada lacuna: data única, mês, combobox, trilha de 12 segmentos, paginação, ordenação e clique de linha, moeda BRL
-- [ ] O teste da T3 lê a lista de primitivos novos deste AD
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 308 → 308
+- [x] Uma linha para cada lacuna: data única, mês, combobox, trilha de 12 segmentos, paginação, ordenação e clique de linha, moeda BRL
+- [x] O teste da T3 lê a lista de primitivos novos deste AD
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 308 → 308
 
 **Tests**: none
 **Gate**: build
