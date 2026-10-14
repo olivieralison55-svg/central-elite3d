@@ -1,10 +1,12 @@
 "use client";
 
 import { CircleCheck, TriangleAlert } from "lucide-react";
+import { useState } from "react";
 
 import { DataHora, LinkFicha, StatusSessao } from "@/components/modules/comum/celulas";
 import { SeloBusca } from "@/components/modules/comum/selo-busca";
 import { BotaoNovoMentorado } from "@/components/modules/mentorados/novo-mentorado";
+import { EncontroGrupo } from "@/components/modules/sessoes/grupo";
 import { type Ui, useDados, useNavegar, useSessao, useUi } from "@/components/shell/contexto";
 import { AvisoRelacoes } from "@/components/shell/dados";
 import Alert from "@/components/ui/alert";
@@ -25,7 +27,7 @@ import { fmtD, hojeSP } from "@/lib/datas";
 import { type ChaveAviso, type Contagem, focoDoAviso, type Matriz, matrizMentores } from "@/lib/matriz";
 import { fmtBRL } from "@/lib/moeda";
 import { type ItemAtencao, type Painel, painel, type Proxima } from "@/lib/painel";
-import { ETAPA_IMPLEMENTACAO } from "@/lib/sessoes";
+import { type Encontro, ETAPA_IMPLEMENTACAO } from "@/lib/sessoes";
 
 // Dashboard e Acompanhamento (index.html:1474–1800, mapeamento §3.1). As regras moram em
 // src/lib/painel.ts e src/lib/matriz.ts; aqui só se desenha o que elas devolvem. O Acompanhamento
@@ -218,9 +220,21 @@ function TabelaMatriz({ matriz, mudarMes, focar }: { matriz: Matriz; mudarMes(me
   );
 }
 
-function Proximas({ proximas, busca }: { proximas: Proxima[]; busca: string }) {
+function Proximas({ proximas, busca, abrirEncontro }: { proximas: Proxima[]; busca: string; abrirEncontro(encontro: Encontro): void }) {
   const colunas: Column<Proxima>[] = [
-    { key: "data", header: "Data", render: (p) => <DataHora data={p.data} hora={p.hora} /> },
+    {
+      key: "data",
+      header: "Data",
+      render: (p) => {
+        const { encontro } = p;
+        if (!encontro) return <DataHora data={p.data} hora={p.hora} />;
+        return (
+          <Button variant="link" size="sm" aria-label={`Abrir o encontro ${encontro.etapa ?? ""} de ${fmtD(encontro.data)}`} onClick={() => abrirEncontro(encontro)}>
+            <DataHora data={p.data} hora={p.hora} />
+          </Button>
+        );
+      },
+    },
     {
       key: "quem",
       header: "Mentorado",
@@ -376,7 +390,19 @@ function Listas({ listas }: { listas: Painel["listas"] }) {
 }
 
 // Números gerais, progressão e o detalhe analítico: só no Dashboard.
-function Detalhe({ resumo, sessoes, hoje, busca }: { resumo: Painel; sessoes: Dataset["sessoes"]; hoje: string; busca: string }) {
+function Detalhe({
+  resumo,
+  sessoes,
+  hoje,
+  busca,
+  abrirEncontro,
+}: {
+  resumo: Painel;
+  sessoes: Dataset["sessoes"];
+  hoje: string;
+  busca: string;
+  abrirEncontro(encontro: Encontro): void;
+}) {
   const { ui, mudar } = useUi();
   const { ir } = useNavegar();
   const matriz = matrizMentores(sessoes, ui.mesMatriz, hoje);
@@ -394,7 +420,7 @@ function Detalhe({ resumo, sessoes, hoje, busca }: { resumo: Painel; sessoes: Da
         <SectionLabel as="h2">Detalhe analítico</SectionLabel>
         <div className="grid gap-4 xl:grid-cols-2">
           <TabelaMatriz matriz={matriz} mudarMes={(mes) => mudar({ mesMatriz: mes })} focar={focar} />
-          <Proximas proximas={resumo.proximas} busca={busca} />
+          <Proximas proximas={resumo.proximas} busca={busca} abrirEncontro={abrirEncontro} />
         </div>
       </section>
     </>
@@ -411,6 +437,8 @@ function Conteudo({ modo }: { modo: "completo" | "acompanhamento" }) {
   const resumo = painel(dados, papel, hoje, busca);
   const acompanhamento = modo === "acompanhamento";
   const filtrar = (campos: Partial<Ui["filtro"]>) => mudar({ filtro: { ...ui.filtro, ...campos } });
+  // O encontro em grupo das próximas abre no detalhe dele, com o objeto, nunca por texto de coluna.
+  const [encontroAberto, setEncontroAberto] = useState<Encontro | null>(null);
 
   // O "ver" de um item que leva a outra tela; o dos criados pela Lia já abre Mentorados filtrada.
   const verItem = (item: ItemAtencao) => {
@@ -457,8 +485,9 @@ function Conteudo({ modo }: { modo: "completo" | "acompanhamento" }) {
         </Alert>
       )}
       <PainelAtencao itens={resumo.atencao} ir={verItem} />
-      {!acompanhamento && <Detalhe resumo={resumo} sessoes={dados.sessoes} hoje={hoje} busca={busca} />}
+      {!acompanhamento && <Detalhe resumo={resumo} sessoes={dados.sessoes} hoje={hoje} busca={busca} abrirEncontro={setEncontroAberto} />}
       <Listas listas={resumo.listas} />
+      <EncontroGrupo encontro={encontroAberto} onClose={() => setEncontroAberto(null)} />
     </div>
   );
 }

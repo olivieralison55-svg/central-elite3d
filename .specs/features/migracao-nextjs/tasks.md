@@ -1537,11 +1537,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Confirmar exige mentor; registrar exige ≥ 1 participante
-- [ ] Participantes com busca, "selecionar visíveis" e "limpar"
-- [ ] Botões com `data-escrita="W01"` e `"W02"` e `loading` durante o envio
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 384 → 390
+- [x] Confirmar exige mentor; registrar exige ≥ 1 participante
+- [x] Participantes com busca, "selecionar visíveis" e "limpar"
+- [x] Botões com `data-escrita="W01"` e `"W02"` e `loading` durante o envio
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 384 → 390
 
 **Tests**: unit
 **Gate**: build

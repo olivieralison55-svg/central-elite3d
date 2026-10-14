@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { DataHora, LinkFicha, LinksSessao, StatusSessao } from "@/components/modules/comum/celulas";
 import { CabecalhoOrdenavel, ordemEscolhida } from "@/components/modules/comum/ordenacao";
 import { SeloBusca } from "@/components/modules/comum/selo-busca";
@@ -18,10 +20,13 @@ import SegmentedControl from "@/components/ui/segmented-control";
 import Select from "@/components/ui/select";
 import { ordemDaEtapa, TODOS_MENTORES } from "@/lib/constantes";
 import type { Sessao } from "@/lib/data/esquemas";
+import { fmtD } from "@/lib/datas";
 import { marcadorDeLinhas } from "@/lib/matriz";
 import { nomeDe } from "@/lib/mentorados";
 import { aplicarOrdem } from "@/lib/ordem";
 import { blocos1a1, type Encontro, recortarSessoes, statusGrupo } from "@/lib/sessoes";
+
+import { BotaoSessaoGrupo, EncontroGrupo } from "./grupo";
 
 // A tela Sessões (renderSessoes, index.html:1856–1985, mapeamento §3.3): as 1:1 em blocos por
 // status e os encontros em grupo por categoria. Recortes, blocos e marcas vêm de src/lib/sessoes.ts
@@ -45,6 +50,7 @@ export default function Sessoes() {
   const recorte = recortarSessoes(dados.sessoes, { focoIds: foco?.ids ?? null, mentor: filtro.mentor, tipo: filtro.tipoSessao, busca: filtro.qSessoes }, nome);
   const marca = marcadorDeLinhas(dados.sessoes);
   const podeCriar = pode("criarSessao");
+  const [encontroAberto, setEncontroAberto] = useState<Encontro | null>(null);
 
   const colunas1a1 = (tabela: string): Column<Sessao>[] => [
     { key: "data", header: <CabecalhoOrdenavel tabela={tabela} campo="data" rotulo="Data" />, render: (s) => <DataHora data={s.data} hora={s.hora} /> },
@@ -79,7 +85,16 @@ export default function Sessoes() {
     { key: "links", header: "Links", render: (s) => <LinksSessao links={s} /> },
   ];
   const colunasGrupo = (tabela: string): Column<Encontro>[] => [
-    { key: "data", header: <CabecalhoOrdenavel tabela={tabela} campo="data" rotulo="Data" />, render: (e) => <DataHora data={e.data} hora={e.hora} /> },
+    {
+      key: "data",
+      header: <CabecalhoOrdenavel tabela={tabela} campo="data" rotulo="Data" />,
+      // O encontro abre pelo botão da primeira célula, com o objeto dele, nunca por texto de coluna.
+      render: (e) => (
+        <Button variant="link" size="sm" aria-label={`Abrir o encontro ${e.etapa ?? ""} de ${fmtD(e.data)}`} onClick={() => setEncontroAberto(e)}>
+          <DataHora data={e.data} hora={e.hora} />
+        </Button>
+      ),
+    },
     { key: "mentor", header: <CabecalhoOrdenavel tabela={tabela} campo="mentor" rotulo="Mentor" />, render: (e) => e.mentor || "—" },
     { key: "participantes", header: <CabecalhoOrdenavel tabela={tabela} campo="participantes" rotulo="Participantes" />, align: "right", render: (e) => e.itens.length },
     { key: "status", header: "Status", render: (e) => <StatusSessao status={statusGrupo(e)} /> },
@@ -94,7 +109,7 @@ export default function Sessoes() {
         subtitle={`${recorte.totais.concluidas1a1} sessões 1:1 concluídas · ${recorte.totais.agendadas1a1} agendadas · ${recorte.totais.encontros} encontro(s) em grupo`}
         actions={
           <>
-            {podeCriar && <Button data-escrita="W02">+ Sessão em grupo</Button>}
+            <BotaoSessaoGrupo />
             <BotaoNovoMentorado secundario={podeCriar} />
           </>
         }
@@ -177,6 +192,7 @@ export default function Sessoes() {
           })}
         </section>
       )}
+      <EncontroGrupo encontro={encontroAberto} onClose={() => setEncontroAberto(null)} />
     </div>
   );
 }

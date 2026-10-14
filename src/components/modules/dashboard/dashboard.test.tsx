@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactElement } from "react";
+import type { ComponentProps, ReactElement, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -50,11 +50,46 @@ vi.mock("@/components/ui/search-input", async (importOriginal) => {
   };
 });
 
-// A tela com o estado de tela do teste: cada `mudar` e cada navegação ficam anotados.
-function tela(el: ReactElement, papel: Papel, { dados = datasetDeTeste(), ui = {}, erros = {} }: { dados?: Dataset; ui?: Partial<Ui>; erros?: ErrosDeCarga } = {}) {
+// Sem DOM, o setState que chega depois do render no servidor não muda nada: o falso guarda o
+// estado entre renders, na ordem dos useState, como o React faz no re-render.
+const estado = vi.hoisted(() => ({ valores: [] as unknown[], proximo: 0 }));
+vi.mock("react", async (importOriginal) => {
+  const react = await importOriginal<typeof import("react")>();
+  return {
+    ...react,
+    useState: (inicial: unknown) => {
+      const i = estado.proximo++;
+      if (!(i in estado.valores)) estado.valores[i] = typeof inicial === "function" ? (inicial as () => unknown)() : inicial;
+      const definir = (valor: unknown) => {
+        estado.valores[i] = typeof valor === "function" ? (valor as (anterior: unknown) => unknown)(estado.valores[i]) : valor;
+      };
+      return [estado.valores[i], definir];
+    },
+  };
+});
+// O Dialog devolve null sem `document`: o falso desenha o conteúdo num elemento falso quando aberto.
+vi.mock("@/components/ui/dialog", async () => {
+  const { createElement } = await import("react");
+  return {
+    default: (props: { open: boolean; onClose(): void; title?: ReactNode; children: ReactNode }) => {
+      vistos.push({ tipo: "dialog", props: { ...props } });
+      return props.open ? createElement("dialog-falso", { "data-titulo": props.title }, props.children) : null;
+    },
+  };
+});
+
+// A tela com o estado de tela do teste: cada `mudar` e cada navegação ficam anotados. `manter`
+// re-renderiza com o estado do render anterior; sem ele, a tela começa do zero.
+function tela(
+  el: ReactElement,
+  papel: Papel,
+  { dados = datasetDeTeste(), ui = {}, erros = {}, manter = false }: { dados?: Dataset; ui?: Partial<Ui>; erros?: ErrosDeCarga; manter?: boolean } = {},
+) {
   const mudancas: Array<Partial<Ui>> = [];
   const navegar = navegadorFalso("/dash");
   vistos.length = 0;
+  estado.proximo = 0;
+  if (!manter) estado.valores.length = 0;
   const html = renderTela(
     <DadosContexto.Provider value={{ dados, erros, recarregando: false, recarregar: () => Promise.resolve() }}>
       <UiContexto.Provider value={{ ui: { ...UI_INICIAL, ...ui }, mudar: (parcial) => mudancas.push(parcial) }}>{el}</UiContexto.Provider>
@@ -246,6 +281,17 @@ describe("Dashboard e Acompanhamento (OPS-01, OPS-04, OPS-10, NAV-10, GER-08, UI
       expect(tela(<Dashboard modo={modo} />, "admin").html, modo).toMatch(/<button[^>]*data-escrita="W14"[^>]*>\+ Novo mentorado<\/button>/);
       for (const papel of ["diretoria", "mentor"] as const) expect(tela(<Dashboard modo={modo} />, papel).html, `${modo} ${papel}`).not.toContain('data-escrita="W14"');
     }
+  });
+
+  it("o encontro em grupo das próximas abre pelo botão da primeira célula, no detalhe daquele encontro; fechar o descarta", () => {
+    const fechada = tela(<Dashboard modo="completo" />, "admin");
+    expect(fechada.html).not.toContain("dialog-falso");
+    handler(fechada.vistos, "button", (p) => p["aria-label"] === "Abrir o encontro Sessão de Implementação Mensal de 15/10/2099", "onClick")();
+    const aberta = tela(<Dashboard modo="completo" />, "admin", { manter: true });
+    expect(aberta.html).toContain('<dialog-falso data-titulo="Sessão de Implementação Mensal">');
+    expect(aberta.html).toContain("15/10/2099 · 20:00 · Michelle · 2 participante(s)");
+    handler(aberta.vistos, "dialog", (p) => p.open === true, "onClose")();
+    expect(tela(<Dashboard modo="completo" />, "admin", { manter: true }).html).not.toContain("dialog-falso");
   });
 
   it("DATA-07: relação complementar que falhou vira aviso no topo, e o resto do Dashboard renderiza", () => {

@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -70,9 +70,40 @@ vi.mock("@/components/ui/sort-header", async (importOriginal) => {
   };
 });
 
-function tela(papel: Papel, { dados = datasetDeTeste(), ui = {} }: { dados?: Dataset; ui?: Partial<Ui> } = {}) {
+// Sem DOM, o setState que chega depois do render no servidor não muda nada: o falso guarda o
+// estado entre renders, na ordem dos useState, como o React faz no re-render.
+const estado = vi.hoisted(() => ({ valores: [] as unknown[], proximo: 0 }));
+vi.mock("react", async (importOriginal) => {
+  const react = await importOriginal<typeof import("react")>();
+  return {
+    ...react,
+    useState: (inicial: unknown) => {
+      const i = estado.proximo++;
+      if (!(i in estado.valores)) estado.valores[i] = typeof inicial === "function" ? (inicial as () => unknown)() : inicial;
+      const definir = (valor: unknown) => {
+        estado.valores[i] = typeof valor === "function" ? (valor as (anterior: unknown) => unknown)(estado.valores[i]) : valor;
+      };
+      return [estado.valores[i], definir];
+    },
+  };
+});
+// O Dialog devolve null sem `document`: o falso desenha o conteúdo num elemento falso quando aberto.
+vi.mock("@/components/ui/dialog", async () => {
+  const { createElement } = await import("react");
+  return {
+    default: (props: { open: boolean; onClose(): void; title?: ReactNode; children: ReactNode }) => {
+      vistos.push({ tipo: "dialog", props: { ...props } });
+      return props.open ? createElement("dialog-falso", { "data-titulo": props.title }, props.children) : null;
+    },
+  };
+});
+
+// `manter` re-renderiza com o estado do render anterior; sem ele, a tela começa do zero.
+function tela(papel: Papel, { dados = datasetDeTeste(), ui = {}, manter = false }: { dados?: Dataset; ui?: Partial<Ui>; manter?: boolean } = {}) {
   const mudancas: Array<Partial<Ui>> = [];
   vistos.length = 0;
+  estado.proximo = 0;
+  if (!manter) estado.valores.length = 0;
   const html = renderTela(
     <UiContexto.Provider value={{ ui: { ...UI_INICIAL, ...ui }, mudar: (parcial) => mudancas.push(parcial) }}>
       <Sessoes />
@@ -229,6 +260,18 @@ describe("tela Sessões (NAV-10, OPS-07, OPS-09, OPS-10, SEC-05)", () => {
       "Concluídas (últimas 30)",
     )[1];
     expect(crescente.indexOf("Carla")).toBeLessThan(crescente.indexOf("Ana Clara"));
+  });
+
+  it("OPS-07: o encontro abre pelo botão da primeira célula, no detalhe daquele encontro; fechar o descarta", () => {
+    const fechada = tela("admin");
+    expect(fechada.html).not.toContain("dialog-falso");
+    chamar(prop(fechada.vistos, "button", (p) => p["aria-label"] === "Abrir o encontro Plantão de Dúvida Semanal de 06/08/2026", "onClick"));
+    const aberta = tela("admin", { manter: true });
+    expect(aberta.html).toContain('<dialog-falso data-titulo="Plantão de Dúvida Semanal">');
+    expect(aberta.html).toContain("06/08/2026 · 19:00 · Sergio · 3 participante(s)");
+    expect(aberta.html).toMatch(/<button[^>]*data-escrita="W01"[^>]*>Marcar 1 como concluída<\/button>/);
+    chamar(prop(aberta.vistos, "dialog", (p) => p.open === true, "onClose"));
+    expect(tela("admin", { manter: true }).html).not.toContain("dialog-falso");
   });
 
   it("WRITE-09: '+ Sessão em grupo' (data-escrita=\"W02\") e '+ Novo mentorado' só com as capacidades; bloco vazio mostra EmptyState", () => {
