@@ -1428,11 +1428,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Filtros todos, ativos, pausados, incompletos e contrato pendente, com a busca depois do filtro
-- [ ] `resumoExclusao` conta os 4 tipos de hoje
-- [ ] Os casos dos grupos "Exclusão", "E-mail do mentorado" e "Ficha criada pela Lia"
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 356 → 366
+- [x] Filtros todos, ativos, pausados, incompletos e contrato pendente, com a busca depois do filtro
+- [x] `resumoExclusao` conta os 4 tipos de hoje
+- [x] Os casos dos grupos "Exclusão", "E-mail do mentorado" e "Ficha criada pela Lia"
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 356 → 366
 
 **Tests**: unit
 **Gate**: quick
