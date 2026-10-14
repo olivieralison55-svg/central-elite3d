@@ -566,12 +566,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] O callback do `onAuthStateChange` não chama o cliente
-- [ ] `sair()` espera `descarregarPendencias()` e só depois chama `signOut`
-- [ ] Render por fase: `anonimo` → login; `semPerfil` e `papelInvalido` → telas da T17; `pronto` → filhos
-- [ ] Nenhuma leitura de dado antes de `pronto`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 137 → 141
+- [x] O callback do `onAuthStateChange` não chama o cliente
+- [x] `sair()` espera `descarregarPendencias()` e só depois chama `signOut`
+- [x] Render por fase: `anonimo` → login; `semPerfil` e `papelInvalido` → telas da T17; `pronto` → filhos
+- [x] Nenhuma leitura de dado antes de `pronto`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 137 → 141
 
 **Tests**: unit
 **Gate**: quick
