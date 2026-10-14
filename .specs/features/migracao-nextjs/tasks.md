@@ -1344,13 +1344,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Reunião pela chave (`mentorado_id`, `data`, `hora`, `mentor` como gravado); fica a linha com `google_event_id` nulo; empate pelo menor `id`
-- [ ] Mentor normalizado sem acento, com espaços colapsados e em minúsculas; grafia de `TODOS_MENTORES`; "fora do projeto" para quem não está em `MENTORES`; "Sem mentor identificado" no fim
-- [ ] Mês padrão: corrente com reunião, senão o mais recente com reunião, senão "Todos"
-- [ ] Ids de `dobradas`, `semData`, `semMentor` e `etapaDeduzida`
-- [ ] Os casos dos grupos "Matriz por mentor" e "Alertas que focam linhas"
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 320 → 332
+- [x] Reunião pela chave (`mentorado_id`, `data`, `hora`, `mentor` como gravado); fica a linha com `google_event_id` nulo; empate pelo menor `id`
+- [x] Mentor normalizado sem acento, com espaços colapsados e em minúsculas; grafia de `TODOS_MENTORES`; "fora do projeto" para quem não está em `MENTORES`; "Sem mentor identificado" no fim
+- [x] Mês padrão: corrente com reunião, senão o mais recente com reunião, senão "Todos"
+- [x] Ids de `dobradas`, `semData`, `semMentor` e `etapaDeduzida`
+- [x] Os casos dos grupos "Matriz por mentor" e "Alertas que focam linhas"
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 320 → 332
 
 **Tests**: unit
 **Gate**: quick

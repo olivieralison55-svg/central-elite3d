@@ -598,9 +598,9 @@ Depois do G6, problema vira correção para a frente, não revert.
 | WRITE-08 | P1: Escritas — capacidade no handler (AC8) | Execute | Implementing |
 | WRITE-09 | P1: Escritas — diretoria sem controle de escrita (AC9) | - | Pending |
 | OPS-01 | P1: Operação — painel de atenção (AC1) | - | Pending |
-| OPS-02 | P1: Operação — matriz conta reunião (AC2) | - | Pending |
+| OPS-02 | P1: Operação — matriz conta reunião (AC2) | Execute | Implementing |
 | OPS-03 | P1: Operação — mentor normalizado (AC3) | Execute | Implementing |
-| OPS-04 | P1: Operação — mês padrão (AC4) | - | Pending |
+| OPS-04 | P1: Operação — mês padrão (AC4) | Execute | Implementing |
 | OPS-05 | P1: Operação — só 1:1 na trilha (AC5) | Execute | Implementing |
 | OPS-06 | P1: Operação — grupo grava N linhas (AC6) | Execute | Implementing |
 | OPS-07 | P1: Operação — grupo por etapa, data e hora (AC7) | Execute | Implementing |
