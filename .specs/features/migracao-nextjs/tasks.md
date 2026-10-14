@@ -1210,10 +1210,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Um segmento por item com `title` e um `aria-label` no conjunto
-- [ ] Tons `success`, `primary`, `warning`, `danger` e `neutral` só por token
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 298 → 301
+- [x] Um segmento por item com `title` e um `aria-label` no conjunto
+- [x] Tons `success`, `primary`, `warning`, `danger` e `neutral` só por token
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 298 → 301
 
 **Tests**: unit
 **Gate**: quick

@@ -601,7 +601,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | OPS-02 | P1: Operação — matriz conta reunião (AC2) | - | Pending |
 | OPS-03 | P1: Operação — mentor normalizado (AC3) | Execute | Implementing |
 | OPS-04 | P1: Operação — mês padrão (AC4) | - | Pending |
-| OPS-05 | P1: Operação — só 1:1 na trilha (AC5) | - | Pending |
+| OPS-05 | P1: Operação — só 1:1 na trilha (AC5) | Execute | Implementing |
 | OPS-06 | P1: Operação — grupo grava N linhas (AC6) | Execute | Implementing |
 | OPS-07 | P1: Operação — grupo por etapa, data e hora (AC7) | - | Pending |
 | OPS-08 | P1: Operação — etapa deduzida (AC8) | Execute | Implementing |
