@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   DadosContexto,
-  type Dataset,
   NavegarContexto,
   type Navegador,
   SessaoContexto,
@@ -12,6 +11,7 @@ import {
   UiContexto,
   type ValorSessao,
 } from "@/components/shell/contexto";
+import type { Dataset } from "@/lib/data/esquemas";
 import { PAPEL_LABEL, type Papel, pode } from "@/lib/papeis";
 
 import { datasetDeTeste } from "./fixtures";

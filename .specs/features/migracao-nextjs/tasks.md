@@ -785,14 +785,14 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Paginadas: R02, R03, R04, R05, R06, R07, R08, R09, R10, R11, R12, R13, R14, R15, R16, R17, R18 e R22, cada uma com a ordem e o desempate da tabela do design
-- [ ] admin e diretoria leem `mentorados`, R04, R05, R14–R19 e R22; mentor lê `mentorados_basic` e R21 e não pede R04, R05, R14–R19 nem R22
-- [ ] R20 para os 3 papéis; nenhuma outra rpc; nenhuma escrita
-- [ ] Falha de R02/R03, R04 ou R06 → `{ ok: false }`; falha de outra → `erros[rel]` com o resto carregado
-- [ ] `lerNota` faz `select("conteudo,atualizado_em").eq("mentorado_id", id).maybeSingle()`
-- [ ] Sem sessão ou com sessão de outro usuário que não `usuarioId`: nenhuma leitura sai e o resultado diz que a sessão mudou
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 178 → 192
+- [x] Paginadas: R02, R03, R04, R05, R06, R07, R08, R09, R10, R11, R12, R13, R14, R15, R16, R17, R18 e R22, cada uma com a ordem e o desempate da tabela do design
+- [x] admin e diretoria leem `mentorados`, R04, R05, R14–R19 e R22; mentor lê `mentorados_basic` e R21 e não pede R04, R05, R14–R19 nem R22
+- [x] R20 para os 3 papéis; nenhuma outra rpc; nenhuma escrita
+- [x] Falha de R02/R03, R04 ou R06 → `{ ok: false }`; falha de outra → `erros[rel]` com o resto carregado
+- [x] `lerNota` faz `select("conteudo,atualizado_em").eq("mentorado_id", id).maybeSingle()`
+- [x] Sem sessão ou com sessão de outro usuário que não `usuarioId`: nenhuma leitura sai e o resultado diz que a sessão mudou
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 178 → 192
 
 **Tests**: unit
 **Gate**: quick

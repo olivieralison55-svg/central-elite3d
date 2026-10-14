@@ -15,7 +15,7 @@ export interface Consulta {
 }
 
 // DATA-03: linha fora do schema escreve o problema no console e vira falha da relação.
-function validarLinhas<T>(rel: string, esquema: z.ZodType<T>, linhas: unknown): Resultado<T[]> {
+export function validarLinhas<T>(rel: string, esquema: z.ZodType<T>, linhas: unknown): Resultado<T[]> {
   const lido = z.array(esquema).safeParse(linhas);
   if (lido.success) return { ok: true, dados: lido.data };
   console.error(`[central-elite3d] ${rel}: schema mismatch`, lido.error.issues);

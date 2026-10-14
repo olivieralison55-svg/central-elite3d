@@ -298,3 +298,52 @@ export type Analise = Linha<"analise_ia_mentor"> & Partial<Pick<Linha<"nps_anali
 export type Adesao = Linha<"experiencia_adesao">;
 export type Transcricao = Linha<"transcricoes">;
 export type Nota = Linha<"mentorado_notas">;
+
+// R02–R22: as relações da carga, que nomeiam o erro de cada uma.
+export type Relacao =
+  | "mentorados"
+  | "mentorados_basic"
+  | "parcelas"
+  | "lia_cobrancas"
+  | "sessoes"
+  | "rotas"
+  | "marcos_definicao"
+  | "mentorado_marcos"
+  | "faturamento_mensal"
+  | "canais"
+  | "mentorado_canais"
+  | "sessoes_orfas"
+  | "stlseller_mentorados"
+  | "stlseller_pedidos_marketplace"
+  | "stlseller_produtos_vendidos"
+  | "nps_respostas"
+  | "experiencia_respostas"
+  | "nps_analises"
+  | "experiencia_adesao"
+  | "analise_ia_mentor"
+  | "transcricoes";
+
+export type ErrosDeCarga = Partial<Record<Relacao, string>>;
+
+// O que a carga entrega às telas: um campo por relação, com as linhas que passaram no schema.
+export interface Dataset {
+  mentorados: Mentorado[]; // R02 ou R03, conforme o papel
+  parcelas: Parcela[];
+  cobrancas: Cobranca[];
+  sessoes: Sessao[];
+  rotas: Rota[];
+  marcos: MarcoDef[];
+  mentoradoMarcos: MentoradoMarco[];
+  faturamento: Faturamento[];
+  canais: Canal[];
+  mentoradoCanais: MentoradoCanal[];
+  orfas: SessaoOrfa[];
+  stlseller: StlMentorado[];
+  stlPedidos: StlPedido[];
+  stlProdutos: StlProduto[];
+  nps: NpsResposta[];
+  experiencia: ExpResposta[];
+  analise: Analise | null; // R19 ou R21
+  adesao: Adesao | null; // R20
+  transcricoes: Transcricao[];
+}

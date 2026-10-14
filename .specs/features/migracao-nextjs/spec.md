@@ -584,8 +584,8 @@ Depois do G6, problema vira correção para a frente, não revert.
 | DATA-03 | P1: Porta — schema mismatch (AC3) | Execute | Implementing |
 | DATA-04 | P1: Porta — paginação estável (AC4) | Execute | Implementing |
 | DATA-05 | P1: Porta — 2.500 linhas (AC5) | Execute | Implementing |
-| DATA-06 | P1: Porta — carga inicial com erro (AC6) | - | Pending |
-| DATA-07 | P1: Porta — erro isolado por relação (AC7) | - | Pending |
+| DATA-06 | P1: Porta — carga inicial com erro (AC6) | Execute | Implementing |
+| DATA-07 | P1: Porta — erro isolado por relação (AC7) | Execute | Implementing |
 | DATA-08 | P1: Porta — só 4 rpcs (AC8) | Execute | Implementing |
 | DATA-09 | P1: Porta — última recarga vence (AC9) | - | Pending |
 | WRITE-01 | P1: Escritas — payload igual (AC1) | - | Pending |
@@ -660,7 +660,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GATE-05 | P1: Gates — snapshot com sessão de admin (AC5) | Execute | Implementing |
 | GATE-06 | P1: Gates — script de paridade (AC6) | - | Pending |
 | GATE-07 | P1: Gates — relatório de divergência (AC7) | - | Pending |
-| GATE-08 | P1: Gates — rede da diretoria (AC8) | - | Pending |
+| GATE-08 | P1: Gates — rede da diretoria (AC8) | Execute | Implementing |
 | GATE-09 | P1: Gates — registro de teste (AC9) | - | Pending |
 | GATE-10 | P1: Gates — matriz igual depois do UAT (AC10) | - | Pending |
 | GATE-11 | P1: Gates — sem chave secreta no bundle (AC11) | - | Pending |

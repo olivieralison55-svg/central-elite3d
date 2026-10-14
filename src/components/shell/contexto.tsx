@@ -4,62 +4,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { type Context, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 
 import type { Perfil } from "@/lib/data/auth";
+import type { Dataset, ErrosDeCarga } from "@/lib/data/esquemas";
 import type { Capacidade, Papel } from "@/lib/papeis";
 import type { Usuario } from "@/lib/sessao";
 
 // Sessão, dado, estado de tela e navegação, cada um num contexto: as telas leem daqui, e o teste
 // troca o valor pelo mesmo contexto (src/test/render.tsx).
-
-export type Relacao =
-  | "mentorados"
-  | "mentorados_basic"
-  | "parcelas"
-  | "lia_cobrancas"
-  | "sessoes"
-  | "rotas"
-  | "marcos_definicao"
-  | "mentorado_marcos"
-  | "faturamento_mensal"
-  | "canais"
-  | "mentorado_canais"
-  | "sessoes_orfas"
-  | "stlseller_mentorados"
-  | "stlseller_pedidos_marketplace"
-  | "stlseller_produtos_vendidos"
-  | "nps_respostas"
-  | "experiencia_respostas"
-  | "nps_analises"
-  | "experiencia_adesao"
-  | "analise_ia_mentor"
-  | "transcricoes";
-
-export type ErrosDeCarga = Partial<Record<Relacao, string>>;
-
-// ponytail: linha sem tipo próprio, só leitura e `unknown` em cada coluna; cada campo do Dataset
-// ganha o z.infer do schema da sua relação quando os schemas Zod existirem.
-type Linha = Readonly<Record<string, unknown>>;
-
-export interface Dataset {
-  mentorados: Linha[]; // R02 ou R03, conforme o papel
-  parcelas: Linha[];
-  cobrancas: Linha[];
-  sessoes: Linha[];
-  rotas: Linha[];
-  marcos: Linha[];
-  mentoradoMarcos: Linha[];
-  faturamento: Linha[];
-  canais: Linha[];
-  mentoradoCanais: Linha[];
-  orfas: Linha[];
-  stlseller: Linha[];
-  stlPedidos: Linha[];
-  stlProdutos: Linha[];
-  nps: Linha[];
-  experiencia: Linha[];
-  analise: Linha | null; // R19 ou R21
-  adesao: Linha | null; // R20
-  transcricoes: Linha[];
-}
 
 export interface ValorSessao {
   usuario: Usuario;
