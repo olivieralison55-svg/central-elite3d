@@ -551,14 +551,14 @@ Depois do G6, problema vira correção para a frente, não revert.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| STACK-01 | P1: Fundação — versões iguais às da plataforma (AC1) | - | Pending |
-| STACK-02 | P1: Fundação — onde mora cada camada (AC2) | - | Pending |
-| STACK-03 | P1: Fundação — gate verde (AC3) | - | Pending |
-| STACK-04 | P1: Fundação — `.gitignore` (AC4) | - | Pending |
+| STACK-01 | P1: Fundação — versões iguais às da plataforma (AC1) | Execute | Implementing |
+| STACK-02 | P1: Fundação — onde mora cada camada (AC2) | Execute | Implementing |
+| STACK-03 | P1: Fundação — gate verde (AC3) | Execute | Implementing |
+| STACK-04 | P1: Fundação — `.gitignore` (AC4) | Execute | Implementing |
 | STACK-05 | P1: Fundação — só 2 variáveis públicas (AC5) | - | Pending |
 | STACK-06 | P1: Fundação — recusa chave secreta (AC6) | - | Pending |
 | STACK-07 | P1: Fundação — sem `service_role` no código (AC7) | - | Pending |
-| STACK-08 | P1: Fundação — sem CDN, versões exatas (AC8) | - | Pending |
+| STACK-08 | P1: Fundação — sem CDN, versões exatas (AC8) | Execute | Implementing |
 | AUTH-01 | P1: Login — tela sem sessão (AC1) | - | Pending |
 | AUTH-02 | P1: Login — entrada e papel (AC2) | - | Pending |
 | AUTH-03 | P1: Login — Enter envia (AC3) | - | Pending |
@@ -652,7 +652,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | TEST-03 | P1: Testes — HTML atribuído só nas notas (AC3) | - | Pending |
 | TEST-04 | P1: Testes — listas iguais às da function (AC4) | - | Pending |
 | TEST-05 | P1: Testes — `hojeSP()` às 23:30 (AC5) | - | Pending |
-| TEST-06 | P1: Testes — offline (AC6) | - | Pending |
+| TEST-06 | P1: Testes — offline (AC6) | Execute | Implementing |
 | GATE-01 | P1: Gates — ordem e refazer o que falhou (AC1) | - | Pending |
 | GATE-02 | P1: Gates — evidência por gate (AC2) | - | Pending |
 | GATE-03 | P1: Gates — evidência sem dado pessoal (AC3) | - | Pending |
@@ -684,7 +684,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | SEC-04 | P1: Segurança — cabeçalhos (AC4) | - | Pending |
 | SEC-05 | P1: Segurança — link do banco só http(s) (AC5) | - | Pending |
 | SEC-06 | P1: Segurança — identidade antes de ler e escrever (AC6) | - | Pending |
-| SEC-07 | P1: Segurança — pnpm fixo e scripts de instalação na lista (AC7) | - | Pending |
+| SEC-07 | P1: Segurança — pnpm fixo e scripts de instalação na lista (AC7) | Execute | Implementing |
 | SEC-08 | P1: Segurança — correção de segurança sem nova cópia do DS (AC8) | - | Pending |
 
 **Coverage:** 135 total, 0 mapped to tasks, 135 unmapped ⚠️ (Design e threat pass prontos; Tasks em rascunho)

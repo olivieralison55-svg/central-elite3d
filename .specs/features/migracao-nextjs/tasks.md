@@ -155,14 +155,14 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `next` 15.5.21, `react` 19.2.8, `react-dom` 19.2.8, `tailwindcss` 3.4.19, `zod` 3.25.76, `vitest` 4.1.10, `lucide-react` 0.475.0 e `react-hot-toast` 2.6.0, ou as resolvidas no sha que a T3 copiar; `@supabase/supabase-js` 2.117.3 e `dompurify` 3.2.6; nenhuma com `^`; sem `chart.js`
-- [ ] `.gitignore` cobre `node_modules/`, `.next/`, `.vercel/`, `.env*` (com exceção de `.env.example`) e `supabase/.temp/`
-- [ ] `.env.example` só com `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, sem valor
-- [ ] `packageManager` com a versão exata do pnpm desta máquina; `pnpm.onlyBuiltDependencies` com a lista mínima que o `pnpm install` pedir, cada item justificado no commit
-- [ ] `src/test/repo.test.ts`: o `.gitignore` cobre os 5 padrões; `git ls-files` não lista `.env*` além de `.env.example`
-- [ ] `node tests/testes.mjs` continua com exit 0
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 0 → 2
+- [x] `next` 15.5.21, `react` 19.2.8, `react-dom` 19.2.8, `tailwindcss` 3.4.19, `zod` 3.25.76, `vitest` 4.1.10, `lucide-react` 0.475.0 e `react-hot-toast` 2.6.0, ou as resolvidas no sha que a T3 copiar; `@supabase/supabase-js` 2.117.3 e `dompurify` 3.2.6; nenhuma com `^`; sem `chart.js`
+- [x] `.gitignore` cobre `node_modules/`, `.next/`, `.vercel/`, `.env*` (com exceção de `.env.example`) e `supabase/.temp/`
+- [x] `.env.example` só com `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, sem valor
+- [x] `packageManager` com a versão exata do pnpm desta máquina; `pnpm.onlyBuiltDependencies` com a lista mínima que o `pnpm install` pedir, cada item justificado no commit
+- [x] `src/test/repo.test.ts`: o `.gitignore` cobre os 5 padrões; `git ls-files` não lista `.env*` além de `.env.example`
+- [x] `node tests/testes.mjs` continua com exit 0
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 0 → 2
 
 **Tests**: unit
 **Gate**: quick
