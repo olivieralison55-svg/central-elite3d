@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ETAPA_ORD } from "@/lib/constantes";
 
 import { cliente } from "./cliente";
+import type { Resultado } from "./esquemas";
 
 // As escritas W01–W21 (mapeamento §4.2), uma função por escrita, com os nomes de hoje. Relação,
 // operação, payload e `onConflict` são os do index.html (WRITE-01). O que muda é o `.select`,
@@ -26,7 +27,8 @@ async function conferir(rel: string, pedido: Resposta, esperadas = 1): Promise<R
     console.error(`[central-elite3d] ${rel}`, error);
     return { ok: false, erro: error.message };
   }
-  const linhas = Array.isArray(data) ? data.length : 0;
+  // `.single()` devolve a linha, não uma lista.
+  const linhas = Array.isArray(data) ? data.length : data ? 1 : 0;
   if (linhas === 0) {
     console.error(`[central-elite3d] ${rel}`, "0 linhas");
     return { ok: false, zeroLinhas: true };
@@ -178,4 +180,115 @@ export function salvarNota(mentoradoId: string, conteudo: string, atualizadoEm: 
     "mentorado_notas",
     db.from("mentorado_notas").upsert({ mentorado_id: mentoradoId, conteudo, atualizado_em: atualizadoEm }).select("mentorado_id"),
   );
+}
+
+// Rpc sem linha para conferir: o que volta é o erro dela, nunca ignorado (WRITE-06, WRITE-07).
+// SPEC_DEVIATION: o design diz que toda função da porta devolve ResultadoEscrita.
+// Reason: a rpc não tem linha a conferir (design, tabela "Escritas": W11b confere o erro da rpc).
+async function chamar(rpc: string, pedido: Resposta): Promise<Resultado<null>> {
+  const { error } = await pedido;
+  if (!error) return { ok: true, dados: null };
+  console.error(`[central-elite3d] ${rpc}`, error);
+  return { ok: false, erro: error.message };
+}
+
+// W11, aba Cadastro. Nome e e-mail chegam validados e normalizados pelo formulário.
+export interface CadastroMentorado {
+  aba: "cadastro";
+  nome: string;
+  email: string | null;
+  data_fechamento: string | null;
+  link_drive: string | null;
+  link_mapa_mental: string | null;
+  link_whatsapp: string | null;
+}
+
+// W11, aba Financeiro.
+export interface FinanceiroMentorado {
+  aba: "financeiro";
+  contrato_status: string | null;
+  entrada_status: string | null;
+  entrada_forma_pgto: string | null;
+  restante_status: string | null;
+  restante_forma_pgto: string | null;
+}
+
+// W12: a situação e as datas da pausa, como o formulário as tem.
+export interface SituacaoMentorado {
+  situacao: string;
+  pausado_em: string | null;
+  retorno_previsto: string | null;
+}
+
+// W14: o formulário de Novo mentorado, com nome e e-mail já validados e normalizados.
+export interface NovoMentorado {
+  nome: string;
+  email: string | null;
+  data_fechamento: string | null;
+  entrada_status: string;
+  entrada_forma_pgto: string | null;
+  contrato_status: string;
+  restante_status: string;
+}
+
+// W11 (index.html:3451), uma aba por vez. Salvar o cadastro é alguém responder por ele: a marca
+// de incompleto que a Lia pôs ao criar sai. No financeiro, status nulo continua nulo (OPS-15).
+export function salvarMentorado(id: string, campos: CadastroMentorado | FinanceiroMentorado, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  const payload =
+    campos.aba === "cadastro"
+      ? {
+          nome: campos.nome,
+          cadastro_incompleto: false,
+          email: ouNulo(campos.email),
+          data_fechamento: ouNulo(campos.data_fechamento),
+          link_drive: ouNulo(campos.link_drive),
+          link_mapa_mental: ouNulo(campos.link_mapa_mental),
+          link_whatsapp: ouNulo(campos.link_whatsapp),
+        }
+      : {
+          contrato_status: ouNulo(campos.contrato_status),
+          entrada_status: ouNulo(campos.entrada_status),
+          entrada_forma_pgto: ouNulo(campos.entrada_forma_pgto),
+          restante_status: ouNulo(campos.restante_status),
+          restante_forma_pgto: ouNulo(campos.restante_forma_pgto),
+        };
+  return conferir("mentorados", db.from("mentorados").update(payload).eq("id", id).select("id"));
+}
+
+// W11b (index.html:3490): adota as cobranças órfãs da Lia com o e-mail do mentorado. Hoje o erro
+// é ignorado; aqui ele volta para quem chama.
+export function adotarOrfas(mentoradoId: string, db: SupabaseClient = cliente()): Promise<Resultado<null>> {
+  return chamar("lia_adotar_orfas", db.rpc("lia_adotar_orfas", { p_mentorado: mentoradoId }));
+}
+
+// W12 (index.html:3533): só "pausado" guarda as datas, e a pausa sem data vale hoje. `hoje` vem
+// de quem chama, lido na hora: o relógio fica fora da porta (AD-007).
+export function salvarSituacao(id: string, campos: SituacaoMentorado, hoje: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  const pausado = campos.situacao === "pausado";
+  const payload = {
+    situacao: campos.situacao,
+    pausado_em: pausado ? campos.pausado_em || hoje : null,
+    retorno_previsto: pausado ? ouNulo(campos.retorno_previsto) : null,
+  };
+  return conferir("mentorados", db.from("mentorados").update(payload).eq("id", id).select("id"));
+}
+
+// W13 (index.html:3731): a única escrita que já conferia as linhas hoje.
+export function excluirMentorado(id: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("mentorados", db.from("mentorados").delete().eq("id", id).select("id"));
+}
+
+// W14 (index.html:3769).
+export function criarMentorado(novo: NovoMentorado, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  const payload = {
+    nome: novo.nome,
+    email: novo.email,
+    data_fechamento: ouNulo(novo.data_fechamento),
+    entrada_status: novo.entrada_status,
+    entrada_forma_pgto: ouNulo(novo.entrada_forma_pgto),
+    contrato_status: novo.contrato_status,
+    restante_status: novo.restante_status,
+    cancelado: false,
+  };
+  return conferir("mentorados", db.from("mentorados").insert(payload).select().single());
 }

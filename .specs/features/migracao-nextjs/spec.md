@@ -609,9 +609,9 @@ Depois do G6, problema vira correção para a frente, não revert.
 | OPS-10 | P1: Operação — busca (AC10) | - | Pending |
 | OPS-11 | P1: Operação — exclusão pelo nome (AC11) | - | Pending |
 | OPS-12 | P1: Operação — só leitura sem permissão (AC12) | - | Pending |
-| OPS-13 | P1: Operação — cadastro e Lia (AC13) | - | Pending |
+| OPS-13 | P1: Operação — cadastro e Lia (AC13) | Execute | Implementing |
 | OPS-14 | P1: Operação — status nulo visível (AC14) | - | Pending |
-| OPS-15 | P1: Operação — status nulo preservado (AC15) | - | Pending |
+| OPS-15 | P1: Operação — status nulo preservado (AC15) | Execute | Implementing |
 | OPS-16 | P1: Operação — critério sem re-render (AC16) | - | Pending |
 | OPS-17 | P1: Operação — um marco aberto (AC17) | - | Pending |
 | OPS-18 | P1: Operação — critérios por texto (AC18) | Execute | Implementing |

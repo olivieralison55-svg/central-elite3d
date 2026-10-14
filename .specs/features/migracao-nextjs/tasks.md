@@ -933,13 +933,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] W11 aba Cadastro: `nome`, `cadastro_incompleto: false`, `email`, `data_fechamento`, `link_drive`, `link_mapa_mental`, `link_whatsapp`; aba Financeiro: os 5 campos de status e forma, com `null` preservado
-- [ ] W11b: `rpc("lia_adotar_orfas", { p_mentorado })`, com o erro devolvido
-- [ ] W12: `situacao`, `pausado_em` (hoje se vazio), `retorno_previsto`
-- [ ] W13: `delete().eq("id", id).select("id")`
-- [ ] W14: `insert` com `nome`, `email`, `data_fechamento`, `entrada_status`, `entrada_forma_pgto`, `contrato_status`, `restante_status`, `cancelado: false`, e `.select().single()`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 223 → 231
+- [x] W11 aba Cadastro: `nome`, `cadastro_incompleto: false`, `email`, `data_fechamento`, `link_drive`, `link_mapa_mental`, `link_whatsapp`; aba Financeiro: os 5 campos de status e forma, com `null` preservado
+- [x] W11b: `rpc("lia_adotar_orfas", { p_mentorado })`, com o erro devolvido
+- [x] W12: `situacao`, `pausado_em` (hoje se vazio), `retorno_previsto`
+- [x] W13: `delete().eq("id", id).select("id")`
+- [x] W14: `insert` com `nome`, `email`, `data_fechamento`, `entrada_status`, `entrada_forma_pgto`, `contrato_status`, `restante_status`, `cancelado: false`, e `.select().single()`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 223 → 231
 
 **Tests**: unit
 **Gate**: quick
