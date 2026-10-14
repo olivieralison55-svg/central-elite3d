@@ -1,7 +1,7 @@
 # Migração do front para Next.js e o design system da product-ops — Specification
 
 **Scope:** Complex · **Date:** 2026-10-13 · **Base:** `main@2aea455`; a paridade é medida contra o `index.html` do merge-base com a `main` a cada G2
-**Status:** em espera. Não executar sem pedido do Lucas (13/10/2026).
+**Status:** em execução desde 13/10/2026, a pedido do Lucas. Próxima fase: Design. O Execute só começa com o G0 verde.
 **Insumo:** [`docs/planejamento/mapeamento-migracao-nextjs.md`](../../../docs/planejamento/mapeamento-migracao-nextjs.md) (citado abaixo como "mapeamento §N"). O mapeamento descreve o comportamento de hoje e é o contrato de paridade desta spec.
 
 ## Problem Statement
