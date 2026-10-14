@@ -111,6 +111,21 @@ describe("ficha: topo, abas e página (NAV-05, NAV-08, NAV-09, EDGE-01, OPS-05)"
     }
   });
 
+  it("NAV-05: o mentor que pede financeiro ou stlseller recebe a ficha de sessoes, sem os status do contrato e do pagamento nem as parcelas", () => {
+    // O corpo do Financeiro desta ficha, que quem tem verFinanceiro vê.
+    const financeiro = ["Forma entrada", "Forma restante", ">Parcelas"];
+    for (const papel of ["admin", "diretoria"] as const) {
+      const { html } = render(<Ficha id="m1" aba="financeiro" />, { papel });
+      for (const marca of financeiro) expect(html, `${papel}: ${marca}`).toContain(marca);
+    }
+    const sessoes = render(<Ficha id="m1" aba="sessoes" />, { papel: "mentor" }).html;
+    for (const aba of ["financeiro", "stlseller"]) {
+      const { html } = render(<Ficha id="m1" aba={aba} />, { papel: "mentor" });
+      for (const marca of financeiro) expect(html, `${aba}: ${marca}`).not.toContain(marca);
+      expect(html, aba).toBe(sessoes);
+    }
+  });
+
   it("trocar de aba vai para o endereço da ficha naquela aba, com o id codificado; o cadastro não leva sufixo", () => {
     const dados = datasetDeTeste();
     dados.mentorados.push({ ...dados.mentorados[0], id: "a/b?c", nome: "Id Estranho" });

@@ -1677,11 +1677,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `contrato_status`, `entrada_status` e `restante_status` nulos mostram "— não informado —" selecionado e continuam nulos se ninguém mexer
-- [ ] Diretoria vê os campos só para leitura
-- [ ] Parcela número ≥ 1 e único no mentorado; excluir por `ConfirmDialog`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 423 → 431
+- [x] `contrato_status`, `entrada_status` e `restante_status` nulos mostram "— não informado —" selecionado e continuam nulos se ninguém mexer
+- [x] Diretoria vê os campos só para leitura
+- [x] Parcela número ≥ 1 e único no mentorado; excluir por `ConfirmDialog`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 423 → 431
 
 **Tests**: unit
 **Gate**: quick

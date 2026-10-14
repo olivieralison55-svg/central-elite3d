@@ -13,6 +13,7 @@ import { itensDoMenu } from "@/lib/papeis";
 import { concluidas1a1De, implementacaoDe, plantoesDe, sessoes1a1De } from "@/lib/sessoes";
 
 import AbaCadastro from "./aba-cadastro";
+import AbaFinanceiro from "./aba-financeiro";
 
 // A ficha do mentorado (renderFicha, index.html:3188–3243; mapeamento §3.4): o topo comum a todas
 // as abas, as abas que o papel abre e o corpo de cada uma. A ficha é o detalhe de uma lista: o
@@ -88,7 +89,10 @@ export default function Ficha({ id, aba }: { id: string; aba?: string }) {
       />
       <Tabs items={abas.map((a) => ({ value: a, label: ROTULO_ABA[a] }))} value={atual} onChange={(nova) => ir(caminhoDaFicha(m.id, abaVisivel(nova, papel)))} />
       {/* A key é o mentorado: outra ficha monta os formulários do zero, sem o estado da anterior. */}
-      <div key={m.id}>{atual === "cadastro" && <AbaCadastro mentorado={m} />}</div>
+      <div key={m.id}>
+        {atual === "cadastro" && <AbaCadastro mentorado={m} />}
+        {atual === "financeiro" && <AbaFinanceiro mentorado={m} />}
+      </div>
     </div>
   );
 }
