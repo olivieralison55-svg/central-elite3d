@@ -15,6 +15,7 @@ import { concluidas1a1De, implementacaoDe, plantoesDe, sessoes1a1De } from "@/li
 import AbaCadastro from "./aba-cadastro";
 import AbaFinanceiro from "./aba-financeiro";
 import AbaSessoes from "./aba-sessoes";
+import AbaStlseller from "./aba-stlseller";
 import EditorNotas from "./editor-notas";
 
 // A ficha do mentorado (renderFicha, index.html:3188–3243; mapeamento §3.4): o topo comum a todas
@@ -96,6 +97,7 @@ export default function Ficha({ id, aba }: { id: string; aba?: string }) {
         {atual === "financeiro" && <AbaFinanceiro mentorado={m} />}
         {atual === "sessoes" && <AbaSessoes mentorado={m} />}
         {atual === "notas" && <EditorNotas mentoradoId={m.id} />}
+        {atual === "stlseller" && <AbaStlseller mentorado={m} />}
       </div>
     </div>
   );

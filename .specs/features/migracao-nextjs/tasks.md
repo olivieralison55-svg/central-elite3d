@@ -1790,10 +1790,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Só para `verFinanceiro`
-- [ ] Falha de R14–R16 mostra erro só nesta aba
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 461 → 464
+- [x] Só para `verFinanceiro`
+- [x] Falha de R14–R16 mostra erro só nesta aba
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 461 → 464
 
 **Tests**: unit
 **Gate**: build

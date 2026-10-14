@@ -631,7 +631,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | NOTE-06 | P1: Notas — diretoria só lê (AC6) | Execute | Implementing |
 | NOTE-07 | P1: Notas — atalhos (AC7) | Execute | Implementing |
 | NOTE-08 | P1: Notas — link http/https (AC8) | Execute | Implementing |
-| GER-01 | P1: Gerenciais — STLSeller (AC1) | - | Pending |
+| GER-01 | P1: Gerenciais — STLSeller (AC1) | Execute | Implementing |
 | GER-02 | P1: Gerenciais — fórmula do NPS (AC2) | - | Pending |
 | GER-03 | P1: Gerenciais — paginação do NPS (AC3) | Execute | Implementing |
 | GER-04 | P1: Gerenciais — filtro de mentor volta as respostas (AC4) | - | Pending |
