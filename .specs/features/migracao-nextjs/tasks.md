@@ -815,10 +815,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Duas recargas sobrepostas com respostas fora de ordem: vale a da última pedida
-- [ ] Recarga que falha mantém o dataset anterior e devolve o erro
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 192 → 196
+- [x] Duas recargas sobrepostas com respostas fora de ordem: vale a da última pedida
+- [x] Recarga que falha mantém o dataset anterior e devolve o erro
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 192 → 196
 
 **Tests**: unit
 **Gate**: quick

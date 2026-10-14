@@ -587,7 +587,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | DATA-06 | P1: Porta — carga inicial com erro (AC6) | Execute | Implementing |
 | DATA-07 | P1: Porta — erro isolado por relação (AC7) | Execute | Implementing |
 | DATA-08 | P1: Porta — só 4 rpcs (AC8) | Execute | Implementing |
-| DATA-09 | P1: Porta — última recarga vence (AC9) | - | Pending |
+| DATA-09 | P1: Porta — última recarga vence (AC9) | Execute | Implementing |
 | WRITE-01 | P1: Escritas — payload igual (AC1) | - | Pending |
 | WRITE-02 | P1: Escritas — 0 linhas não é sucesso (AC2) | - | Pending |
 | WRITE-03 | P1: Escritas — botão travado (AC3) | - | Pending |
