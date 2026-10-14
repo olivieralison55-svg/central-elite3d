@@ -1132,11 +1132,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Sem caixa, sem acento e por partes
-- [ ] Data nos 4 formatos do grupo "Busca por data"
-- [ ] `chaveNome` sem caixa, acento nem espaço extra
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 280 → 290
+- [x] Sem caixa, sem acento e por partes
+- [x] Data nos 4 formatos do grupo "Busca por data"
+- [x] `chaveNome` sem caixa, acento nem espaço extra
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 280 → 290
 
 **Tests**: unit
 **Gate**: quick
