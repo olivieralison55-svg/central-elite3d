@@ -644,7 +644,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | UI-03 | P1: Design system — Inter (AC3) | Execute | Implementing |
 | UI-04 | P1: Design system — dois temas (AC4) | Execute | Implementing |
 | UI-05 | P1: Design system — ConfirmDialog (AC5) | Execute | Implementing |
-| UI-06 | P1: Design system — lacunas com AD (AC6) | - | Pending |
+| UI-06 | P1: Design system — lacunas com AD (AC6) | Execute | Implementing |
 | UI-07 | P1: Design system — EmptyState e Skeleton (AC7) | Execute | Implementing |
 | UI-08 | P1: Design system — casca com primitivos do DS (AC8) | Execute | Implementing |
 | TEST-01 | P1: Testes — 20 grupos portados (AC1) | - | Pending |

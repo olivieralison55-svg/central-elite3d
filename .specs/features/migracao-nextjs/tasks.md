@@ -1184,10 +1184,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Alterna asc → desc na mesma coluna; nova coluna começa asc
-- [ ] Ordena texto sem acento, número e data; `null` no fim
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 294 → 298
+- [x] Alterna asc → desc na mesma coluna; nova coluna começa asc
+- [x] Ordena texto sem acento, número e data; `null` no fim
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 294 → 298
 
 **Tests**: unit
 **Gate**: quick

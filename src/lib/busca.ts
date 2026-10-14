@@ -4,7 +4,7 @@
 
 type Campo = string | number | null | undefined;
 
-const normBusca = (valor: Campo): string =>
+export const normBusca = (valor: Campo): string =>
   (valor == null ? "" : String(valor)).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 // Cada parte do termo precisa aparecer em algum dos campos. Termo vazio não filtra.
