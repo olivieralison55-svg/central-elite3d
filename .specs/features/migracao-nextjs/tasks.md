@@ -185,12 +185,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Funções puras exportadas: hash git de blob, filtro de exclusão, leitura de versão no lockfile, remoção da linha de `report.css`, comparação do `SNAPSHOT` com a saída do `git ls-tree -r <sha>`
-- [ ] Modo `--verificar <repo>` (G2.10): compara cada `blob` do `SNAPSHOT` com a árvore da plataforma e sai com 1 se houver diferença
-- [ ] `scripts/sync-design-system.test.mjs` cobre as cinco, com o hash git conferido contra um `git hash-object` conhecido
-- [ ] Nada lido do working tree da plataforma
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 2 → 7
+- [x] Funções puras exportadas: hash git de blob, filtro de exclusão, leitura de versão no lockfile, remoção da linha de `report.css`, comparação do `SNAPSHOT` com a saída do `git ls-tree -r <sha>`
+- [x] Modo `--verificar <repo>` (G2.10): compara cada `blob` do `SNAPSHOT` com a árvore da plataforma e sai com 1 se houver diferença
+- [x] `scripts/sync-design-system.test.mjs` cobre as cinco, com o hash git conferido contra um `git hash-object` conhecido
+- [x] Nada lido do working tree da plataforma
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 2 → 7
 
 **Tests**: unit
 **Gate**: quick

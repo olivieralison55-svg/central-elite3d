@@ -639,9 +639,9 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GER-06 | P1: Gerenciais — formato antigo da IA (AC6) | - | Pending |
 | GER-07 | P1: Gerenciais — Mentores (AC7) | - | Pending |
 | GER-08 | P1: Gerenciais — aviso de adesão (AC8) | - | Pending |
-| UI-01 | P1: Design system — cópia literal (AC1) | - | Pending |
+| UI-01 | P1: Design system — cópia literal (AC1) | Execute | Implementing |
 | UI-02 | P1: Design system — sem cor crua (AC2) | - | Pending |
-| UI-03 | P1: Design system — Inter (AC3) | - | Pending |
+| UI-03 | P1: Design system — Inter (AC3) | Execute | Implementing |
 | UI-04 | P1: Design system — dois temas (AC4) | - | Pending |
 | UI-05 | P1: Design system — ConfirmDialog (AC5) | - | Pending |
 | UI-06 | P1: Design system — lacunas com AD (AC6) | - | Pending |
@@ -680,7 +680,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | EDGE-05 | Edge — status fora do domínio | - | Pending |
 | SEC-01 | P1: Segurança — navegação só na mesma origem (AC1) | - | Pending |
 | SEC-02 | P1: Segurança — o agente não lê dado pessoal nos gates (AC2) | - | Pending |
-| SEC-03 | P1: Segurança — auditoria e cópia conferida no G2 (AC3) | - | Pending |
+| SEC-03 | P1: Segurança — auditoria e cópia conferida no G2 (AC3) | Execute | Implementing |
 | SEC-04 | P1: Segurança — cabeçalhos (AC4) | - | Pending |
 | SEC-05 | P1: Segurança — link do banco só http(s) (AC5) | - | Pending |
 | SEC-06 | P1: Segurança — identidade antes de ler e escrever (AC6) | - | Pending |
