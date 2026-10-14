@@ -242,12 +242,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `scripts/parity/snapshot.test.mjs` com cliente falso: lê até vir página com menos de 1.000; manda `order` com o desempate; falha com chave duplicada; falha com coluna de desempate ausente; grava com `0700`/`0600` numa pasta temporária; recusa pasta existente com outro modo; cria o cliente com `persistSession: false` e chama `signOut` no fim
-- [ ] Exclui a pasta do Time Machine com `tmutil addexclusion` (sem falhar fora do macOS)
-- [ ] A saída do script só tem nome de relação e contagem
-- [ ] E-mail e senha não vão para arquivo, argumento nem variável de ambiente
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 61 → 68
+- [x] `scripts/parity/snapshot.test.mjs` com cliente falso: lê até vir página com menos de 1.000; manda `order` com o desempate; falha com chave duplicada; falha com coluna de desempate ausente; grava com `0700`/`0600` numa pasta temporária; recusa pasta existente com outro modo; cria o cliente com `persistSession: false` e chama `signOut` no fim
+- [x] Exclui a pasta do Time Machine com `tmutil addexclusion` (sem falhar fora do macOS)
+- [x] A saída do script só tem nome de relação e contagem
+- [x] E-mail e senha não vão para arquivo, argumento nem variável de ambiente
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 61 → 68
 
 **Tests**: unit
 **Gate**: build

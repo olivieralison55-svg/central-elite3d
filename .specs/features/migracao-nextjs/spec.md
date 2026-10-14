@@ -582,7 +582,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | DATA-01 | P1: Porta — só ela importa o supabase-js (AC1) | - | Pending |
 | DATA-02 | P1: Porta — Zod em R01–R23 (AC2) | - | Pending |
 | DATA-03 | P1: Porta — schema mismatch (AC3) | - | Pending |
-| DATA-04 | P1: Porta — paginação estável (AC4) | - | Pending |
+| DATA-04 | P1: Porta — paginação estável (AC4) | Execute | Implementing |
 | DATA-05 | P1: Porta — 2.500 linhas (AC5) | - | Pending |
 | DATA-06 | P1: Porta — carga inicial com erro (AC6) | - | Pending |
 | DATA-07 | P1: Porta — erro isolado por relação (AC7) | - | Pending |
@@ -655,9 +655,9 @@ Depois do G6, problema vira correção para a frente, não revert.
 | TEST-06 | P1: Testes — offline (AC6) | Execute | Implementing |
 | GATE-01 | P1: Gates — ordem e refazer o que falhou (AC1) | - | Pending |
 | GATE-02 | P1: Gates — evidência por gate (AC2) | - | Pending |
-| GATE-03 | P1: Gates — evidência sem dado pessoal (AC3) | - | Pending |
+| GATE-03 | P1: Gates — evidência sem dado pessoal (AC3) | Execute | Implementing |
 | GATE-04 | P1: Gates — `vercel.json` e `main` estática (AC4) | - | Pending |
-| GATE-05 | P1: Gates — snapshot com sessão de admin (AC5) | - | Pending |
+| GATE-05 | P1: Gates — snapshot com sessão de admin (AC5) | Execute | Implementing |
 | GATE-06 | P1: Gates — script de paridade (AC6) | - | Pending |
 | GATE-07 | P1: Gates — relatório de divergência (AC7) | - | Pending |
 | GATE-08 | P1: Gates — rede da diretoria (AC8) | - | Pending |
