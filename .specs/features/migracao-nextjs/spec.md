@@ -617,11 +617,11 @@ Depois do G6, problema vira correção para a frente, não revert.
 | OPS-18 | P1: Operação — critérios por texto (AC18) | Execute | Implementing |
 | OPS-19 | P1: Operação — régua por unidade (AC19) | - | Pending |
 | OPS-20 | P1: Operação — moeda BRL (AC20) | Execute | Implementing |
-| FIN-01 | P1: Dinheiro — busca não esconde (AC1) | - | Pending |
-| FIN-02 | P1: Dinheiro — vincular com 1 cadastro (AC2) | - | Pending |
-| FIN-03 | P1: Dinheiro — motivo da órfã (AC3) | - | Pending |
+| FIN-01 | P1: Dinheiro — busca não esconde (AC1) | Execute | Implementing |
+| FIN-02 | P1: Dinheiro — vincular com 1 cadastro (AC2) | Execute | Implementing |
+| FIN-03 | P1: Dinheiro — motivo da órfã (AC3) | Execute | Implementing |
 | FIN-04 | P1: Dinheiro — descartar e restaurar (AC4) | Execute | Implementing |
-| FIN-05 | P1: Dinheiro — parcela da Lia (AC5) | - | Pending |
+| FIN-05 | P1: Dinheiro — parcela da Lia (AC5) | Execute | Implementing |
 | FIN-06 | P1: Dinheiro — prazo em SP (AC6) | Execute | Implementing |
 | NOTE-01 | P1: Notas — contenteditable (AC1) | - | Pending |
 | NOTE-02 | P1: Notas — DOMPurify (AC2) | - | Pending |

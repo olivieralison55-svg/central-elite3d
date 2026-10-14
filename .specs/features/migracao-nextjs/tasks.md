@@ -1622,13 +1622,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Motivos: sem e-mail, e-mail em mais de um cadastro, cadastro existe, nenhum cadastro
-- [ ] "vincular" só com exatamente 1 mentorado com o e-mail, comparado em minúsculas
-- [ ] Cards e painéis ignoram a busca
-- [ ] Parcela com `lia_bill_id` não é editável; "Adicionar parcela" some se alguma veio da Lia
-- [ ] Os casos dos grupos "Cobrança órfã" e "Parcelas da Lia"
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 406 → 420
+- [x] Motivos: sem e-mail, e-mail em mais de um cadastro, cadastro existe, nenhum cadastro
+- [x] "vincular" só com exatamente 1 mentorado com o e-mail, comparado em minúsculas
+- [x] Cards e painéis ignoram a busca
+- [x] Parcela com `lia_bill_id` não é editável; "Adicionar parcela" some se alguma veio da Lia
+- [x] Os casos dos grupos "Cobrança órfã" e "Parcelas da Lia"
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 406 → 420
 
 **Tests**: unit
 **Gate**: quick
