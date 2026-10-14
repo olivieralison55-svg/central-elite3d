@@ -507,12 +507,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `registrarPendencia(fn)` e `descarregarPendencias()`: o que foi registrado roda uma vez, e um registro desfeito não roda
-- [ ] `INITIAL_SESSION` sem sessão → `anonimo`; com sessão → `lendoPerfil`
-- [ ] perfil válido → `pronto` com o papel; sem linha ou com erro → `semPerfil` com pedido de `signOut`; papel nulo ou desconhecido → `papelInvalido`
-- [ ] `SIGNED_OUT` em qualquer fase → `anonimo`, sem perfil; `SIGNED_IN` de outro usuário → `lendoPerfil` desse usuário; `TOKEN_REFRESHED` não muda a fase
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 123 → 133
+- [x] `registrarPendencia(fn)` e `descarregarPendencias()`: o que foi registrado roda uma vez, e um registro desfeito não roda
+- [x] `INITIAL_SESSION` sem sessão → `anonimo`; com sessão → `lendoPerfil`
+- [x] perfil válido → `pronto` com o papel; sem linha ou com erro → `semPerfil` com pedido de `signOut`; papel nulo ou desconhecido → `papelInvalido`
+- [x] `SIGNED_OUT` em qualquer fase → `anonimo`, sem perfil; `SIGNED_IN` de outro usuário → `lendoPerfil` desse usuário; `TOKEN_REFRESHED` não muda a fase
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 123 → 133
 
 **Tests**: unit
 **Gate**: quick
