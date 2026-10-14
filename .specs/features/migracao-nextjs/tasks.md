@@ -1315,13 +1315,13 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Grupo por (`etapa`, `data`, `hora`), herdando o primeiro mentor e o primeiro link não nulos; busca depois de agrupar
-- [ ] Só 1:1 conta na trilha
-- [ ] "Concluídas (últimas 30)" são as 30 de data mais recente; sem corte sob foco
-- [ ] Status fora de `S_STATUS` não quebra
-- [ ] Os casos do grupo "1:1 × grupo"
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 308 → 320
+- [x] Grupo por (`etapa`, `data`, `hora`), herdando o primeiro mentor e o primeiro link não nulos; busca depois de agrupar
+- [x] Só 1:1 conta na trilha
+- [x] "Concluídas (últimas 30)" são as 30 de data mais recente; sem corte sob foco
+- [x] Status fora de `S_STATUS` não quebra
+- [x] Os casos do grupo "1:1 × grupo"
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 308 → 320
 
 **Tests**: unit
 **Gate**: quick
