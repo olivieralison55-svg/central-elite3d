@@ -2053,9 +2053,9 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `pontos_fortes`, `pontos_de_atencao` e `sinais` lidos nos mesmos blocos de hoje
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 531 → 537
+- [x] `pontos_fortes`, `pontos_de_atencao` e `sinais` lidos nos mesmos blocos de hoje
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 531 → 537
 
 **Tests**: unit
 **Gate**: quick
