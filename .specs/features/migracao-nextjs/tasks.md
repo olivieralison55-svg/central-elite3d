@@ -1922,10 +1922,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] A busca não esconde cards, órfãs nem descartadas
-- [ ] Falha de R05: erro só nos painéis de órfãs e descartadas
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 491 → 499
+- [x] A busca não esconde cards, órfãs nem descartadas
+- [x] Falha de R05: erro só nos painéis de órfãs e descartadas
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 491 → 499
 
 **Tests**: unit
 **Gate**: build
