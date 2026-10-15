@@ -88,6 +88,15 @@ describe("menu, usuário e tema (NAV-06, UI-04, UI-08, AUTH-08)", () => {
     expect(logos.map((l) => [l.src, l.alt])).toEqual(Array(2).fill([["/logo-elite3d-preta.png", "Elite 3D"], ["/logo-elite3d-branca.png", "Elite 3D"]]).flat());
     expect(logos[0].class).toContain("dark:hidden");
     expect(logos[1].class).toMatch(/\bhidden\b.*dark:block/);
+    // As duas versões têm o mesmo tamanho: trocar o tema não muda a logo de tamanho.
+    for (const logo of logos) {
+      const classes = logo.class.split(" ");
+      expect([classes.find((c) => c.startsWith("h-")), classes.find((c) => c.startsWith("w-")), logo.width, logo.height], logo.src).toEqual(["h-[19px]", "w-[86px]", "86", "19"]);
+    }
+    // 86×19 é a proporção do PNG (480×106): a logo não distorce.
+    expect(Math.abs(86 / 19 - 480 / 106)).toBeLessThan(0.05);
+    // O flex-col não estica a logo na largura do menu.
+    expect(html).toMatch(/<span class="flex flex-col items-start gap-1"><img[^>]*logo-elite3d-preta/);
     expect(html.match(/Central de Controle/g)).toHaveLength(2);
     expect(html).not.toContain("Mentoria Elite 3D");
   });

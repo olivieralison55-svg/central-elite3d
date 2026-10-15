@@ -52,10 +52,12 @@ export function itemAceso(caminho: string, voltarPara: string): string {
 
 // A logo da Elite 3D (480×106) com o nome do app embaixo: a preta no tema claro, a branca no `.dark`.
 // `<img>` simples: são dois PNG estáticos de `public/`, sem otimização que o `next/image` traga.
+// Largura e altura fixas na proporção do PNG (480×106) e `items-start`: o `flex-col` estica o filho
+// na largura toda, e a logo saía larga e achatada.
 const TITULO = (
-  <span className="flex flex-col gap-1">
-    <img src="/logo-elite3d-preta.png" alt="Elite 3D" width={127} height={28} className="h-7 w-auto dark:hidden" />
-    <img src="/logo-elite3d-branca.png" alt="Elite 3D" width={127} height={28} className="hidden h-7 w-auto dark:block" />
+  <span className="flex flex-col items-start gap-1">
+    <img src="/logo-elite3d-preta.png" alt="Elite 3D" width={86} height={19} className="h-[19px] w-[86px] dark:hidden" />
+    <img src="/logo-elite3d-branca.png" alt="Elite 3D" width={86} height={19} className="hidden h-[19px] w-[86px] dark:block" />
     <span className="text-[11px] font-medium text-muted">Central de Controle</span>
   </span>
 );
