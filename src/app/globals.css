@@ -1,5 +1,21 @@
 @import "../design-system/tokens.css";
 
+/* Marca verde da Elite 3D sobre o design system (AD-009). A cópia do DS não se edita: o verde
+   sobrepõe o azul aqui, depois do import. `--primary-rgb`/`--primary-dark-rgb` alimentam o fundo
+   (`bg-primary`); `--primary` e `--primary-ink-rgb` são o primário SOBRE o fundo da página
+   (texto, borda, anel, contorno, gráficos): verde escuro no claro, o lima no escuro. */
+:root {
+  --primary: #3f6212;
+  --primary-dark: #9fe22f;
+  --primary-rgb: 185 255 70; /* #B9FF46 */
+  --primary-dark-rgb: 159 226 47; /* #9FE22F */
+  --primary-ink-rgb: 63 98 18; /* #3F6212, 7,1:1 sobre #fff */
+}
+.dark {
+  --primary: #b9ff46;
+  --primary-ink-rgb: 185 255 70;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -53,6 +69,13 @@ body {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
   }
+}
+
+/* Texto branco sobre lima não lê (1,2:1): botão, badge, avatar e dia escolhido ganham o grafite da
+   marca (#10141A, 15,4:1 no lima, 11,8:1 no lima do hover). */
+.bg-primary.text-white,
+.hover\:bg-primary-dark.text-white:hover {
+  color: #10141a;
 }
 
 /* Dialog / overlay entrance */

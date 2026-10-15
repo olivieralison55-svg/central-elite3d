@@ -158,7 +158,8 @@ describe("controles de escrita por papel (WRITE-09, GATE-08)", () => {
     expect(achados.length).toBeGreaterThanOrEqual(10);
     // As escritas que só o admin tem, uma de cada capacidade, aparecem: a varredura enxerga a tela.
     for (const w of ["W02", "W05", "W08", "W11", "W12", "W13", "W14", "W15", "W16", "W17", "W18", "W19", "W20", "W21"]) expect(achados, w).toContain(w);
-  });
+    // Renderiza ~40 telas: leva ~4 s sozinho e estoura os 5 s padrão com a suíte inteira em paralelo.
+  }, 30_000);
 
   it("mentor: só W01, W03, W04, W06, W07, W09 e W10", () => {
     expect(varrerPapel("mentor")).toEqual(["W01", "W03", "W04", "W06", "W07", "W09", "W10"]);

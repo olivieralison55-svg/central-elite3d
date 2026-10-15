@@ -85,8 +85,9 @@ const insereHtml: Regra = (texto, caminho) =>
   );
 
 // UI-02: hexa (menos entidade HTML como &#8212;), rgb(, rgba( e a paleta padrão do Tailwind.
+// `globals.css` é onde o projeto define os tokens da marca (AD-009): lá o hexa é a definição.
 const usaCorCrua: Regra = (texto, caminho) =>
-  /^src\/(?:components\/modules|app)\//.test(caminho)
+  /^src\/(?:components\/modules|app)\//.test(caminho) && caminho !== "src/app/globals.css"
     ? achar(
         texto,
         /(?<!&)#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b|\brgba?\(|\b(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|[1-9]00|950)\b/g,
@@ -257,6 +258,7 @@ describe("varreduras estáticas", () => {
     expect(usaCorCrua(ruim, "src/components/modules/x.tsx")).toHaveLength(4);
     expect(usaCorCrua(ruim, "src/app/x/page.tsx")).toHaveLength(4);
     expect(usaCorCrua(ruim, "src/components/ui/x.tsx")).toEqual([]);
+    expect(usaCorCrua(ruim, "src/app/globals.css")).toEqual([]);
     expect(varrer(SRC, usaCorCrua)).toEqual([]);
   });
 
