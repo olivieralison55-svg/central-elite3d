@@ -24,6 +24,7 @@
 | paginação | primitivo novo `Pagination`: "Página X de Y" entre dois `Button` de ícone | `ui/pagination.tsx` |
 | ordenação e clique de linha | primitivo novo `SortHeader` no `header` da coluna, com a ordem calculada por `aplicarOrdem` (`src/lib/ordem.ts`). O clique de linha é um `<Link>` na primeira célula | `ui/sort-header.tsx` |
 | moeda BRL | `Input` do DS com `inputMode="decimal"`, `mascaraBRL` no `onChange` e `mascaraBRL(v, true)` no `onBlur` (`src/lib/moeda.ts`) | `modules/comum/campo-moeda.tsx` |
+| gráfico de colunas em reais | `TrendChart view="bar"` com `ratio: null` em todo ponto e o real cheio no tooltip. Limite: o primitivo sempre desenha o eixo de razão (0% e 1%, sem razão nenhuma), e a cópia não se edita. Sobe para a plataforma como pedido de eixo opcional | nenhum novo |
 
 3. **Os primitivos novos são genéricos.** Nomes e props em inglês, sem domínio e só com tokens do
    design system, para poderem subir para a plataforma.

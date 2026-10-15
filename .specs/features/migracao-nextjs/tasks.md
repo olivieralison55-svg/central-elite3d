@@ -1895,11 +1895,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Abrir um marco fecha o anterior
-- [ ] Marcar critério atualiza contador e barra sem fechar o painel nem perder campo
-- [ ] Excluir faturamento por `ConfirmDialog`
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 483 → 491
+- [x] Abrir um marco fecha o anterior
+- [x] Marcar critério atualiza contador e barra sem fechar o painel nem perder campo
+- [x] Excluir faturamento por `ConfirmDialog`
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 483 → 491
 
 **Tests**: unit
 **Gate**: quick
