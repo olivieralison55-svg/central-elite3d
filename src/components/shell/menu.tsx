@@ -50,7 +50,15 @@ export function itemAceso(caminho: string, voltarPara: string): string {
   return endereco.tela === "mentorado" ? voltarPara : `/${endereco.tela}`;
 }
 
-const TITULO = <span className="text-[15px] font-bold text-ink">Central de Controle</span>;
+// A logo da Elite 3D (480×106) com o nome do app embaixo: a preta no tema claro, a branca no `.dark`.
+// `<img>` simples: são dois PNG estáticos de `public/`, sem otimização que o `next/image` traga.
+const TITULO = (
+  <span className="flex flex-col gap-1">
+    <img src="/logo-elite3d-preta.png" alt="Elite 3D" width={127} height={28} className="h-7 w-auto dark:hidden" />
+    <img src="/logo-elite3d-branca.png" alt="Elite 3D" width={127} height={28} className="hidden h-7 w-auto dark:block" />
+    <span className="text-[11px] font-medium text-muted">Central de Controle</span>
+  </span>
+);
 
 // Nome, papel, tema e Sair: no pé da sidebar e no do menu mobile.
 export function Usuario({ nome, papel, sair }: { nome: string; papel: Papel; sair(): Promise<void> }) {
@@ -90,10 +98,7 @@ export default function Menu() {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] flex-col border-r border-line bg-sub-bg md:flex">
-        <div className="px-4 pb-2 pt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Mentoria Elite 3D · STLFLIX</p>
-          <div className="mt-1">{TITULO}</div>
-        </div>
+        <div className="px-4 pb-2 pt-4">{TITULO}</div>
         <div className="flex-1 overflow-y-auto px-2.5 pt-2">{itens}</div>
         {usuarioDoMenu}
       </aside>

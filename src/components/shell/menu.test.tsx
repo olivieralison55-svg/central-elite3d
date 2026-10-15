@@ -81,6 +81,17 @@ describe("menu, usuário e tema (NAV-06, UI-04, UI-08, AUTH-08)", () => {
     }
   });
 
+  it("a logo da Elite 3D abre a sidebar e o cabeçalho mobile: a preta no claro, a branca no escuro", () => {
+    const html = renderTela(<Menu />, { papel: "admin" });
+    const logos = tags(html, "img");
+    // Sidebar e cabeçalho mobile: duas imagens em cada.
+    expect(logos.map((l) => [l.src, l.alt])).toEqual(Array(2).fill([["/logo-elite3d-preta.png", "Elite 3D"], ["/logo-elite3d-branca.png", "Elite 3D"]]).flat());
+    expect(logos[0].class).toContain("dark:hidden");
+    expect(logos[1].class).toMatch(/\bhidden\b.*dark:block/);
+    expect(html.match(/Central de Controle/g)).toHaveLength(2);
+    expect(html).not.toContain("Mentoria Elite 3D");
+  });
+
   it("o item aceso é o da tela; na ficha, é o voltarPara", () => {
     expect(acesos(renderTela(<Menu />, { papel: "admin", navegar: navegadorFalso("/rotas") }))).toEqual(["/rotas"]);
     const fichaDeSessoes = renderTela(<Menu />, { papel: "admin", ui: { voltarPara: "/sessoes" }, navegar: navegadorFalso("/mentorado/m1/financeiro") });
