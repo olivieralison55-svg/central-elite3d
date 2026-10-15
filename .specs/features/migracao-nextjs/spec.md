@@ -666,13 +666,13 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GATE-11 | P1: Gates — sem chave secreta no bundle (AC11) | Execute | Implementing |
 | GATE-12 | P1: Gates — classe da fonte no CSS (AC12) | Execute | Implementing |
 | GATE-13 | P1: Gates — merge só com go e gate na main (AC13) | - | Pending |
-| GATE-14 | P1: Gates — volta em até 15 min (AC14) | - | Pending |
+| GATE-14 | P1: Gates — volta em até 15 min (AC14) | Execute | Implementing |
 | GATE-15 | P1: Gates — tag e ensaio da volta (AC15) | - | Pending |
 | GATE-16 | P1: Gates — congelamento do `index.html` (AC16) | - | Pending |
 | CUT-01 | P2: Corte — arquivos do repo em 404 (AC1) | - | Pending |
 | CUT-02 | P2: Corte — link antigo (AC2) | Execute | Implementing |
 | CUT-03 | P2: Corte — um front só (AC3) | Execute | Implementing |
-| CUT-04 | P2: Corte — docs atualizadas (AC4) | - | Pending |
+| CUT-04 | P2: Corte — docs atualizadas (AC4) | Execute | Implementing |
 | EDGE-01 | Edge — ficha excluída por outro admin | Execute | Implementing |
 | EDGE-02 | Edge — sessão não renova | Execute | Implementing |
 | EDGE-03 | Edge — virada do dia | Execute | Implementing |

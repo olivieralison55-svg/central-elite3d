@@ -2448,10 +2448,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Cada linha do mapeamento §12 corrigida ou removida
-- [ ] Seções de rodar, testar (`pnpm test`, `pnpm parity`), publicar e voltar (`git revert -m 1` com o `.vercelignore` que publica só `index.html` e `favicon.png`)
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 627 → 627
+- [x] Cada linha do mapeamento §12 corrigida ou removida
+- [x] Seções de rodar, testar (`pnpm test`, `pnpm parity`), publicar e voltar (`git revert -m 1` com o `.vercelignore` que publica só `index.html` e `favicon.png`)
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 627 → 627
 
 **Tests**: none
 **Gate**: build

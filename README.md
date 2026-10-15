@@ -43,7 +43,8 @@ inferior esquerdo, embaixo do seu nome.
 | Faturamento do mentorado | ✅ | ✅ só vê | ✅ vê e registra |
 | Criar mentorado | ✅ | ❌ | ❌ |
 | Editar dados do mentorado (nome, datas, links) | ✅ | ❌ | ❌ |
-| Registrar e editar sessões | ✅ | ❌ | ✅ |
+| Criar sessão | ✅ | ❌ | ❌ |
+| Editar e confirmar sessão | ✅ | ❌ | ✅ |
 | Registrar evolução na trilha (Rotas) | ✅ | ❌ | ✅ |
 | Excluir sessão, parcela ou faturamento | ✅ | ❌ | ❌ |
 
@@ -77,7 +78,7 @@ Duas coisas se repetem em todas elas:
   hora. Vale para sessão 1:1 e para encontro em grupo. Nas outras telas a busca
   continua sendo só por nome.
 - **Botão + Novo mentorado.** Presente nas cinco telas, para quem tem permissão
-  de criar (administrador e diretoria). Nas telas que já têm uma ação própria —
+  de criar (só o administrador). Nas telas que já têm uma ação própria —
   Sessões, com o encontro em grupo — ele aparece como botão secundário.
 
 ### Acompanhamento
@@ -231,7 +232,7 @@ Mais abaixo, na mesma tela: o **canal de venda** do mentorado e o
 de evolução e o formulário para registrar um novo mês. Excluir um registro de
 faturamento é só para administrador.
 
-### Financeiro — só administrador
+### Financeiro — administrador e diretoria
 
 Três indicadores no topo: parcelas vencidas, quantos estão com o restante em
 aberto e quantos contratos foram assinados.
@@ -249,13 +250,15 @@ um nome vira cobrança esquecida.
 
 Abre ao clicar em qualquer mentorado, em qualquer tela. **É uma página, com
 endereço próprio** — dá para mandar o link para alguém, recarregar em cima dela
-e usar o voltar do navegador. O endereço é `#/mentorado/<id>`, com a aba no
+e usar o voltar do navegador. O endereço é `/mentorado/<id>`, com a aba no
 fim quando não é o cadastro.
 
-São três abas, e a origem escolhe em qual a ficha abre: vindo de Sessões abre em
+São cinco abas (**Cadastro**, **Financeiro**, **Sessões**, **Notas** e
+**STLSeller**), e a origem escolhe em qual a ficha abre: vindo de Sessões abre em
 **Sessões**, vindo de Financeiro abre em **Financeiro**, das outras telas abre em
 **Cadastro**. Trocar de aba é um clique, e o link muda junto. Quem não vê
-financeiro não recebe essa aba — nem clicando num link dela.
+financeiro não recebe as abas Financeiro e STLSeller — nem clicando num
+link delas.
 
 No alto, à esquerda, o caminho de volta aponta para a tela de onde a ficha foi
 aberta.
@@ -417,9 +420,10 @@ Coisas que a ferramenta **não** faz hoje, para você não procurar em vão:
 
 - **Não há filtro "meus mentorados".** Todo mentor vê todos. O sistema ainda não
   liga o nome do mentor na sessão à conta de quem faz login.
-- **Não há campo de observações, anotações internas ou follow-up.** Não existe
-  onde registrar o que foi conversado, por que alguém pausou, ou o que ficou
-  combinado para a próxima semana.
+- **Anotação é um bloco só por mentorado.** A aba **Notas** da ficha guarda uma
+  nota livre por mentorado (administrador e mentor escrevem, diretoria lê), sem
+  histórico de versões, e quem salva por último vence. Não há follow-up com
+  prazo nem responsável.
 - **Não há histórico de alterações.** Não é possível saber quem mudou um dado,
   quando, nem qual era o valor anterior.
 - **Não há turma, programa ou período.** Não dá para comparar grupos.
@@ -448,3 +452,25 @@ Coisas que a ferramenta **não** faz hoje, para você não procurar em vão:
 Estão em [ARCHITECTURE.md](ARCHITECTURE.md): modelo de dados, permissões,
 automações, decisões de projeto e pontos de atenção para quem for mexer no
 código.
+
+### Rodar, testar, publicar e voltar
+
+A aplicação é um app Next.js (`src/`) com TypeScript, em `pnpm`. Use o Node 24
+pelo `nvm` (`nvm use default`).
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev          # roda em http://localhost:3000, contra o banco de produção
+pnpm typecheck    # confere os tipos
+pnpm test         # a suíte, sem rede e sem banco
+pnpm build        # o build que a Vercel roda
+pnpm parity       # compara com o app antigo, sobre um snapshot fora do repo
+```
+
+`pnpm parity` precisa de um snapshot de produção com dado pessoal. Ele fica
+**fora do repositório**, em `~/.central-elite3d-paridade/`, e nunca é copiado
+para cá. **Publicar:** a Vercel publica pela `main`, com o `vercel.json` da
+raiz. **Voltar:** `git revert -m 1 <merge>` na `main`; o commit da volta leva
+um `.vercelignore` que publica só `index.html` e `favicon.png`. O passo a passo,
+com as verificações de publicação, está em
+[ARCHITECTURE.md](ARCHITECTURE.md), seções *Rodar*, *Testar* e *Publicar e voltar*.

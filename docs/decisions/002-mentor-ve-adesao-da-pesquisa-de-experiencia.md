@@ -18,7 +18,7 @@ Análise IA só para admin e diretoria, e o RLS de `experiencia_respostas` barra
   Sessão realizada há menos de `PRAZO_RESPOSTA_DIAS` (2 dias, o prazo padrão de resposta)
   não entra no denominador — a mesma regra do alerta de satisfação pendente do admin.
   Nunca o conteúdo, a nota ou o NPS.
-- A contagem vem da RPC `experiencia_adesao(p_desde)`, `security definer`, com grant para
+- A contagem vem da RPC `experiencia_adesao(p_desde, p_prazo_dias)`, `security definer`, com grant para
   `authenticated`. O RLS das tabelas fica como estava.
 - A pesquisa é **anônima**, então o aviso é geral: igual para todos os mentores, sem nome de
   quem falta e sem atribuir a um mentor.
