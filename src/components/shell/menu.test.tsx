@@ -145,7 +145,7 @@ describe("menu, usuário e tema (NAV-06, UI-04, UI-08, AUTH-08)", () => {
 
   it("UI-04: ThemeToggle na casca; o menu mobile abre por um botão e nasce fechado", () => {
     const html = renderTela(<Menu />, { papel: "diretoria" });
-    expect(tags(html, "button").map((botao) => botao["aria-label"] ?? null)).toEqual(["Ativar tema escuro", null, "Abrir o menu"]);
+    expect(tags(html, "button").map((botao) => botao["aria-label"] ?? null)).toEqual(["Recolher o menu", "Ativar tema escuro", null, "Abrir o menu"]);
     expect(html).not.toContain('role="dialog"');
   });
 

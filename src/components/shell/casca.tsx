@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { lerCaminho, telaPermitida } from "@/lib/endereco";
 import type { Papel } from "@/lib/papeis";
@@ -33,10 +33,11 @@ export function Moldura({ children }: { children: ReactNode }) {
   const { caminho, substituir } = useNavegar();
   useEffect(() => aplicarCaminho(caminho, papel, mudar, substituir), [caminho, papel, mudar, substituir]);
   const permitida = telaPermitida(lerCaminho(caminho.split("/")).tela, papel);
+  const [recolhido, setRecolhido] = useState(false);
   return (
     <div className="min-h-screen bg-canvas">
-      <Menu />
-      <main className="px-4 py-6 md:ml-[240px] md:px-8 md:py-8">{permitida ? children : <Carregando />}</main>
+      <Menu recolhido={recolhido} alternar={() => setRecolhido((r) => !r)} />
+      <main className={`px-4 py-6 transition-all md:px-8 md:py-8 ${recolhido ? "md:ml-[68px]" : "md:ml-[240px]"}`}>{permitida ? children : <Carregando />}</main>
     </div>
   );
 }
