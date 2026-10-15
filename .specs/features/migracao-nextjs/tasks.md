@@ -2314,12 +2314,12 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Relatório impresso só com `PAR-xx | chave | falta, sobra ou valor diferente`; os dois valores vão para `divergencias-<data>.json` (`0600`) na pasta do snapshot
-- [ ] Exit 1 com divergência fora do Apêndice A; o bloco Concluídas de PAR-09 fica fora da comparação
-- [ ] Linha do snapshot fora do schema conta como divergência
-- [ ] `scripts/parity/relatorio.test.ts`: o relatório impresso não carrega valor nem campo pessoal; o arquivo de valores sai com `0600`; a exceção do PAR-09 vale; o código de saída segue o diff
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 610 → 615
+- [x] Relatório impresso só com `PAR-xx | chave | falta, sobra ou valor diferente`; os dois valores vão para `divergencias-<data>.json` (`0600`) na pasta do snapshot
+- [x] Exit 1 com divergência fora do Apêndice A; o bloco Concluídas de PAR-09 fica fora da comparação
+- [x] Linha do snapshot fora do schema conta como divergência
+- [x] `scripts/parity/relatorio.test.ts`: o relatório impresso não carrega valor nem campo pessoal; o arquivo de valores sai com `0600`; a exceção do PAR-09 vale; o código de saída segue o diff
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 610 → 615
 
 **Tests**: unit
 **Gate**: quick

@@ -659,7 +659,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GATE-04 | P1: Gates — `vercel.json` e `main` estática (AC4) | - | Pending |
 | GATE-05 | P1: Gates — snapshot com sessão de admin (AC5) | Execute | Implementing |
 | GATE-06 | P1: Gates — script de paridade (AC6) | Execute | Implementing |
-| GATE-07 | P1: Gates — relatório de divergência (AC7) | - | Pending |
+| GATE-07 | P1: Gates — relatório de divergência (AC7) | Execute | Implementing |
 | GATE-08 | P1: Gates — rede da diretoria (AC8) | Execute | Implementing |
 | GATE-09 | P1: Gates — registro de teste (AC9) | - | Pending |
 | GATE-10 | P1: Gates — matriz igual depois do UAT (AC10) | - | Pending |
@@ -679,7 +679,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | EDGE-04 | Edge — nota grande demais | Execute | Implementing |
 | EDGE-05 | Edge — status fora do domínio | Execute | Implementing |
 | SEC-01 | P1: Segurança — navegação só na mesma origem (AC1) | Execute | Implementing |
-| SEC-02 | P1: Segurança — o agente não lê dado pessoal nos gates (AC2) | - | Pending |
+| SEC-02 | P1: Segurança — o agente não lê dado pessoal nos gates (AC2) | Execute | Implementing |
 | SEC-03 | P1: Segurança — auditoria e cópia conferida no G2 (AC3) | Execute | Implementing |
 | SEC-04 | P1: Segurança — cabeçalhos (AC4) | Execute | Implementing |
 | SEC-05 | P1: Segurança — link do banco só http(s) (AC5) | Execute | Implementing |
