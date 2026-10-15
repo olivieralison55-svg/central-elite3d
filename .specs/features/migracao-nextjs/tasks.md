@@ -1950,9 +1950,9 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Recorte "Ativos" como padrão; e-mail STLFLIX primeiro no diagnóstico
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 499 → 509
+- [x] Recorte "Ativos" como padrão; e-mail STLFLIX primeiro no diagnóstico
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 499 → 509
 
 **Tests**: unit
 **Gate**: quick
