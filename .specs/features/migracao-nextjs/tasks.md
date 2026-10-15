@@ -2288,10 +2288,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] PAR-01 a PAR-17 com as mesmas chaves da T77
-- [ ] Sobre as fixtures antigas, as duas tasks dão o mesmo valor em cada métrica
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 593 → 610
+- [x] PAR-01 a PAR-17 com as mesmas chaves da T77
+- [x] Sobre as fixtures antigas, as duas tasks dão o mesmo valor em cada métrica
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 593 → 610
 
 **Tests**: unit
 **Gate**: quick
