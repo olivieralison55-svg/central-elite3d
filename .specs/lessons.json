@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 3,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "surviving_mutant::when a failed read must show an error test it with the failed relation returning zero rows a fixture that keeps rows populated lets error only if data exists survive",
+      "text": "When a failed read must show an error, test it with the failed relation returning zero rows: a fixture that keeps rows populated lets 'error only if data exists' survive.",
+      "signal": "surviving_mutant",
+      "scope": "src/components/modules",
+      "status": "candidate",
+      "features": [
+        "migracao-nextjs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "sensor9 m8 src/components/modules/financeiro/financeiro.tsx:280 (src/components/modules)"
+      ],
+      "created": "2026-10-15T11:17:13Z",
+      "last_seen": "2026-10-15T11:17:13Z"
+    },
+    {
+      "id": "L-002",
+      "key": "gate_fail::keep tasks md test count lines equal to the measured count of each task commit estimates left in place fail g1 2 and the final count check at verification",
+      "text": "Keep tasks.md Test count lines equal to the measured count of each task commit; estimates left in place fail G1.2 and the final-count check at verification.",
+      "signal": "gate_fail",
+      "scope": ".specs",
+      "status": "candidate",
+      "features": [
+        "migracao-nextjs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md Fix 1 (G1.2) (.specs)"
+      ],
+      "created": "2026-10-15T11:17:13Z",
+      "last_seen": "2026-10-15T11:17:13Z"
+    }
+  ]
+}
