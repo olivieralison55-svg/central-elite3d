@@ -53,9 +53,11 @@ vi.mock("react-hot-toast", () => ({ default: { error: toastErro, success: toastS
 const sessaoDoCliente = vi.hoisted(() => ({ id: "usuario-admin" }));
 vi.mock("@/lib/data/auth", () => ({ usuarioDaSessao: () => Promise.resolve(sessaoDoCliente.id) }));
 const lerNota = vi.hoisted(() => vi.fn<(mentoradoId: string, usuarioId: string) => Promise<{ ok: true; dados: Nota | null } | { ok: false; erro: string }>>());
-vi.mock("@/lib/data/leituras", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/data/leituras")>()), lerNota }));
+const linksAssinados = vi.hoisted(() => vi.fn<(caminhos: readonly string[]) => Promise<{ ok: true; dados: Map<string, string> } | { ok: false; erro: string }>>());
+vi.mock("@/lib/data/leituras", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/data/leituras")>()), lerNota, linksAssinados }));
 const salvarNota = vi.hoisted(() => vi.fn<(mentoradoId: string, conteudo: string, atualizadoEm: string) => Promise<ResultadoEscrita>>());
-vi.mock("@/lib/data/escritas", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/data/escritas")>()), salvarNota }));
+const enviarAnexo = vi.hoisted(() => vi.fn<(mentoradoId: string, arquivo: File) => Promise<ResultadoEscrita>>());
+vi.mock("@/lib/data/escritas", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/data/escritas")>()), salvarNota, enviarAnexo }));
 // O sanitizador de verdade não roda sem DOM (design, componente 11): o falso marca o que limpou,
 // ou falta, como num navegador sem suporte. Sem marca, devolve a entrada, como o DOMPurify faz com
 // HTML já limpo e com "" (purify.es.mjs:1182).
@@ -89,13 +91,20 @@ vi.mock("@/components/ui/dialog", async () => {
 
 type Ouvinte = (evento: Record<string, unknown>) => void;
 
-// O nó do editor: guarda o HTML e os ouvintes que o efeito liga.
-function elementoFalso() {
+// Um anexo no DOM do editor: o que o resolvedor lê e troca.
+function anexoFalso(tagName: "IMG" | "A", atributos: Record<string, string>) {
+  return { tagName, atributos, getAttribute: (nome: string) => atributos[nome] ?? null, setAttribute: (nome: string, valor: string) => void (atributos[nome] = valor) };
+}
+
+// O nó do editor: guarda o HTML, os anexos que o querySelectorAll devolve e os ouvintes que o efeito liga.
+function elementoFalso(anexos: ReturnType<typeof anexoFalso>[] = []) {
   const ouvintes = new Map<string, Ouvinte>();
   return {
     innerHTML: "",
     focos: 0,
     ouvintes,
+    anexos,
+    querySelectorAll: () => anexos,
     addEventListener: (tipo: string, fn: Ouvinte) => void ouvintes.set(tipo, fn),
     removeEventListener: (tipo: string, fn: Ouvinte) => {
       if (ouvintes.get(tipo) === fn) ouvintes.delete(tipo);
@@ -158,10 +167,10 @@ const NOTA: Nota = { conteudo: "<h1>Plano</h1><p>texto</p>", atualizado_em: "202
 const limpezas: Array<() => void> = [];
 
 // Monta como o React: o render, a ref apontando para o nó e o efeito rodando. Devolve o cleanup.
-async function montar({ papel = "admin", caps, nota = NOTA }: { papel?: Papel; caps?: Set<Capacidade>; nota?: Nota | null } = {}) {
+async function montar({ papel = "admin", caps, nota = NOTA, anexos = [] }: { papel?: Papel; caps?: Set<Capacidade>; nota?: Nota | null; anexos?: ReturnType<typeof anexoFalso>[] } = {}) {
   lerNota.mockResolvedValue({ ok: true, dados: nota });
   const primeiro = render({ papel, caps });
-  const el = elementoFalso();
+  const el = elementoFalso(anexos);
   react.refs[0].current = el;
   const cleanup = primeiro.efeitos[0]();
   const limpar = typeof cleanup === "function" ? (cleanup as () => void) : () => undefined;
@@ -197,6 +206,9 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
     lerNota.mockReset();
     salvarNota.mockReset();
     salvarNota.mockResolvedValue({ ok: true, linhas: 1 });
+    enviarAnexo.mockReset();
+    linksAssinados.mockReset();
+    linksAssinados.mockResolvedValue({ ok: true, dados: new Map() });
   });
   afterEach(async () => {
     // O cleanup grava o que ficou pendente: a gravação termina aqui, não no teste seguinte.
@@ -460,5 +472,208 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
     await descarregarPendencias();
     await vazar();
     expect(salvos()).toEqual(["[limpo]<p>com</p>"]);
+  });
+
+  // AD-010: os anexos.
+  const BASE = "https://matgynpiscyoshnjzolo.supabase.co";
+  const assinada = (caminho: string) => `${BASE}/storage/v1/object/sign/notas-anexos/${caminho}?token=eyJ0b2tlbiI6MX0.c2ln`;
+  const entrada = (lista: typeof vistos, rotulo: string) => lista.find((v) => v.tipo === "input" && v.props["aria-label"] === rotulo)?.props;
+  const arquivo = (nome: string, tipo: string, tamanho = 3) => new File(["x".repeat(tamanho)], nome, { type: tipo });
+  // A seleção guardada: o anexo cai nela, depois do envio.
+  const comSelecao = () => {
+    const intervalo = { marcado: true };
+    const adicionar = vi.fn();
+    documento.selecao = { rangeCount: 1, getRangeAt: () => ({ cloneRange: () => intervalo }), removeAllRanges: vi.fn(), addRange: adicionar };
+    return { intervalo, adicionar };
+  };
+
+  it("AD-010 e lição c: admin e mentor têm Imagem (ImagePlus) e Anexo (Paperclip), com o seletor de arquivo oculto e o accept certo; a diretoria e o papel sem escreverNotas, não", async () => {
+    for (const papel of ["admin", "mentor"] as const) {
+      const { limpar } = await montar({ papel });
+      const { html, vistos: barra } = render({ papel });
+      expect([botaoDaBarra(barra, "Imagem")?.title, botaoDaBarra(barra, "Anexo")?.title], papel).toEqual(["Imagem", "Anexo"]);
+      for (const icone of ["image-plus", "paperclip"]) expect(html, `${papel} ${icone}`).toContain(`lucide-${icone}`);
+      expect([entrada(barra, "Escolher imagem")?.type, entrada(barra, "Escolher imagem")?.hidden, entrada(barra, "Escolher imagem")?.accept], papel).toEqual(["file", true, "image/png,image/jpeg,image/webp,image/gif"]);
+      expect(entrada(barra, "Escolher anexo")?.accept, papel).toBe(
+        "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv",
+      );
+      expect(html, papel).not.toContain("svg+xml");
+      limpar();
+      react.valores.length = 0;
+      react.refs.length = 0;
+    }
+    for (const sem of [{ papel: "diretoria" as const }, { caps: new Set<Capacidade>(["verFinanceiro"]) }]) {
+      const { el } = await montar(sem);
+      const { html, vistos: barra } = render(sem);
+      expect([botaoDaBarra(barra, "Imagem"), botaoDaBarra(barra, "Anexo"), entrada(barra, "Escolher imagem"), entrada(barra, "Escolher anexo")]).toEqual([undefined, undefined, undefined, undefined]);
+      expect(html).not.toContain("lucide-paperclip");
+      expect(el.ouvintes.has("drop")).toBe(false);
+      react.valores.length = 0;
+      react.refs.length = 0;
+    }
+  });
+
+  it("AD-010 e WRITE-03: Imagem guarda a seleção e abre o seletor; o arquivo sobe pela porta com o botão travado, entra na seleção como anexo: sanitizado, ganha o link assinado e a gravação leva anexo:, não a URL", async () => {
+    const { el } = await montar();
+    const { intervalo, adicionar } = comSelecao();
+    const barra = render().vistos;
+    const seletor = entrada(barra, "Escolher imagem");
+    const clicar = vi.fn();
+    const ref = seletor?.ref;
+    if (!ref || typeof ref !== "object") throw new Error("ref do seletor ausente");
+    Object.assign(ref, { current: { click: clicar } });
+    chamar(botaoDaBarra(barra, "Imagem")?.onClick);
+    expect(clicar).toHaveBeenCalledTimes(1);
+    const prevenir = vi.fn();
+    chamar(botaoDaBarra(barra, "Imagem")?.onMouseDown, { preventDefault: prevenir });
+    expect(prevenir).toHaveBeenCalledTimes(1);
+
+    let terminar: (r: ResultadoEscrita) => void = () => undefined;
+    enviarAnexo.mockImplementation(() => new Promise((resolve) => (terminar = resolve)));
+    const foto = arquivo("Foto Ação.png", "image/png");
+    const alvo = { files: [foto], value: "C:\\fakepath\\Foto Ação.png" };
+    chamar(seletor?.onChange, { target: alvo });
+    await vazar();
+    expect(alvo.value).toBe("");
+    expect(enviarAnexo.mock.calls).toEqual([["m1", foto]]);
+    // WRITE-03: os dois botões travam até o fim do envio.
+    const enviando = render();
+    expect([botaoDaBarra(enviando.vistos, "Imagem")?.loading, botaoDaBarra(enviando.vistos, "Anexo")?.loading]).toEqual([true, true]);
+    expect(enviando.html).toMatch(/aria-busy="true"[^>]*aria-label="Imagem"|aria-label="Imagem"[^>]*aria-busy="true"/);
+    expect(documento.comandos).toEqual([]);
+
+    // O navegador põe a imagem no DOM; o resolvedor troca o anexo: pela URL assinada.
+    const img = anexoFalso("IMG", { src: "anexo:m1/u1-foto-acao.png", alt: "Foto Ação.png" });
+    el.anexos.push(img);
+    linksAssinados.mockResolvedValue({ ok: true, dados: new Map([["m1/u1-foto-acao.png", assinada("m1/u1-foto-acao.png")]]) });
+    Object.assign(el, { innerHTML: `<p>a</p><img src="${assinada("m1/u1-foto-acao.png")}" alt="Foto Ação.png">` });
+    terminar({ ok: true, linhas: 1, caminho: "m1/u1-foto-acao.png" });
+    await vazar();
+    expect(documento.comandos).toEqual([["insertHTML", false, '[limpo]<img src="anexo:m1/u1-foto-acao.png" alt="Foto Ação.png">']]);
+    expect(adicionar.mock.calls).toEqual([[intervalo]]);
+    expect(linksAssinados.mock.calls).toEqual([[["m1/u1-foto-acao.png"]]]);
+    expect(img.atributos.src).toBe(assinada("m1/u1-foto-acao.png"));
+    expect(botaoDaBarra(render().vistos, "Imagem")?.loading).toBe(false);
+    // O input do envio agendou a gravação: a URL assinada volta a anexo: antes do sanitizador.
+    await vi.advanceTimersByTimeAsync(1000);
+    await vazar();
+    expect(salvos()).toEqual(['[limpo]<p>a</p><img src="anexo:m1/u1-foto-acao.png" alt="Foto Ação.png">']);
+  });
+
+  it("AD-010: Anexo sobe o documento e insere o link com a classe anexo; NOTE-05: o descarregar também grava anexo:", async () => {
+    const { el } = await montar();
+    comSelecao();
+    enviarAnexo.mockResolvedValue({ ok: true, linhas: 1, caminho: "m1/u2-plano.pdf" });
+    const plano = arquivo("Plano <v2>.pdf", "application/pdf");
+    chamar(entrada(render().vistos, "Escolher anexo")?.onChange, { target: { files: [plano], value: "x" } });
+    await vazar();
+    expect(enviarAnexo.mock.calls).toEqual([["m1", plano]]);
+    expect(documento.comandos).toEqual([["insertHTML", false, '[limpo]<a href="anexo:m1/u2-plano.pdf" class="anexo">Plano &lt;v2&gt;.pdf</a>']]);
+    digitarNota(el, `<a href="${assinada("m1/u2-plano.pdf")}" class="anexo" target="_blank" rel="noopener noreferrer">Plano</a>`);
+    await descarregarPendencias();
+    expect(salvos()).toEqual(['[limpo]<a href="anexo:m1/u2-plano.pdf" class="anexo" target="_blank" rel="noopener noreferrer">Plano</a>']);
+  });
+
+  it("EDGE: arquivo acima de 10 MB ou de tipo recusado (SVG) vai para o toast e não sai; o erro do Storage vai para o toast e nada entra na nota", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await montar();
+    const escolher = (rotulo: string, escolhido: unknown) => chamar(entrada(render().vistos, rotulo)?.onChange, { target: { files: [escolhido], value: "x" } });
+    escolher("Escolher imagem", arquivo("logo.svg", "image/svg+xml"));
+    escolher("Escolher anexo", { name: "grande.pdf", size: 10 * 1024 * 1024 + 1, type: "application/pdf" });
+    escolher("Escolher anexo", arquivo("foto.png", "image/png"));
+    await vazar();
+    expect(toastErro.mock.calls).toEqual([
+      ['"logo.svg" não foi enviado: a imagem tem de ser PNG, JPEG, WEBP ou GIF.'],
+      ['"grande.pdf" não foi enviado: tem 10,0 MB, e o limite é 10 MB.'],
+      ['"foto.png" não foi enviado: o anexo tem de ser PDF, Word, Excel, PowerPoint, TXT ou CSV.'],
+    ]);
+    expect(enviarAnexo).not.toHaveBeenCalled();
+    toastErro.mockClear();
+    enviarAnexo.mockResolvedValue({ ok: false, erro: "The resource already exists" });
+    escolher("Escolher anexo", arquivo("a.pdf", "application/pdf"));
+    await vazar();
+    expect(toastErro.mock.calls).toEqual([['"a.pdf" não foi enviado: The resource already exists']]);
+    expect(documento.comandos).toEqual([]);
+    expect(linksAssinados).not.toHaveBeenCalled();
+  });
+
+  it("WRITE-08: tirada a escreverNotas, o arquivo escolhido não chega à porta", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const caps = new Set<Capacidade>(["escreverNotas"]);
+    await montar({ caps });
+    const seletor = entrada(render({ caps }).vistos, "Escolher anexo");
+    caps.delete("escreverNotas");
+    chamar(seletor?.onChange, { target: { files: [arquivo("a.pdf", "application/pdf")], value: "x" } });
+    await vazar();
+    expect([enviarAnexo.mock.calls, documento.comandos]).toEqual([[], []]);
+  });
+
+  it("AD-010 e NOTE-02: imagem colada ou arquivo solto sobem como o botão; HTML colado volta a anexo: e passa pelo sanitizador; texto do Word com PNG junto entra como HTML", async () => {
+    const { el } = await montar();
+    comSelecao();
+    enviarAnexo.mockResolvedValue({ ok: true, linhas: 1, caminho: "m1/u3-print.png" });
+    const colar = (html: string, files: File[]) => {
+      const prevenir = vi.fn();
+      el.dispatchEvent({ type: "paste", preventDefault: prevenir, clipboardData: { getData: (tipo: string) => (tipo === "text/html" ? html : ""), files } });
+      return prevenir;
+    };
+    const print = arquivo("image.png", "image/png");
+    // A imagem copiada do navegador vem com um HTML só de <img>: sobe o arquivo.
+    expect(colar('<meta charset="utf-8"><img src="https://site.example/a.png">', [print])).toHaveBeenCalledTimes(1);
+    await vazar();
+    expect(enviarAnexo.mock.calls).toEqual([["m1", print]]);
+    expect(documento.comandos).toEqual([["insertHTML", false, '[limpo]<img src="anexo:m1/u3-print.png" alt="image.png">']]);
+
+    documento.comandos.length = 0;
+    colar(`<p>Planilha</p><img src="${assinada("m1/u1-a.png")}" alt="a">`, [arquivo("excel.png", "image/png")]);
+    await vazar();
+    expect(enviarAnexo).toHaveBeenCalledTimes(1);
+    expect(documento.comandos).toEqual([["insertHTML", false, '[limpo]<p>Planilha</p><img src="anexo:m1/u1-a.png" alt="a">']]);
+
+    const pdf = arquivo("Contrato.pdf", "application/pdf");
+    enviarAnexo.mockResolvedValue({ ok: true, linhas: 1, caminho: "m1/u4-contrato.pdf" });
+    const sobre = vi.fn();
+    el.dispatchEvent({ type: "dragover", preventDefault: sobre, dataTransfer: { types: ["Files"], files: [pdf] } });
+    expect(sobre).toHaveBeenCalledTimes(1);
+    const soltar = vi.fn();
+    documento.comandos.length = 0;
+    el.dispatchEvent({ type: "drop", preventDefault: soltar, dataTransfer: { types: ["Files"], files: [pdf] } });
+    await vazar();
+    expect(soltar).toHaveBeenCalledTimes(1);
+    expect(enviarAnexo.mock.calls.at(-1)).toEqual(["m1", pdf]);
+    expect(documento.comandos).toEqual([["insertHTML", false, '[limpo]<a href="anexo:m1/u4-contrato.pdf" class="anexo">Contrato.pdf</a>']]);
+    // Soltar texto, sem arquivo, segue o navegador.
+    const texto = vi.fn();
+    el.dispatchEvent({ type: "drop", preventDefault: texto, dataTransfer: { types: ["text/plain"], files: [] } });
+    expect(texto).not.toHaveBeenCalled();
+  });
+
+  it("NOTE-06 e AD-010: a diretoria lê a nota com os anexos resolvidos, documento em outra aba; sem link, o toast avisa e a nota abre igual", async () => {
+    const img = anexoFalso("IMG", { src: "anexo:m1/u1-a.png", alt: "a" });
+    const doc = anexoFalso("A", { href: "anexo:m1/u2-b.pdf", class: "anexo" });
+    linksAssinados.mockResolvedValue({ ok: true, dados: new Map([["m1/u1-a.png", assinada("m1/u1-a.png")], ["m1/u2-b.pdf", assinada("m1/u2-b.pdf")]]) });
+    const { el } = await montar({ papel: "diretoria", anexos: [img, doc] });
+    expect(el.innerHTML).toBe("[limpo]<h1>Plano</h1><p>texto</p>");
+    expect(linksAssinados.mock.calls).toEqual([[["m1/u1-a.png", "m1/u2-b.pdf"]]]);
+    expect([img.atributos, doc.atributos]).toEqual([
+      { src: assinada("m1/u1-a.png"), alt: "a" },
+      { href: assinada("m1/u2-b.pdf"), class: "anexo", target: "_blank", rel: "noopener noreferrer" },
+    ]);
+    react.valores.length = 0;
+    react.refs.length = 0;
+    linksAssinados.mockResolvedValue({ ok: false, erro: "permission denied" });
+    const semLink = anexoFalso("IMG", { src: "anexo:m1/u1-a.png" });
+    await montar({ papel: "diretoria", anexos: [semLink] });
+    expect(toastErro.mock.calls).toEqual([["Os anexos da nota não abriram: permission denied"]]);
+    expect(semLink.atributos.src).toBe("anexo:m1/u1-a.png");
+    expect(render({ papel: "diretoria" }).html).toContain('role="textbox"');
+  });
+
+  it("o estilo do anexo mora em marca.css: imagem no máximo da coluna com raio 8, documento com o FileText antes do nome", () => {
+    const css = readFileSync(`${RAIZ}src/app/marca.css`, "utf8");
+    expect(css).toMatch(/\.nota-anexos img \{[^}]*max-width: 100%;[^}]*border-radius: 8px;/);
+    expect(css).toMatch(/\.nota-anexos a\.anexo::before \{[^}]*mask: url\("data:image\/svg\+xml[^"]*M15 2H6a2 2 0 0 0-2 2v16/);
+    expect(readFileSync(`${RAIZ}src/app/globals.css`, "utf8")).not.toContain("nota-anexos");
+    expect(readFileSync(`${RAIZ}src/components/modules/ficha/editor-notas.tsx`, "utf8")).toContain("nota-anexos");
   });
 });

@@ -1,7 +1,8 @@
 "use client";
 
-import { Bold, Code, Heading1, Heading2, Heading3, Italic, Link, List, ListChecks, ListOrdered, type LucideIcon, Minus, Pilcrow, Quote, Strikethrough, Underline } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Bold, Code, Heading1, Heading2, Heading3, ImagePlus, Italic, Link, List, ListChecks, ListOrdered, type LucideIcon, Minus, Paperclip, Pilcrow, Quote, Strikethrough, Underline } from "lucide-react";
+import { type RefObject, useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 
 import { useSessao } from "@/components/shell/contexto";
 import { useEscrita } from "@/components/shell/use-escrita";
@@ -12,10 +13,24 @@ import FormField from "@/components/ui/form-field";
 import Input from "@/components/ui/input";
 import { PROSE_CLASS } from "@/components/ui/prose";
 import Skeleton from "@/components/ui/skeleton";
-import { type ResultadoEscrita, salvarNota } from "@/lib/data/escritas";
-import { lerNota } from "@/lib/data/leituras";
+import { SUPABASE_URL } from "@/lib/data/config";
+import { enviarAnexo, type ResultadoEscrita, salvarNota } from "@/lib/data/escritas";
+import { lerNota, linksAssinados } from "@/lib/data/leituras";
 import { fmtInstante } from "@/lib/datas";
-import { atalhoPara, type ComandoNota, criarAutosave, linkValido, sanitizarNota } from "@/lib/notas";
+import {
+  atalhoPara,
+  caminhosDeAnexo,
+  canonizarAnexos,
+  type ComandoNota,
+  conferirArquivo,
+  criarAutosave,
+  htmlDoAnexo,
+  linkValido,
+  resolverAnexos,
+  sanitizarNota,
+  TIPOS_DOCUMENTO,
+  TIPOS_IMAGEM,
+} from "@/lib/notas";
 import { registrarPendencia } from "@/lib/sessao";
 
 // O bloco de notas do mentorado (AD-004; abaNotas, index.html:3357–3437). O editor é um
@@ -51,6 +66,35 @@ const CHECKLIST = "nota-checklist [&_ul.checklist]:list-none [&_ul.checklist]:pl
 async function gravarNota(mentoradoId: string, conteudo: string): Promise<ResultadoEscrita> {
   const gravada = await salvarNota(mentoradoId, conteudo, new Date().toISOString());
   return !gravada.ok && "erro" in gravada ? { ok: false, erro: `Notas não salvas: ${gravada.erro}` } : gravada;
+}
+
+// O anexo enviado (AD-010), com o nome do arquivo no erro do Storage.
+async function enviar(mentoradoId: string, arquivo: File): Promise<ResultadoEscrita> {
+  const enviado = await enviarAnexo(mentoradoId, arquivo);
+  return !enviado.ok && "erro" in enviado ? { ok: false, erro: `"${arquivo.name}" não foi enviado: ${enviado.erro}` } : enviado;
+}
+
+// AD-010: os `anexo:` da nota viram links assinados no DOM, para ler e para editar. Sem link, a
+// nota abre igual e o toast diz por quê.
+async function resolver(el: HTMLElement): Promise<void> {
+  const caminhos = caminhosDeAnexo(el);
+  if (caminhos.length === 0) return;
+  const links = await linksAssinados(caminhos);
+  if (!links.ok) {
+    toast.error(`Os anexos da nota não abriram: ${links.erro}`);
+    return;
+  }
+  resolverAnexos(el, links.dados);
+}
+
+const ACEITA_IMAGEM = TIPOS_IMAGEM.join(",");
+const ACEITA_DOCUMENTO = [...TIPOS_DOCUMENTO, ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv"].join(",");
+
+// A seleção do editor, guardada para o que cai nela depois: o Dialog do link e o envio do anexo
+// tiram o foco.
+function selecaoAtual(): Range | null {
+  const atual = document.getSelection();
+  return atual?.rangeCount ? atual.getRangeAt(0).cloneRange() : null;
 }
 
 // O nó que é filho direto do editor: o bloco onde o cursor está.
@@ -117,6 +161,23 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
   // O efeito vive enquanto o editor está montado: grava pelo executor do render mais recente.
   const executarRef = useRef(executar);
   executarRef.current = executar;
+  // AD-010: o anexo sobe pela mesma regra de escrita (capacidade, trava, sessão, toast) e, enviado,
+  // entra na seleção guardada.
+  const imagemInput = useRef<HTMLInputElement>(null);
+  const anexoInput = useRef<HTMLInputElement>(null);
+  const pendente = useRef<{ nome: string; imagem: boolean } | null>(null);
+  const anexo = useEscrita("escreverNotas", (arquivo: File) => enviar(mentoradoId, arquivo), undefined, (gravado) => inserirAnexo(gravado.caminho));
+  const enviarArquivo = async (arquivo: File, imagem: boolean) => {
+    const recusa = conferirArquivo(arquivo, imagem);
+    if (recusa) {
+      toast.error(recusa);
+      return;
+    }
+    pendente.current = { nome: arquivo.name, imagem };
+    await anexo.executar(arquivo);
+  };
+  const enviarRef = useRef(enviarArquivo);
+  enviarRef.current = enviarArquivo;
 
   useEffect(() => {
     // NOTE-03: sem sanitizador o editor não abre: nada de HTML na tela e nada gravado.
@@ -128,7 +189,8 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
     const ligar = (el: HTMLDivElement) => {
       let fila: Promise<void> = Promise.resolve();
       const gravar = async (html: string) => {
-        const limpo = sanitizarNota(html);
+        // AD-010: a URL assinada não vai para o banco; volta a `anexo:` antes do sanitizador.
+        const limpo = sanitizarNota(canonizarAnexos(html, SUPABASE_URL));
         if (limpo === null) return;
         setAviso((await executarRef.current(limpo)) ? `Salvo ${fmtInstante(new Date().toISOString())}` : "Erro ao salvar");
       };
@@ -156,12 +218,36 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
         no.textContent = (no.textContent ?? "").slice(selecionado.anchorOffset);
         aplicar(el, comando);
       };
-      // Colar também passa pelo sanitizador (NOTE-02).
+      // Colar também passa pelo sanitizador (NOTE-02); o link assinado colado volta a `anexo:` e é
+      // resolvido de novo. A imagem colada sobe como a do botão (AD-010). Texto do Word e do Excel
+      // vem com um PNG da seleção junto: com texto no HTML, o que entra é o HTML.
       const aoColar = (e: ClipboardEvent) => {
         e.preventDefault();
         const html = e.clipboardData?.getData("text/html") ?? "";
-        if (html) document.execCommand("insertHTML", false, sanitizarNota(html) ?? "");
-        else document.execCommand("insertText", false, e.clipboardData?.getData("text/plain") ?? "");
+        const imagem = Array.from(e.clipboardData?.files ?? []).find((arquivo) => arquivo.type.startsWith("image/"));
+        if (imagem && !html.replace(/<[^>]*>/g, "").trim()) {
+          selecao.current = selecaoAtual();
+          void enviarRef.current(imagem, true).catch((erro: unknown) => console.error("[central-elite3d] enviar anexo", erro));
+          return;
+        }
+        if (!html) {
+          document.execCommand("insertText", false, e.clipboardData?.getData("text/plain") ?? "");
+          return;
+        }
+        document.execCommand("insertHTML", false, sanitizarNota(canonizarAnexos(html, SUPABASE_URL)) ?? "");
+        void resolver(el).catch((erro: unknown) => console.error("[central-elite3d] anexos da nota", erro));
+      };
+      // O arquivo solto no editor sobe no lugar do cursor: imagem como imagem, o resto como anexo.
+      // ponytail: cai na seleção atual, não no ponto do mouse; caretRangeFromPoint se pedirem.
+      const aoArrastar = (e: DragEvent) => {
+        if (e.dataTransfer?.types.includes("Files")) e.preventDefault();
+      };
+      const aoSoltar = (e: DragEvent) => {
+        const arquivo = e.dataTransfer?.files[0];
+        if (!arquivo) return;
+        e.preventDefault();
+        selecao.current = selecaoAtual();
+        void enviarRef.current(arquivo, arquivo.type.startsWith("image/")).catch((erro: unknown) => console.error("[central-elite3d] enviar anexo", erro));
       };
       // A caixa do checklist marca o item feito (index.html:3389–3392).
       const aoClicar = (e: MouseEvent) => {
@@ -177,6 +263,8 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
       el.addEventListener("input", aoDigitar);
       el.addEventListener("keydown", aoTeclar);
       el.addEventListener("paste", aoColar);
+      el.addEventListener("dragover", aoArrastar);
+      el.addEventListener("drop", aoSoltar);
       el.addEventListener("click", aoClicar);
       document.addEventListener("visibilitychange", aoEsconder);
       // SEC-06: o sair() grava a nota pendente antes do signOut.
@@ -185,6 +273,8 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
         el.removeEventListener("input", aoDigitar);
         el.removeEventListener("keydown", aoTeclar);
         el.removeEventListener("paste", aoColar);
+        el.removeEventListener("dragover", aoArrastar);
+        el.removeEventListener("drop", aoSoltar);
         el.removeEventListener("click", aoClicar);
         document.removeEventListener("visibilitychange", aoEsconder);
         soltar();
@@ -206,8 +296,9 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
       el.innerHTML = sanitizarNota(lida.dados?.conteudo ?? "") ?? "";
       setEstado({ fase: "pronto" });
       if (lida.dados) setAviso(`Salvo ${fmtInstante(lida.dados.atualizado_em)}`);
-      // NOTE-06: quem não escreve só lê.
+      // NOTE-06: quem não escreve só lê; os anexos abrem para os dois.
       if (edita) desligar = ligar(el);
+      await resolver(el);
     };
     void abrir().catch((erro: unknown) => console.error("[central-elite3d] abrir nota", erro));
     return () => {
@@ -224,22 +315,48 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
       return;
     }
     // O Dialog tira o foco do editor: a seleção é guardada para o link cair no texto marcado.
-    const atual = document.getSelection();
-    selecao.current = atual?.rangeCount ? atual.getRangeAt(0).cloneRange() : null;
+    selecao.current = selecaoAtual();
     setLinkAberto(true);
   };
-  const inserirLink = (url: string) => {
-    const el = editor.current;
-    setLinkAberto(false);
-    if (!el) return;
+  const voltarSelecao = (el: HTMLElement) => {
     el.focus();
     const atual = document.getSelection();
     if (atual && selecao.current) {
       atual.removeAllRanges();
       atual.addRange(selecao.current);
     }
+  };
+  const inserirLink = (url: string) => {
+    const el = editor.current;
+    setLinkAberto(false);
+    if (!el) return;
+    voltarSelecao(el);
     document.execCommand("createLink", false, url);
     el.dispatchEvent(new Event("input"));
+  };
+  // AD-010: o anexo enviado entra na seleção guardada como `anexo:` sanitizado, agenda a gravação e
+  // ganha o link assinado para aparecer na hora.
+  function inserirAnexo(caminho: string | undefined) {
+    const el = editor.current;
+    const enviado = pendente.current;
+    pendente.current = null;
+    if (!el || !caminho || !enviado) return;
+    voltarSelecao(el);
+    document.execCommand("insertHTML", false, sanitizarNota(htmlDoAnexo(caminho, enviado.nome, enviado.imagem)) ?? "");
+    el.dispatchEvent(new Event("input"));
+    void resolver(el).catch((erro: unknown) => console.error("[central-elite3d] anexos da nota", erro));
+  }
+  // O botão guarda a seleção e abre o seletor de arquivo; o valor volta a vazio para o mesmo
+  // arquivo poder subir de novo.
+  const escolher = (entrada: RefObject<HTMLInputElement | null>) => {
+    if (!editor.current) return;
+    selecao.current = selecaoAtual();
+    entrada.current?.click();
+  };
+  const aoEscolher = (e: { target: HTMLInputElement }, imagem: boolean) => {
+    const arquivo = e.target.files?.[0];
+    e.target.value = "";
+    if (arquivo) void enviarArquivo(arquivo, imagem).catch((erro: unknown) => console.error("[central-elite3d] enviar anexo", erro));
   };
 
   if (estado.fase === "semSanitizador") {
@@ -266,6 +383,14 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
               <Icone aria-hidden size={16} />
             </Button>
           ))}
+          <Button variant="ghost" size="sm" title="Imagem" aria-label="Imagem" loading={anexo.ocupado} onMouseDown={(e) => e.preventDefault()} onClick={() => escolher(imagemInput)}>
+            <ImagePlus aria-hidden size={16} />
+          </Button>
+          <Button variant="ghost" size="sm" title="Anexo" aria-label="Anexo" loading={anexo.ocupado} onMouseDown={(e) => e.preventDefault()} onClick={() => escolher(anexoInput)}>
+            <Paperclip aria-hidden size={16} />
+          </Button>
+          <Input ref={imagemInput} type="file" accept={ACEITA_IMAGEM} hidden aria-label="Escolher imagem" onChange={(e) => aoEscolher(e, true)} />
+          <Input ref={anexoInput} type="file" accept={ACEITA_DOCUMENTO} hidden aria-label="Escolher anexo" onChange={(e) => aoEscolher(e, false)} />
           <span className="ml-auto px-2 text-xs text-muted">{aviso}</span>
         </div>
       ) : (
@@ -281,7 +406,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
         contentEditable={editavel || undefined}
         data-escrita={editavel ? "W10" : undefined}
         data-vazio={editavel ? "Escreva aqui… use # para título, - para lista, [] para checklist." : "Sem notas."}
-        className={`${PROSE_CLASS} ${CHECKLIST} min-h-40 rounded-8 border border-line bg-background p-4 outline-none focus:border-primary/70 empty:before:text-muted empty:before:content-[attr(data-vazio)] ${estado.fase === "carregando" ? "hidden" : ""}`}
+        className={`${PROSE_CLASS} ${CHECKLIST} nota-anexos min-h-40 rounded-8 border border-line bg-background p-4 outline-none focus:border-primary/70 empty:before:text-muted empty:before:content-[attr(data-vazio)] ${estado.fase === "carregando" ? "hidden" : ""}`}
       />
       <Dialog open={linkAberto} onClose={() => setLinkAberto(false)} title="Inserir link">
         <LinkForm aoInserir={inserirLink} />
