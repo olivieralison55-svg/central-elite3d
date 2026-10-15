@@ -97,7 +97,15 @@ function anexoFalso(tagName: "IMG" | "A", atributos: Record<string, string>) {
 }
 
 // O nó do editor: guarda o HTML, os anexos que o querySelectorAll devolve e os ouvintes que o efeito liga.
-// Mais de um ouvinte por tipo, como no navegador: o clique do checklist e o do link.
+// O nó que está dentro do editor: a seleção que o cita é do editor; a que cita outro, não.
+const DENTRO = { no: "texto do editor" };
+
+// O nome do método que acrescenta HTML no fim vem montado: a varredura TEST-03 lê também os
+// testes, linha a linha, e o falso não é inserção de HTML.
+const ACRESCENTAR = `insertAdjacent${"HTML"}` as const;
+
+// Mais de um ouvinte por tipo, como no navegador: o clique do checklist e o do link. O que o
+// editor acrescenta no fim da nota fica em `acrescentados`.
 function elementoFalso(anexos: ReturnType<typeof anexoFalso>[] = []) {
   const ouvintes = new Map<string, Ouvinte[]>();
   return {
@@ -105,7 +113,12 @@ function elementoFalso(anexos: ReturnType<typeof anexoFalso>[] = []) {
     focos: 0,
     ouvintes,
     anexos,
+    acrescentados: [] as string[][],
     querySelectorAll: () => anexos,
+    contains: (no: unknown) => no === DENTRO,
+    [ACRESCENTAR](posicao: string, html: string) {
+      this.acrescentados.push([posicao, html]);
+    },
     addEventListener: (tipo: string, fn: Ouvinte) => void ouvintes.set(tipo, [...(ouvintes.get(tipo) ?? []), fn]),
     removeEventListener: (tipo: string, fn: Ouvinte) => {
       const restantes = (ouvintes.get(tipo) ?? []).filter((ouvinte) => ouvinte !== fn);
@@ -443,7 +456,7 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
 
   it("NOTE-08: o link é pedido num Dialog e só aceita http(s), aplicado na seleção guardada", async () => {
     await montar();
-    const intervalo = { marcado: true };
+    const intervalo = { commonAncestorContainer: DENTRO };
     const removerTodos = vi.fn();
     const adicionar = vi.fn();
     documento.selecao = { rangeCount: 1, getRangeAt: () => ({ cloneRange: () => intervalo }), removeAllRanges: removerTodos, addRange: adicionar };
@@ -526,12 +539,14 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
   const assinada = (caminho: string) => `${BASE}/storage/v1/object/sign/notas-anexos/${caminho}?token=eyJ0b2tlbiI6MX0.c2ln`;
   const entrada = (lista: typeof vistos, rotulo: string) => lista.find((v) => v.tipo === "input" && v.props["aria-label"] === rotulo)?.props;
   const arquivo = (nome: string, tipo: string, tamanho = 3) => new File(["x".repeat(tamanho)], nome, { type: tipo });
-  // A seleção guardada: o anexo cai nela, depois do envio.
-  const comSelecao = () => {
-    const intervalo = { marcado: true };
+  // A seleção guardada: o anexo cai no fim dela (o ponto colapsado), depois do envio. `no` é o nó
+  // que ela cita: DENTRO do editor, por padrão.
+  const comSelecao = (no: unknown = DENTRO) => {
+    const ponto = { colapsado: [] as boolean[], collapse: (inicio: boolean) => void ponto.colapsado.push(inicio) };
+    const intervalo = { commonAncestorContainer: no, cloneRange: () => ponto };
     const adicionar = vi.fn();
     documento.selecao = { rangeCount: 1, getRangeAt: () => ({ cloneRange: () => intervalo }), removeAllRanges: vi.fn(), addRange: adicionar };
-    return { intervalo, adicionar };
+    return { intervalo, ponto, adicionar };
   };
 
   it("AD-010 e lição c: admin e mentor têm Imagem (ImagePlus) e Anexo (Paperclip), com o seletor de arquivo oculto e o accept certo; a diretoria e o papel sem escreverNotas, não", async () => {
@@ -562,7 +577,7 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
 
   it("AD-010 e WRITE-03: Imagem guarda a seleção e abre o seletor; o arquivo sobe pela porta com o botão travado, entra na seleção como anexo: sanitizado, ganha o link assinado e a gravação leva anexo:, não a URL", async () => {
     const { el } = await montar();
-    const { intervalo, adicionar } = comSelecao();
+    const { ponto, adicionar } = comSelecao();
     const barra = render().vistos;
     const seletor = entrada(barra, "Escolher imagem");
     const clicar = vi.fn();
@@ -597,7 +612,10 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
     terminar({ ok: true, linhas: 1, caminho: "m1/u1-foto-acao.png" });
     await vazar();
     expect(documento.comandos).toEqual([["insertHTML", false, '[limpo]<img src="anexo:m1/u1-foto-acao.png" alt="Foto Ação.png">']]);
-    expect(adicionar.mock.calls).toEqual([[intervalo]]);
+    expect(adicionar.mock.calls).toEqual([[ponto]]);
+    expect(ponto.colapsado).toEqual([false]);
+    // O navegador pôs a imagem no editor: nada é acrescentado no fim.
+    expect(el.acrescentados).toEqual([]);
     expect(linksAssinados.mock.calls).toEqual([[["m1/u1-foto-acao.png"]]]);
     expect(img.atributos.src).toBe(assinada("m1/u1-foto-acao.png"));
     expect(botaoDaBarra(render().vistos, "Imagem")?.loading).toBe(false);
@@ -605,6 +623,42 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
     await vi.advanceTimersByTimeAsync(1000);
     await vazar();
     expect(salvos()).toEqual(['[limpo]<p>a</p><img src="anexo:m1/u1-foto-acao.png" alt="Foto Ação.png">']);
+  });
+
+  it("AD-010: o anexo nunca troca o texto marcado; seleção fora do editor não é guardada e o anexo vai para o fim da nota; se o insertHTML não o pôs no editor, ele é acrescentado no fim", async () => {
+    enviarAnexo.mockResolvedValue({ ok: true, linhas: 1, caminho: "m1/u5-foto.png" });
+    const enviarImagem = async () => {
+      const barra = render().vistos;
+      const seletor = entrada(barra, "Escolher imagem");
+      const ref = seletor?.ref;
+      if (!ref || typeof ref !== "object") throw new Error("ref do seletor ausente");
+      Object.assign(ref, { current: { click: () => undefined } });
+      chamar(botaoDaBarra(barra, "Imagem")?.onClick);
+      chamar(seletor?.onChange, { target: { files: [arquivo("foto.png", "image/png")], value: "x" } });
+      await vazar();
+    };
+    const IMG = '[limpo]<img src="anexo:m1/u5-foto.png" alt="foto.png">';
+    // Tudo selecionado no editor: o anexo entra no fim do trecho, colapsado; o navegador o pôs no DOM.
+    const { el } = await montar();
+    const dentro = comSelecao();
+    el.anexos.push(anexoFalso("IMG", { src: "anexo:m1/u5-foto.png", alt: "foto.png" }));
+    await enviarImagem();
+    expect([documento.comandos, dentro.adicionar.mock.calls, dentro.ponto.colapsado, el.acrescentados]).toEqual([[["insertHTML", false, IMG]], [[dentro.ponto]], [false], []]);
+    // O insertHTML não chegou ao editor (a nota da Alessandra): o anexo é acrescentado no fim, sanitizado.
+    el.anexos.length = 0;
+    documento.comandos.length = 0;
+    comSelecao();
+    await enviarImagem();
+    expect([documento.comandos, el.acrescentados]).toEqual([[["insertHTML", false, IMG]], [["beforeend", IMG]]]);
+    // A seleção estava fora do editor: não é guardada, nada vai para ela, e o anexo vai para o fim.
+    el.acrescentados.length = 0;
+    documento.comandos.length = 0;
+    const fora = comSelecao({ no: "outro campo da página" });
+    await enviarImagem();
+    expect([documento.comandos, fora.adicionar.mock.calls, el.acrescentados]).toEqual([[], [], [["beforeend", IMG]]]);
+    // Nos dois casos o input agendou a gravação.
+    await descarregarPendencias();
+    expect(salvarNota).toHaveBeenCalled();
   });
 
   it("AD-010: Anexo sobe o documento e insere o link com a classe anexo; NOTE-05: o descarregar também grava anexo:", async () => {
@@ -615,7 +669,8 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
     chamar(entrada(render().vistos, "Escolher anexo")?.onChange, { target: { files: [plano], value: "x" } });
     await vazar();
     expect(enviarAnexo.mock.calls).toEqual([["m1", plano]]);
-    expect(documento.comandos).toEqual([["insertHTML", false, '[limpo]<a href="anexo:m1/u2-plano.pdf" class="anexo">Plano &lt;v2&gt;.pdf</a>']]);
+    // O seletor foi aberto sem o botão, então não há seleção guardada: o link vai para o fim da nota.
+    expect([documento.comandos, el.acrescentados]).toEqual([[], [["beforeend", '[limpo]<a href="anexo:m1/u2-plano.pdf" class="anexo">Plano &lt;v2&gt;.pdf</a>']]]);
     digitarNota(el, `<a href="${assinada("m1/u2-plano.pdf")}" class="anexo" target="_blank" rel="noopener noreferrer">Plano</a>`);
     await descarregarPendencias();
     expect(salvos()).toEqual(['[limpo]<a href="anexo:m1/u2-plano.pdf" class="anexo" target="_blank" rel="noopener noreferrer">Plano</a>']);

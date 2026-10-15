@@ -123,6 +123,27 @@ export function resolverAnexos(raiz: Raiz, links: ReadonlyMap<string, string>): 
   }
 }
 
+// As citações de um anexo no DOM, resolvidas ou não: a URL assinada volta a `anexo:` para comparar.
+export function citacoesDoAnexo(raiz: Raiz, caminho: string, urlBase: string): Element[] {
+  const ref = `${ANEXO}${caminho}`;
+  return Array.from(raiz.querySelectorAll("img[src], a[href]")).filter((no) => canonizarAnexos(no.getAttribute(atributoDo(no)) ?? "", urlBase) === ref);
+}
+
+// A seleção que o editor guarda só vale dentro dele: a de fora (outro campo, a página) é null.
+export function dentroDoEditor<T extends Pick<Range, "commonAncestorContainer">>(intervalo: T | null, editor: Pick<Node, "contains">): T | null {
+  return intervalo && editor.contains(intervalo.commonAncestorContainer) ? intervalo : null;
+}
+
+// Onde o anexo entra (AD-010): no fim do intervalo guardado, colapsado, para nunca trocar o texto
+// marcado. Fora do editor, ou sem intervalo, é null: o anexo vai para o fim da nota.
+export function pontoDoAnexo(intervalo: Range | null, editor: Pick<Node, "contains">): Range | null {
+  const dentro = dentroDoEditor(intervalo, editor);
+  if (!dentro) return null;
+  const ponto = dentro.cloneRange();
+  ponto.collapse(false);
+  return ponto;
+}
+
 // Os tipos que o bucket aceita (20261015_notas_anexos.sql). SVG fica fora (AD-010).
 export const TIPOS_IMAGEM: readonly string[] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 export const TIPOS_DOCUMENTO: readonly string[] = [

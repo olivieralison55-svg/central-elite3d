@@ -22,11 +22,14 @@ import {
   atalhoPara,
   caminhosDeAnexo,
   canonizarAnexos,
+  citacoesDoAnexo,
   type ComandoNota,
   conferirArquivo,
   criarAutosave,
+  dentroDoEditor,
   htmlDoAnexo,
   linkValido,
+  pontoDoAnexo,
   resolverAnexos,
   sanitizarNota,
   TIPOS_DOCUMENTO,
@@ -122,10 +125,10 @@ const ACEITA_IMAGEM = TIPOS_IMAGEM.join(",");
 const ACEITA_DOCUMENTO = [...TIPOS_DOCUMENTO, ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv"].join(",");
 
 // A seleção do editor, guardada para o que cai nela depois: o Dialog do link e o envio do anexo
-// tiram o foco.
-function selecaoAtual(): Range | null {
+// tiram o foco. Seleção fora do editor não é guardada.
+function selecaoAtual(editor: HTMLElement): Range | null {
   const atual = document.getSelection();
-  return atual?.rangeCount ? atual.getRangeAt(0).cloneRange() : null;
+  return dentroDoEditor(atual?.rangeCount ? atual.getRangeAt(0).cloneRange() : null, editor);
 }
 
 // O nó que é filho direto do editor: o bloco onde o cursor está.
@@ -257,7 +260,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
         const html = e.clipboardData?.getData("text/html") ?? "";
         const imagem = Array.from(e.clipboardData?.files ?? []).find((arquivo) => arquivo.type.startsWith("image/"));
         if (imagem && !html.replace(/<[^>]*>/g, "").trim()) {
-          selecao.current = selecaoAtual();
+          selecao.current = selecaoAtual(el);
           void enviarRef.current(imagem, true).catch((erro: unknown) => console.error("[central-elite3d] enviar anexo", erro));
           return;
         }
@@ -277,7 +280,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
         const arquivo = e.dataTransfer?.files[0];
         if (!arquivo) return;
         e.preventDefault();
-        selecao.current = selecaoAtual();
+        selecao.current = selecaoAtual(el);
         void enviarRef.current(arquivo, arquivo.type.startsWith("image/")).catch((erro: unknown) => console.error("[central-elite3d] enviar anexo", erro));
       };
       // A caixa do checklist marca o item feito (index.html:3389–3392).
@@ -350,7 +353,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
       return;
     }
     // O Dialog tira o foco do editor: a seleção é guardada para o link cair no texto marcado.
-    selecao.current = selecaoAtual();
+    selecao.current = selecaoAtual(el);
     setLinkAberto(true);
   };
   const voltarSelecao = (el: HTMLElement) => {
@@ -369,15 +372,23 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
     document.execCommand("createLink", false, url);
     el.dispatchEvent(new Event("input"));
   };
-  // AD-010: o anexo enviado entra na seleção guardada como `anexo:` sanitizado, agenda a gravação e
-  // ganha o link assinado para aparecer na hora.
+  // AD-010: o anexo enviado entra como `anexo:` sanitizado no fim da seleção guardada, sem nunca
+  // trocar o texto marcado; sem seleção no editor, no fim da nota. Se o navegador não o pôs no editor,
+  // ele é acrescentado no fim. Depois agenda a gravação e ganha o link assinado para aparecer na hora.
   function inserirAnexo(caminho: string | undefined) {
     const el = editor.current;
     const enviado = pendente.current;
     pendente.current = null;
     if (!el || !caminho || !enviado) return;
-    voltarSelecao(el);
-    document.execCommand("insertHTML", false, sanitizarNota(htmlDoAnexo(caminho, enviado.nome, enviado.imagem)) ?? "");
+    const ponto = pontoDoAnexo(selecao.current, el);
+    el.focus();
+    if (ponto) {
+      const atual = document.getSelection();
+      atual?.removeAllRanges();
+      atual?.addRange(ponto);
+      document.execCommand("insertHTML", false, sanitizarNota(htmlDoAnexo(caminho, enviado.nome, enviado.imagem)) ?? "");
+    }
+    if (citacoesDoAnexo(el, caminho, SUPABASE_URL).length === 0) el.insertAdjacentHTML("beforeend", sanitizarNota(htmlDoAnexo(caminho, enviado.nome, enviado.imagem)) ?? "");
     el.dispatchEvent(new Event("input"));
     void resolver(el).catch((erro: unknown) => console.error("[central-elite3d] anexos da nota", erro));
   }
@@ -385,7 +396,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
   // arquivo poder subir de novo.
   const escolher = (entrada: RefObject<HTMLInputElement | null>) => {
     if (!editor.current) return;
-    selecao.current = selecaoAtual();
+    selecao.current = selecaoAtual(editor.current);
     entrada.current?.click();
   };
   const aoEscolher = (e: { target: HTMLInputElement }, imagem: boolean) => {
