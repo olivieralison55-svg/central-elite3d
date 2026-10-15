@@ -2156,11 +2156,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Em cada render: `&lt;img` presente e `<img src=x` ausente
-- [ ] Links `javascript:` e `data:` dos fixtures nunca aparecem como `href`
-- [ ] Dashboard, Acompanhamento, Mentorados, Sessões, Rotas, Mentores, STLSeller, NPS, Análise IA, Financeiro, Ficha (5 abas) e os corpos de modal
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 554 → 567
+- [x] Em cada render: `&lt;img` presente e `<img src=x` ausente
+- [x] Links `javascript:` e `data:` dos fixtures nunca aparecem como `href`
+- [x] Dashboard, Acompanhamento, Mentorados, Sessões, Rotas, Mentores, STLSeller, NPS, Análise IA, Financeiro, Ficha (5 abas) e os corpos de modal
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 554 → 567
 
 **Tests**: unit
 **Gate**: quick
