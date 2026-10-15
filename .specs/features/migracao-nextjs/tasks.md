@@ -2236,10 +2236,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `scripts/parity/legado.test.mjs` carrega as fixtures de `tests/ambiente.mjs` pelo cliente falso: admin lê `mentorados`; mentor lê `mentorados_basic`; as rpcs respondem; navegar pelo hash troca o HTML de `#app`
-- [ ] Lê o `index.html` de um caminho dado (o do merge-base, extraído por `git show`)
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 572 → 576
+- [x] `scripts/parity/legado.test.mjs` carrega as fixtures de `tests/ambiente.mjs` pelo cliente falso: admin lê `mentorados`; mentor lê `mentorados_basic`; as rpcs respondem; navegar pelo hash troca o HTML de `#app`
+- [x] Lê o `index.html` de um caminho dado (o do merge-base, extraído por `git show`)
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 572 → 576
 
 **Tests**: unit
 **Gate**: quick

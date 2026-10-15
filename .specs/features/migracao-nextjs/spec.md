@@ -658,7 +658,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GATE-03 | P1: Gates — evidência sem dado pessoal (AC3) | Execute | Implementing |
 | GATE-04 | P1: Gates — `vercel.json` e `main` estática (AC4) | - | Pending |
 | GATE-05 | P1: Gates — snapshot com sessão de admin (AC5) | Execute | Implementing |
-| GATE-06 | P1: Gates — script de paridade (AC6) | - | Pending |
+| GATE-06 | P1: Gates — script de paridade (AC6) | Execute | Implementing |
 | GATE-07 | P1: Gates — relatório de divergência (AC7) | - | Pending |
 | GATE-08 | P1: Gates — rede da diretoria (AC8) | Execute | Implementing |
 | GATE-09 | P1: Gates — registro de teste (AC9) | - | Pending |
