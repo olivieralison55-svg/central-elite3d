@@ -647,7 +647,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | UI-06 | P1: Design system — lacunas com AD (AC6) | Execute | Implementing |
 | UI-07 | P1: Design system — EmptyState e Skeleton (AC7) | Execute | Implementing |
 | UI-08 | P1: Design system — casca com primitivos do DS (AC8) | Execute | Implementing |
-| TEST-01 | P1: Testes — 20 grupos portados (AC1) | - | Pending |
+| TEST-01 | P1: Testes — 20 grupos portados (AC1) | Execute | Implementing |
 | TEST-02 | P1: Testes — XSS em toda tela (AC2) | Execute | Implementing |
 | TEST-03 | P1: Testes — HTML atribuído só nas notas (AC3) | Execute | Implementing |
 | TEST-04 | P1: Testes — listas iguais às da function (AC4) | Execute | Implementing |

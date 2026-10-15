@@ -2210,10 +2210,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Páginas: `/dash`, `/acompanhamento`, `/mentorados`, `/sessoes`, `/rotas`, `/mentores`, `/analise`, `/nps`, `/ia`, `/financeiro`, `/mentorado/[id]/[[...aba]]` e `/`
-- [ ] Os 20 grupos: Formatadores e campo de data; 1:1 × grupo; Telas do admin; Modais e telas; Escrita do grupo; Papel mentor; Papel diretoria; Controle negativo com admin; Matriz por mentor; Alertas que focam linhas; Busca e botão de criar; Exclusão; Cobrança órfã; Ficha criada pela Lia; Parcelas da Lia; Etapa deduzida; Busca por data; E-mail do mentorado; Rotas; Notas — cada um apontando para um arquivo de teste que existe
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 570 → 572
+- [x] Páginas: `/dash`, `/acompanhamento`, `/mentorados`, `/sessoes`, `/rotas`, `/mentores`, `/analise`, `/nps`, `/ia`, `/financeiro`, `/mentorado/[id]/[[...aba]]` e `/`
+- [x] Os 20 grupos: Formatadores e campo de data; 1:1 × grupo; Telas do admin; Modais e telas; Escrita do grupo; Papel mentor; Papel diretoria; Controle negativo com admin; Matriz por mentor; Alertas que focam linhas; Busca e botão de criar; Exclusão; Cobrança órfã; Ficha criada pela Lia; Parcelas da Lia; Etapa deduzida; Busca por data; E-mail do mentorado; Rotas; Notas — cada um apontando para um arquivo de teste que existe
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 570 → 572
 
 **Tests**: unit
 **Gate**: quick
