@@ -1,6 +1,6 @@
 /* Carregador do app antigo para a paridade (GATE-06, design componente 10).
  *
- * Executa o <script> inline de um `index.html` (o do merge-base, extraído por
+ * Executa o <script> inline de um `index.html` (o do app antigo, extraído por
  * `git show`) pela técnica de tests/ambiente.mjs: recorta o script a partir do
  * marcador de CONFIG, tira o `boot()` e roda o resto com `new Function`, com
  * stubs de DOM e de `location`. O cliente Supabase falso responde do snapshot.
@@ -16,14 +16,18 @@ import { readFileSync, writeFileSync } from "node:fs";
 const MARCADOR = "<script>\n/* ================= CONFIG";
 
 /**
- * Grava o `index.html` do merge-base entre `main` e `HEAD` em `destino` (0600) e
- * devolve o sha. É o app antigo que a paridade compara, e ele continua no
- * merge-base depois que a branch apaga o arquivo.
- * @param {{ cwd: string, destino: string, base?: string }} opcoes
+ * O último commit do app de arquivo único, antes do front Next.js (tag `pre-nextjs`). A paridade
+ * compara contra ele, fixo: o merge-base entre `main` e `HEAD` deixou de servir depois que a
+ * migração entrou na `main`, porque ali o `index.html` já não existe.
+ */
+export const LEGADO = "2aea45579452463cb494f8c3312d0bedfcaa0006";
+
+/**
+ * Grava o `index.html` do app antigo (`LEGADO`) em `destino` (0600) e devolve o sha.
+ * @param {{ cwd: string, destino: string, sha?: string }} opcoes
  * @returns {{ sha: string, arquivo: string }}
  */
-export function indexDoMergeBase({ cwd, destino, base = "main" }) {
-  const sha = execFileSync("git", ["merge-base", base, "HEAD"], { cwd, encoding: "utf8" }).trim();
+export function indexDoLegado({ cwd, destino, sha = LEGADO }) {
   const html = execFileSync("git", ["show", `${sha}:index.html`], { cwd, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
   writeFileSync(destino, html, { mode: 0o600 });
   return { sha, arquivo: destino };

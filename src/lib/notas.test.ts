@@ -2,16 +2,20 @@ import type { Config, UponSanitizeAttributeHookEvent } from "dompurify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  anexosDaNota,
   atalhoPara,
   caminhosDeAnexo,
   canonizarAnexos,
+  citacoesDoAnexo,
   conferirArquivo,
   criarAutosave,
+  dentroDoEditor,
   filtrarClasses,
   htmlDoAnexo,
   LIMITE_ANEXO,
   linkValido,
   NOTA_TAGS,
+  pontoDoAnexo,
   type Purificador,
   resolverAnexos,
   sanitizarNota,
@@ -288,6 +292,54 @@ describe("regras das notas (NOTE-02, NOTE-03, NOTE-04, NOTE-05, NOTE-07, NOTE-08
       { src: "https://x/a?token=1" },
       { href: "https://x/b?token=2", class: "anexo", target: "_blank", rel: "noopener noreferrer" },
       { href: "anexo:m1/u3-c.pdf" },
+    ]);
+  });
+
+  it("AD-010: dentroDoEditor só guarda o intervalo do editor; pontoDoAnexo é o fim dele, colapsado, e null fora do editor ou sem intervalo", () => {
+    const texto = { no: "texto do editor" };
+    const editor = { contains: (no: unknown) => no === texto } as unknown as Node;
+    const colapsos: boolean[] = [];
+    const ponto = { collapse: (inicio: boolean) => void colapsos.push(inicio) };
+    const dentro = { commonAncestorContainer: texto, cloneRange: () => ponto } as unknown as Range;
+    const fora = { commonAncestorContainer: { no: "campo de fora" }, cloneRange: () => ponto } as unknown as Range;
+    expect([dentroDoEditor(dentro, editor), dentroDoEditor(fora, editor), dentroDoEditor(null, editor)]).toEqual([dentro, null, null]);
+    expect(pontoDoAnexo(dentro, editor)).toBe(ponto);
+    // collapse(false): o anexo vai para o fim do trecho marcado e não o substitui.
+    expect(colapsos).toEqual([false]);
+    expect([pontoDoAnexo(fora, editor), pontoDoAnexo(null, editor)]).toEqual([null, null]);
+    expect(colapsos).toEqual([false]);
+  });
+
+  it("AD-010: citacoesDoAnexo acha a imagem e o link do caminho, com anexo: ou já com a URL assinada, e só eles", () => {
+    const base = "https://projeto.supabase.co";
+    const elemento = (tagName: string, atributos: Record<string, string>) => ({ tagName, getAttribute: (nome: string) => atributos[nome] ?? null });
+    const img = elemento("IMG", { src: "anexo:m1/u1-a.png" });
+    const assinada = elemento("A", { href: `${base}/storage/v1/object/sign/notas-anexos/m1/u1-a.png?token=t`, class: "anexo" });
+    const outro = elemento("IMG", { src: "anexo:m1/u2-b.png" });
+    const externo = elemento("A", { href: "https://exemplo.com/m1/u1-a.png" });
+    const seletores: string[] = [];
+    const raiz = { querySelectorAll: (seletor: string) => (seletores.push(seletor), [img, assinada, outro, externo]) } as unknown as ParentNode;
+    expect(citacoesDoAnexo(raiz, "m1/u1-a.png", base)).toEqual([img, assinada]);
+    expect(citacoesDoAnexo(raiz, "m1/u9-z.png", base)).toEqual([]);
+    expect(seletores).toEqual(["img[src], a[href]", "img[src], a[href]"]);
+  });
+
+  it("AD-010 e W22: anexosDaNota lista cada imagem e documento citado uma vez, resolvido ou não, com o nome do alt ou do texto do link", () => {
+    const base = "https://projeto.supabase.co";
+    const elemento = (tagName: string, atributos: Record<string, string>, textContent = "") => ({ tagName, textContent, getAttribute: (nome: string) => atributos[nome] ?? null });
+    const raiz = {
+      querySelectorAll: () => [
+        elemento("IMG", { src: `${base}/storage/v1/object/sign/notas-anexos/m1/u1-foto.png?token=t`, alt: "Foto Ação.png" }),
+        elemento("A", { href: "anexo:m1/u2-plano.pdf", class: "anexo" }, " Plano.pdf "),
+        elemento("IMG", { src: "anexo:m1/u1-foto.png", alt: "repetida" }),
+        elemento("A", { href: "https://exemplo.com/doc" }, "link comum"),
+        elemento("IMG", { src: "anexo:m1/u3-sem-nome.png" }),
+      ],
+    } as unknown as ParentNode;
+    expect(anexosDaNota(raiz, base)).toEqual([
+      { caminho: "m1/u1-foto.png", imagem: true, nome: "Foto Ação.png" },
+      { caminho: "m1/u2-plano.pdf", imagem: false, nome: "Plano.pdf" },
+      { caminho: "m1/u3-sem-nome.png", imagem: true, nome: "u3-sem-nome.png" },
     ]);
   });
 

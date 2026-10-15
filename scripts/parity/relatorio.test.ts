@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { indexDoMergeBase } from "./legado.mjs";
+import { indexDoLegado } from "./legado.mjs";
 import { relacoesDeTeste } from "./snapshot-de-teste";
 import { codigoDeSaida, comparar, type Divergencia, divergenciasDoSnapshot, foraDoSchema, gravarDivergencias, linhasDoRelatorio } from "./relatorio";
 
@@ -87,7 +87,7 @@ describe("relatório da paridade (GATE-06, GATE-07, SEC-02)", () => {
     vi.setSystemTime(new Date("2026-09-25T15:00:00Z"));
     const pasta = mkdtempSync(join(tmpdir(), "corrida-"));
     pastas.push(pasta);
-    const { arquivo } = indexDoMergeBase({ cwd: fileURLToPath(new URL("../..", import.meta.url)), destino: join(pasta, "index.html") });
+    const { arquivo } = indexDoLegado({ cwd: fileURLToPath(new URL("../..", import.meta.url)), destino: join(pasta, "index.html") });
     expect(await divergenciasDoSnapshot({ relacoes: relacoesDeTeste(), data: "2026-09-25", arquivo })).toEqual([]);
     const sujo = relacoesDeTeste();
     sujo.sessoes[0] = { ...sujo.sessoes[0], ordem: "um" };

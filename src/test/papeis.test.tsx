@@ -20,7 +20,7 @@ import { renderTela } from "@/test/render";
 
 // WRITE-09 e GATE-08: os controles `data-escrita="Wnn"` que cada papel acha nas 10 telas, na
 // ficha e nos modais que ele consegue abrir. A diretoria não acha nenhum, o admin acha pelo menos
-// 10 e o mentor só os das capacidades dele (escreverSessao, escreverRotas, escreverNotas).
+// 10 e o mentor só os das capacidades dele (escreverSessao, escreverRotas, escreverNotas: W10 e W22).
 
 // Sem DOM, o setState depois do render no servidor não muda nada: o falso guarda o estado entre
 // renders, com a chave no useId da chamada (a posição na árvore), para um modal que monta no meio
@@ -160,7 +160,7 @@ describe("controles de escrita por papel (WRITE-09, GATE-08)", () => {
     for (const w of ["W02", "W05", "W08", "W11", "W12", "W13", "W14", "W15", "W16", "W17", "W18", "W19", "W20", "W21"]) expect(achados, w).toContain(w);
   });
 
-  it("mentor: só W01, W03, W04, W06, W07, W09 e W10", () => {
-    expect(varrerPapel("mentor")).toEqual(["W01", "W03", "W04", "W06", "W07", "W09", "W10"]);
+  it("mentor: só W01, W03, W04, W06, W07, W09, W10 e W22", () => {
+    expect(varrerPapel("mentor")).toEqual(["W01", "W03", "W04", "W06", "W07", "W09", "W10", "W22"]);
   });
 });

@@ -1,6 +1,27 @@
 "use client";
 
-import { Bold, Code, Heading1, Heading2, Heading3, ImagePlus, Italic, Link, List, ListChecks, ListOrdered, type LucideIcon, Minus, Paperclip, Pilcrow, Quote, Strikethrough, Underline } from "lucide-react";
+import {
+  Bold,
+  Code,
+  FileText,
+  Heading1,
+  Heading2,
+  Heading3,
+  ImageIcon,
+  ImagePlus,
+  Italic,
+  Link,
+  List,
+  ListChecks,
+  ListOrdered,
+  type LucideIcon,
+  Minus,
+  Paperclip,
+  Pilcrow,
+  Quote,
+  Strikethrough,
+  Underline,
+} from "lucide-react";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -8,24 +29,31 @@ import { useSessao } from "@/components/shell/contexto";
 import { useEscrita } from "@/components/shell/use-escrita";
 import Alert from "@/components/ui/alert";
 import Button from "@/components/ui/button";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import Dialog from "@/components/ui/dialog";
 import FormField from "@/components/ui/form-field";
 import Input from "@/components/ui/input";
 import { PROSE_CLASS } from "@/components/ui/prose";
 import Skeleton from "@/components/ui/skeleton";
 import { SUPABASE_URL } from "@/lib/data/config";
-import { enviarAnexo, type ResultadoEscrita, salvarNota } from "@/lib/data/escritas";
+import { enviarAnexo, removerAnexo, type ResultadoEscrita, salvarNota } from "@/lib/data/escritas";
 import { lerNota, linksAssinados } from "@/lib/data/leituras";
 import { fmtInstante } from "@/lib/datas";
 import {
+  ANEXO,
+  type AnexoDaNota,
+  anexosDaNota,
   atalhoPara,
   caminhosDeAnexo,
   canonizarAnexos,
+  citacoesDoAnexo,
   type ComandoNota,
   conferirArquivo,
   criarAutosave,
+  dentroDoEditor,
   htmlDoAnexo,
   linkValido,
+  pontoDoAnexo,
   resolverAnexos,
   sanitizarNota,
   TIPOS_DOCUMENTO,
@@ -74,6 +102,12 @@ async function enviar(mentoradoId: string, arquivo: File): Promise<ResultadoEscr
   return !enviado.ok && "erro" in enviado ? { ok: false, erro: `"${arquivo.name}" não foi enviado: ${enviado.erro}` } : enviado;
 }
 
+// W22 (AD-010, emenda): o anexo apagado do bucket, com o nome do arquivo no erro do Storage.
+async function excluir(anexo: AnexoDaNota): Promise<ResultadoEscrita> {
+  const removido = await removerAnexo(anexo.caminho);
+  return !removido.ok && "erro" in removido ? { ok: false, erro: `"${anexo.nome}" não foi excluído: ${removido.erro}` } : removido;
+}
+
 // AD-010: os `anexo:` da nota viram links assinados no DOM, para ler e para editar. Sem link, a
 // nota abre igual e o toast diz por quê.
 async function resolver(el: HTMLElement): Promise<void> {
@@ -87,14 +121,44 @@ async function resolver(el: HTMLElement): Promise<void> {
   resolverAnexos(el, links.dados);
 }
 
+// O anexo abre em outra aba pelo link assinado pedido na hora: o `anexo:` ainda sem link não navega.
+async function abrirAnexo(caminho: string): Promise<void> {
+  const links = await linksAssinados([caminho]);
+  if (!links.ok) {
+    toast.error(`O anexo não abriu: ${links.erro}`);
+    return;
+  }
+  const url = linkValido(links.dados.get(caminho) ?? "");
+  if (!url) {
+    toast.error("O anexo não abriu: o arquivo não está no bucket.");
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+// No contenteditable o clique num link só põe o cursor: aqui ele abre o endereço em outra aba, no
+// editor e no quadro só leitura. Arrastar para selecionar não abre, e só http(s) sai (NOTE-08).
+function abrirLink(e: MouseEvent): void {
+  const link = e.target instanceof Element ? e.target.closest("a[href]") : null;
+  if (!link || document.getSelection()?.isCollapsed === false) return;
+  e.preventDefault();
+  const href = link.getAttribute("href") ?? "";
+  if (href.startsWith(ANEXO)) {
+    void abrirAnexo(href.slice(ANEXO.length)).catch((erro: unknown) => console.error("[central-elite3d] abrir anexo", erro));
+    return;
+  }
+  const url = linkValido(href);
+  if (url) window.open(url, "_blank", "noopener,noreferrer");
+}
+
 const ACEITA_IMAGEM = TIPOS_IMAGEM.join(",");
 const ACEITA_DOCUMENTO = [...TIPOS_DOCUMENTO, ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv"].join(",");
 
 // A seleção do editor, guardada para o que cai nela depois: o Dialog do link e o envio do anexo
-// tiram o foco.
-function selecaoAtual(): Range | null {
+// tiram o foco. Seleção fora do editor não é guardada.
+function selecaoAtual(editor: HTMLElement): Range | null {
   const atual = document.getSelection();
-  return atual?.rangeCount ? atual.getRangeAt(0).cloneRange() : null;
+  return dentroDoEditor(atual?.rangeCount ? atual.getRangeAt(0).cloneRange() : null, editor);
 }
 
 // O nó que é filho direto do editor: o bloco onde o cursor está.
@@ -178,6 +242,20 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
   };
   const enviarRef = useRef(enviarArquivo);
   enviarRef.current = enviarArquivo;
+  // W22: a lista "Anexos" sai do DOM do editor (ao abrir, a cada input e depois de inserir ou
+  // excluir, que disparam input). Excluir apaga o arquivo do bucket e, só depois, as citações dele.
+  const [anexos, setAnexos] = useState<AnexoDaNota[]>([]);
+  const [excluindo, setExcluindo] = useState<AnexoDaNota | null>(null);
+  const exclusao = useEscrita("escreverNotas", (alvo: AnexoDaNota) => excluir(alvo), "Anexo excluído");
+  const confirmarExclusao = async () => {
+    const el = editor.current;
+    if (!el || !excluindo) return;
+    // Falhou no Storage: nada sai da nota, e o toast já mostrou o erro.
+    if (!(await exclusao.executar(excluindo))) return;
+    for (const no of citacoesDoAnexo(el, excluindo.caminho, SUPABASE_URL)) no.remove();
+    setExcluindo(null);
+    el.dispatchEvent(new Event("input"));
+  };
 
   useEffect(() => {
     // NOTE-03: sem sanitizador o editor não abre: nada de HTML na tela e nada gravado.
@@ -202,6 +280,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
       const aoDigitar = () => {
         autosave.mudou(el.innerHTML);
         setAviso("Editando…");
+        setAnexos(anexosDaNota(el, SUPABASE_URL));
       };
       const aoTeclar = (e: KeyboardEvent) => {
         if (e.key !== " " && e.key !== "Enter") return;
@@ -226,7 +305,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
         const html = e.clipboardData?.getData("text/html") ?? "";
         const imagem = Array.from(e.clipboardData?.files ?? []).find((arquivo) => arquivo.type.startsWith("image/"));
         if (imagem && !html.replace(/<[^>]*>/g, "").trim()) {
-          selecao.current = selecaoAtual();
+          selecao.current = selecaoAtual(el);
           void enviarRef.current(imagem, true).catch((erro: unknown) => console.error("[central-elite3d] enviar anexo", erro));
           return;
         }
@@ -246,7 +325,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
         const arquivo = e.dataTransfer?.files[0];
         if (!arquivo) return;
         e.preventDefault();
-        selecao.current = selecaoAtual();
+        selecao.current = selecaoAtual(el);
         void enviarRef.current(arquivo, arquivo.type.startsWith("image/")).catch((erro: unknown) => console.error("[central-elite3d] enviar anexo", erro));
       };
       // A caixa do checklist marca o item feito (index.html:3389–3392).
@@ -284,6 +363,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
     };
     let vivo = true;
     let desligar: () => void = () => undefined;
+    let soltarClique: () => void = () => undefined;
     const abrir = async () => {
       // SEC-06: a leitura confere a sessão do supabase-js contra o usuário da tela.
       const lida = await lerNota(mentoradoId, usuario.id);
@@ -295,14 +375,18 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
       }
       el.innerHTML = sanitizarNota(lida.dados?.conteudo ?? "") ?? "";
       setEstado({ fase: "pronto" });
+      setAnexos(anexosDaNota(el, SUPABASE_URL));
       if (lida.dados) setAviso(`Salvo ${fmtInstante(lida.dados.atualizado_em)}`);
       // NOTE-06: quem não escreve só lê; os anexos abrem para os dois.
       if (edita) desligar = ligar(el);
+      el.addEventListener("click", abrirLink);
+      soltarClique = () => el.removeEventListener("click", abrirLink);
       await resolver(el);
     };
     void abrir().catch((erro: unknown) => console.error("[central-elite3d] abrir nota", erro));
     return () => {
       vivo = false;
+      soltarClique();
       desligar();
     };
   }, [mentoradoId, usuario.id, edita]);
@@ -315,7 +399,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
       return;
     }
     // O Dialog tira o foco do editor: a seleção é guardada para o link cair no texto marcado.
-    selecao.current = selecaoAtual();
+    selecao.current = selecaoAtual(el);
     setLinkAberto(true);
   };
   const voltarSelecao = (el: HTMLElement) => {
@@ -334,15 +418,23 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
     document.execCommand("createLink", false, url);
     el.dispatchEvent(new Event("input"));
   };
-  // AD-010: o anexo enviado entra na seleção guardada como `anexo:` sanitizado, agenda a gravação e
-  // ganha o link assinado para aparecer na hora.
+  // AD-010: o anexo enviado entra como `anexo:` sanitizado no fim da seleção guardada, sem nunca
+  // trocar o texto marcado; sem seleção no editor, no fim da nota. Se o navegador não o pôs no editor,
+  // ele é acrescentado no fim. Depois agenda a gravação e ganha o link assinado para aparecer na hora.
   function inserirAnexo(caminho: string | undefined) {
     const el = editor.current;
     const enviado = pendente.current;
     pendente.current = null;
     if (!el || !caminho || !enviado) return;
-    voltarSelecao(el);
-    document.execCommand("insertHTML", false, sanitizarNota(htmlDoAnexo(caminho, enviado.nome, enviado.imagem)) ?? "");
+    const ponto = pontoDoAnexo(selecao.current, el);
+    el.focus();
+    if (ponto) {
+      const atual = document.getSelection();
+      atual?.removeAllRanges();
+      atual?.addRange(ponto);
+      document.execCommand("insertHTML", false, sanitizarNota(htmlDoAnexo(caminho, enviado.nome, enviado.imagem)) ?? "");
+    }
+    if (citacoesDoAnexo(el, caminho, SUPABASE_URL).length === 0) el.insertAdjacentHTML("beforeend", sanitizarNota(htmlDoAnexo(caminho, enviado.nome, enviado.imagem)) ?? "");
     el.dispatchEvent(new Event("input"));
     void resolver(el).catch((erro: unknown) => console.error("[central-elite3d] anexos da nota", erro));
   }
@@ -350,7 +442,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
   // arquivo poder subir de novo.
   const escolher = (entrada: RefObject<HTMLInputElement | null>) => {
     if (!editor.current) return;
-    selecao.current = selecaoAtual();
+    selecao.current = selecaoAtual(editor.current);
     entrada.current?.click();
   };
   const aoEscolher = (e: { target: HTMLInputElement }, imagem: boolean) => {
@@ -408,6 +500,47 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
         data-vazio={editavel ? "Escreva aqui… use # para título, - para lista, [] para checklist." : "Sem notas."}
         className={`${PROSE_CLASS} ${CHECKLIST} nota-anexos min-h-40 rounded-8 border border-line bg-background p-4 outline-none focus:border-primary/70 empty:before:text-muted empty:before:content-[attr(data-vazio)] ${estado.fase === "carregando" ? "hidden" : ""}`}
       />
+      {estado.fase === "pronto" && (
+        <section aria-label="Anexos da nota" data-escrita={editavel ? "W22" : undefined} className="space-y-2">
+          <h3 className="text-sm font-medium text-ink">Anexos</h3>
+          {anexos.length === 0 ? (
+            <p className="text-xs text-muted">Nenhum anexo nesta nota.</p>
+          ) : (
+            <ul className="divide-y divide-line rounded-8 border border-line">
+              {anexos.map((item) => {
+                const Icone = item.imagem ? ImageIcon : FileText;
+                return (
+                  <li key={item.caminho} className="flex items-center gap-2 px-3 py-2 text-sm">
+                    <Icone aria-hidden size={16} className="shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1 truncate" title={item.nome}>
+                      {item.nome}
+                    </span>
+                    <Button variant="ghost" size="sm" aria-label={`Abrir ${item.nome}`} onClick={() => void abrirAnexo(item.caminho).catch((erro: unknown) => console.error("[central-elite3d] abrir anexo", erro))}>
+                      Abrir
+                    </Button>
+                    {editavel && (
+                      <Button variant="outline" size="sm" className="text-danger" data-escrita="W22" aria-label={`Excluir ${item.nome}`} onClick={() => setExcluindo(item)}>
+                        Excluir
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+      {editavel && (
+        <ConfirmDialog
+          open={excluindo !== null}
+          title="Excluir anexo"
+          description={`Excluir "${excluindo?.nome ?? ""}"? O arquivo é apagado e sai da nota. A ação não pode ser desfeita.`}
+          confirmLabel="Excluir anexo"
+          busy={exclusao.ocupado}
+          onConfirm={() => void confirmarExclusao().catch((erro: unknown) => console.error("[central-elite3d] excluir anexo", erro))}
+          onClose={() => setExcluindo(null)}
+        />
+      )}
       <Dialog open={linkAberto} onClose={() => setLinkAberto(false)} title="Inserir link">
         <LinkForm aoInserir={inserirLink} />
       </Dialog>

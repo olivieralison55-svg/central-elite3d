@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { carregarLegado, indexDoMergeBase } from "./legado.mjs";
+import { carregarLegado, indexDoLegado, LEGADO } from "./legado.mjs";
 import { relacoesDeTeste } from "./snapshot-de-teste";
 
-// GATE-06: o app antigo do merge-base roda sobre os fixtures do harness antigo, servidos pelo
+// GATE-06: o app antigo (commit LEGADO) roda sobre os fixtures do harness antigo, servidos pelo
 // cliente falso, com o afterLogin e o loadAll reais.
 
 const RAIZ = fileURLToPath(new URL("../..", import.meta.url));
@@ -26,13 +26,15 @@ function relacoes() {
 
 beforeAll(() => {
   pasta = mkdtempSync(join(tmpdir(), "legado-"));
-  arquivo = indexDoMergeBase({ cwd: RAIZ, destino: join(pasta, "index.html") }).arquivo;
+  arquivo = indexDoLegado({ cwd: RAIZ, destino: join(pasta, "index.html") }).arquivo;
 });
 afterAll(() => rmSync(pasta, { recursive: true, force: true }));
 
 describe("carregador do app antigo (GATE-06)", () => {
-  it("lê o index.html do merge-base, extraído por git show, e o app que roda é o do caminho dado", async () => {
-    const sha = execFileSync("git", ["merge-base", "main", "HEAD"], { cwd: RAIZ, encoding: "utf8" }).trim();
+  it("lê o index.html do app antigo (commit fixo LEGADO), extraído por git show, e o app que roda é o do caminho dado", async () => {
+    const sha = LEGADO;
+    // O commit fixo é o pai do merge da migração na main, e é o último a ter o index.html.
+    expect(execFileSync("git", ["cat-file", "-t", `${sha}:index.html`], { cwd: RAIZ, encoding: "utf8" }).trim()).toBe("blob");
     expect(readFileSync(arquivo, "utf8")).toBe(execFileSync("git", ["show", `${sha}:index.html`], { cwd: RAIZ, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }));
     expect(statSync(arquivo).mode & 0o777).toBe(0o600);
     // Uma cópia alterada no caminho dado: é ela que roda, não um index.html achado por conta própria.

@@ -123,6 +123,55 @@ export function resolverAnexos(raiz: Raiz, links: ReadonlyMap<string, string>): 
   }
 }
 
+// Cada imagem e link do DOM que cita um anexo, resolvido ou não: a URL assinada volta a `anexo:`.
+// O `caminhosDeAnexo` só vê os ainda sem link; a lista e a exclusão precisam dos dois.
+function citacoes(raiz: Raiz, urlBase: string): Array<{ no: Element; caminho: string }> {
+  return Array.from(raiz.querySelectorAll("img[src], a[href]"), (no) => ({ no, ref: canonizarAnexos(no.getAttribute(atributoDo(no)) ?? "", urlBase) }))
+    .filter(({ ref }) => ref.startsWith(ANEXO))
+    .map(({ no, ref }) => ({ no, caminho: ref.slice(ANEXO.length) }));
+}
+
+// As citações de um anexo no DOM.
+export function citacoesDoAnexo(raiz: Raiz, caminho: string, urlBase: string): Element[] {
+  return citacoes(raiz, urlBase)
+    .filter((citacao) => citacao.caminho === caminho)
+    .map(({ no }) => no);
+}
+
+export interface AnexoDaNota {
+  caminho: string;
+  nome: string;
+  imagem: boolean;
+}
+
+// A lista "Anexos" abaixo do editor: cada anexo citado, uma vez, com o nome original (o `alt` da
+// imagem ou o texto do link); sem nome, o do arquivo no bucket.
+export function anexosDaNota(raiz: Raiz, urlBase: string): AnexoDaNota[] {
+  const anexos = new Map<string, AnexoDaNota>();
+  for (const { no, caminho } of citacoes(raiz, urlBase)) {
+    if (anexos.has(caminho)) continue;
+    const imagem = no.tagName === "IMG";
+    const nome = ((imagem ? no.getAttribute("alt") : no.textContent) ?? "").trim();
+    anexos.set(caminho, { caminho, imagem, nome: nome || (caminho.split("/").pop() ?? caminho) });
+  }
+  return [...anexos.values()];
+}
+
+// A seleção que o editor guarda só vale dentro dele: a de fora (outro campo, a página) é null.
+export function dentroDoEditor<T extends Pick<Range, "commonAncestorContainer">>(intervalo: T | null, editor: Pick<Node, "contains">): T | null {
+  return intervalo && editor.contains(intervalo.commonAncestorContainer) ? intervalo : null;
+}
+
+// Onde o anexo entra (AD-010): no fim do intervalo guardado, colapsado, para nunca trocar o texto
+// marcado. Fora do editor, ou sem intervalo, é null: o anexo vai para o fim da nota.
+export function pontoDoAnexo(intervalo: Range | null, editor: Pick<Node, "contains">): Range | null {
+  const dentro = dentroDoEditor(intervalo, editor);
+  if (!dentro) return null;
+  const ponto = dentro.cloneRange();
+  ponto.collapse(false);
+  return ponto;
+}
+
 // Os tipos que o bucket aceita (20261015_notas_anexos.sql). SVG fica fora (AD-010).
 export const TIPOS_IMAGEM: readonly string[] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 export const TIPOS_DOCUMENTO: readonly string[] = [

@@ -10,7 +10,7 @@ import type { Dataset } from "@/lib/data/esquemas";
 import { hojeSP } from "@/lib/datas";
 import type { Papel } from "@/lib/papeis";
 
-import { carregarLegado, clienteDoSnapshot, indexDoMergeBase } from "./legado.mjs";
+import { carregarLegado, clienteDoSnapshot, indexDoLegado } from "./legado.mjs";
 import { METRICAS as LEGADO } from "./metricas-legado.mjs";
 import { METRICAS } from "./metricas";
 import { type Relacoes, relacoesDeTeste } from "./snapshot-de-teste";
@@ -25,7 +25,7 @@ let arquivo = "";
 
 beforeAll(() => {
   pasta = mkdtempSync(join(tmpdir(), "metricas-"));
-  arquivo = indexDoMergeBase({ cwd: RAIZ, destino: join(pasta, "index.html") }).arquivo;
+  arquivo = indexDoLegado({ cwd: RAIZ, destino: join(pasta, "index.html") }).arquivo;
 });
 afterAll(() => {
   vi.useRealTimers();
