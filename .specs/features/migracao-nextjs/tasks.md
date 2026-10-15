@@ -2421,11 +2421,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `git ls-files` não lista `index.html` nem `tests/`
-- [ ] O teste da T75 continua verde sem `tests/`; a paridade lê o app antigo do merge-base por `git show`
-- [ ] `pnpm test` sem rede e sem banco
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 627 → 627
+- [x] `git ls-files` não lista `index.html` nem `tests/`
+- [x] O teste da T75 continua verde sem `tests/`; a paridade lê o app antigo do merge-base por `git show`
+- [x] `pnpm test` sem rede e sem banco
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 627 → 627
 
 **Tests**: none
 **Gate**: build
