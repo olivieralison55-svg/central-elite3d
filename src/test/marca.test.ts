@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const RAIZ = fileURLToPath(new URL("../..", import.meta.url));
 const ler = (rel: string) => readFileSync(`${RAIZ}${rel}`, "utf8");
-const CSS = ler("src/app/globals.css");
+const CSS = ler("src/app/marca.css");
 const CONFIG = ler("tailwind.config.ts");
 
 // Contraste WCAG entre dois hex #rrggbb.
@@ -44,5 +44,16 @@ describe("marca verde da Elite 3D (AD-009)", () => {
     expect(contraste("#10141a", "#b9ff46")).toBeGreaterThanOrEqual(4.5);
     expect(contraste("#10141a", "#9fe22f")).toBeGreaterThanOrEqual(4.5);
     expect(contraste("#ffffff", "#b9ff46")).toBeLessThan(3);
+  });
+});
+
+describe("a marca sobrevive à sincronização do DS (AD-009)", () => {
+  it("o layout importa marca.css depois do globals.css, e o globals.css da cópia não carrega a marca", () => {
+    const layout = ler("src/app/layout.tsx");
+    const globals = layout.indexOf('import "./globals.css";');
+    const marca = layout.indexOf('import "./marca.css";');
+    expect(globals).toBeGreaterThanOrEqual(0);
+    expect(marca).toBeGreaterThan(globals);
+    expect(ler("src/app/globals.css")).not.toContain("185 255 70");
   });
 });

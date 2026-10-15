@@ -73,7 +73,10 @@ export default function FilterDropdown({
   return (
     // isolate: contains the panel's z-40 so it can't leak past the AppShell
     // header/sidebar stacking context when the trigger scrolls near the top.
-    <div ref={rootRef} className={`relative inline-block isolate ${className}`}>
+    // While open the root also takes z-[15]: isolate alone leaves it at z-auto, so a later
+    // positioned sibling (a Select wrapper, a card) painted over the panel. 15 stays under
+    // the AppShell header (z-20) and above the sticky sub-navs (z-10).
+    <div ref={rootRef} className={`relative inline-block isolate ${open ? "z-[15]" : ""} ${className}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

@@ -26,8 +26,8 @@ vi.mock("react", async (importOriginal) => {
 // O Popover devolve só o gatilho sem DOM. O falso o deixa aberto e entrega o `fechar` ao filho.
 const fechar = vi.hoisted(() => vi.fn());
 vi.mock("@/components/ui/popover", () => ({
-  default: ({ trigger, children, className }: { trigger(aberto: boolean): ReactNode; children: ReactNode | ((fechar: () => void) => ReactNode); className?: string }) => (
-    <div data-popover-raiz={className}>
+  default: ({ trigger, children }: { trigger(aberto: boolean): ReactNode; children: ReactNode | ((fechar: () => void) => ReactNode) }) => (
+    <div>
       {trigger(true)}
       {typeof children === "function" ? children(fechar) : children}
     </div>
@@ -96,11 +96,6 @@ describe("escolha de mentorado (UI-06, OPS-10)", () => {
     const html = renderToStaticMarkup(<EscolherMentorado ativos={[DIEGO]} escolhidoId={null} termo="" onTermo={() => undefined} onEscolher={() => undefined} />);
     expect(html).not.toContain("<img");
     expect(html).toContain("Diego &quot;&gt;&lt;img src=x onerror=alert(1)&gt;");
-  });
-
-  it("a raiz do Popover leva z-20, acima do Select de canal e abaixo do Dialog (z-50)", () => {
-    const html = renderToStaticMarkup(<EscolherMentorado ativos={ATIVOS} escolhidoId={null} termo="" onTermo={() => undefined} onEscolher={() => undefined} />);
-    expect(html).toContain('data-popover-raiz="z-20"');
   });
 
   it("digitar só recorta a lista: avisa o termo e não escolhe ninguém", () => {

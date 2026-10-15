@@ -47,7 +47,10 @@ export default function Popover({
   }, [open]);
 
   return (
-    <div ref={rootRef} className={`relative inline-block isolate ${className}`}>
+    // isolate keeps the panel's z-[60] inside this root; while open the root also takes
+    // z-[15], or a later positioned sibling (a Select wrapper, a card) paints over the panel.
+    // 15 stays under the AppShell header (z-20) and above the sticky sub-navs (z-10).
+    <div ref={rootRef} className={`relative inline-block isolate ${open ? "z-[15]" : ""} ${className}`}>
       <div onClick={() => setOpen((o) => !o)}>{trigger(open)}</div>
       {open && (
         <div

@@ -1,0 +1,46 @@
+/* Arquivo do projeto, fora da cópia do design system: o `sync-design-system.mjs` reescreve o
+   `globals.css` a cada sincronização, então a marca e os estilos próprios moram aqui (AD-009). */
+
+/* Marca verde da Elite 3D sobre o design system (AD-009). A cópia do DS não se edita: o verde
+   sobrepõe o azul aqui, depois do import. `--primary-rgb`/`--primary-dark-rgb` alimentam o fundo
+   (`bg-primary`); `--primary` e `--primary-ink-rgb` são o primário SOBRE o fundo da página
+   (texto, borda, anel, contorno, gráficos): verde escuro no claro, o lima no escuro. */
+:root {
+  --primary: #3f6212;
+  --primary-dark: #9fe22f;
+  --primary-rgb: 185 255 70; /* #B9FF46 */
+  --primary-dark-rgb: 159 226 47; /* #9FE22F */
+  --primary-ink-rgb: 63 98 18; /* #3F6212, 7,1:1 sobre #fff */
+}
+.dark {
+  --primary: #b9ff46;
+  --primary-ink-rgb: 185 255 70;
+}
+
+/* Texto branco sobre lima não lê (1,2:1): botão, badge, avatar e dia escolhido ganham o grafite da
+   marca (#10141A, 15,4:1 no lima, 11,8:1 no lima do hover). */
+.bg-primary.text-white,
+.hover\:bg-primary-dark.text-white:hover {
+  color: #10141a;
+}
+
+/* A caixa da lista de tarefas das notas (ul.checklist > li): borda arredondada; a do item feito
+   ganha o verde de sucesso e um check em SVG (o traço branco do SVG fica sobre o fundo verde). */
+.nota-checklist ul.checklist > li::before {
+  content: "";
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.5rem;
+  vertical-align: -0.1em;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 0.25em;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 80%;
+}
+.nota-checklist ul.checklist > li.feito::before {
+  border-color: var(--success-accent);
+  background-color: var(--success-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}

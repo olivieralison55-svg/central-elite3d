@@ -115,7 +115,10 @@ export default function DateRangeCalendar({
   return (
     // isolate: contains the panel's z-[200] so it can't leak past the AppShell
     // header/sidebar stacking context when the trigger scrolls near the top.
-    <div ref={wrapRef} className="relative inline-flex isolate">
+    // While open the root also takes z-[15]: isolate alone leaves it at z-auto, so a later
+    // positioned sibling (a Select wrapper, a card) painted over the panel. 15 stays under
+    // the AppShell header (z-20) and above the sticky sub-navs (z-10).
+    <div ref={wrapRef} className={`relative inline-flex isolate ${open ? "z-[15]" : ""}`}>
       <button
         type="button"
         onClick={() => {

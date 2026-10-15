@@ -95,8 +95,6 @@ export default function EscolherMentorado(props: Props) {
   return (
     <Popover
       label="Escolher mentorado"
-      // A raiz do Popover é isolada e sem z-index: sem o z, o Select de canal (irmão `relative`) pinta por cima do painel.
-      className="z-20"
       panelClassName="w-80"
       trigger={() => (
         <Button variant="outline" size="sm">

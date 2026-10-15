@@ -355,7 +355,7 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
   });
 
   it("a caixa da checklist é CSS (borda e check em SVG), sem ☐ nem ☑", () => {
-    const css = readFileSync(`${RAIZ}src/app/globals.css`, "utf8");
+    const css = readFileSync(`${RAIZ}src/app/marca.css`, "utf8");
     expect(css).toMatch(/\.nota-checklist ul\.checklist > li::before \{\s*content: "";/);
     expect(css).toMatch(/li\.feito::before \{[^}]*background-image: url\("data:image\/svg\+xml/);
     expect(readFileSync(`${RAIZ}src/components/modules/ficha/editor-notas.tsx`, "utf8")).not.toMatch(/[☐☑]/);

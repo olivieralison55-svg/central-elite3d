@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import "./marca.css";
 import { Toaster } from "react-hot-toast";
 
 // A Inter auto-hospedada da plataforma (UI-03), copiada com o design system: o

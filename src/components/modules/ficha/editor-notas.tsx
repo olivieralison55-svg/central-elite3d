@@ -44,7 +44,7 @@ const BARRA: readonly [ComandoNota, LucideIcon, string][] = [
 ];
 
 // As listas de tarefa: a caixa antes do item (desenhada em CSS, sem caractere; `.nota-checklist` mora
-// em globals.css), e o item feito riscado.
+// em marca.css), e o item feito riscado.
 const CHECKLIST = "nota-checklist [&_ul.checklist]:list-none [&_ul.checklist]:pl-1 [&_ul.checklist>li.feito]:text-muted [&_ul.checklist>li.feito]:line-through";
 
 // W10: o conteúdo já sanitizado, com o instante de quem grava (o relógio fica fora da porta).

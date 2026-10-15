@@ -2,7 +2,7 @@
 
 - **Status**: active
 - **Date**: 2026-10-15
-- **Scope**: `tailwind.config.ts`, `src/app/globals.css`, `src/test/marca.test.ts`.
+- **Scope**: `tailwind.config.ts`, `src/app/marca.css`, `src/test/marca.test.ts`.
 - **Decided by**: o Lucas, ao ver o app rodando (o app antigo usava `--primary:#B9FF46`, `index.html:18–56`).
 
 ## Decisão
@@ -31,7 +31,8 @@
 
 ## Consequências
 
-- Voltar ao azul ou mudar o verde é editar `globals.css` (`--primary-*`): nenhum componente muda.
+- Voltar ao azul ou mudar o verde é editar `marca.css` (`--primary-*`): nenhum componente muda.
 - O `TrendChart` ainda desenha as barras não selecionadas com `rgba(65,105,225,0.22)` literal, na
   cópia do DS. Fica azul-claro até a plataforma trocar por token.
 - `src/test/marca.test.ts` trava o verde, o override do config e a regra do botão.
+- A marca mora em `src/app/marca.css`, importado no layout depois do `globals.css`: o `globals.css` é da cópia e o `sync-design-system.mjs` o reescreve a cada sincronização (15/10/2026, a primeira sincronização apagou o verde).
