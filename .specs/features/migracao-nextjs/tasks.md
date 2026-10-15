@@ -2395,10 +2395,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `src/test/vercel.test.ts`: as 3 chaves com os valores acima
-- [ ] A `main` não ganha `vercel.json` antes do merge
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 625 → 627
+- [x] `src/test/vercel.test.ts`: as 3 chaves com os valores acima
+- [x] A `main` não ganha `vercel.json` antes do merge
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 625 → 627
 
 **Tests**: unit
 **Gate**: quick
