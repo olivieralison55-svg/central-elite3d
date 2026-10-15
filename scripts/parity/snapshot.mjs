@@ -180,7 +180,7 @@ function dataSP(agora) {
  * @param {string} pergunta
  * @returns {Promise<string>}
  */
-function perguntarSemEco(pergunta) {
+export function perguntarSemEco(pergunta) {
   return new Promise((resolve) => {
     let mudo = false;
     const saida = new Writable({

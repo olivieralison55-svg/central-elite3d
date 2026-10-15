@@ -2368,9 +2368,9 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `scripts/gates/sondar-rls.test.mjs`: a lista de escritas proibidas por papel sai das capacidades; o alvo só pode ser o registro cujo e-mail é `zzq-migracao@example.invalid`, e qualquer outro é recusado antes de tentar; a saída não tem nome, e-mail nem valor
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 622 → 625
+- [x] `scripts/gates/sondar-rls.test.mjs`: a lista de escritas proibidas por papel sai das capacidades; o alvo só pode ser o registro cujo e-mail é `zzq-migracao@example.invalid`, e qualquer outro é recusado antes de tentar; a saída não tem nome, e-mail nem valor
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 622 → 625
 
 **Tests**: unit
 **Gate**: build
