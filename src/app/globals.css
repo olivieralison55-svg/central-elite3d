@@ -1,0 +1,278 @@
+@import "../design-system/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+/* Design-system scrollbars — thin, rounded, translucent thumb that flips with
+   the theme. content-box + transparent border gives the slim Linear look and
+   padding around the thumb. Firefox uses the standard properties. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  background-color: var(--canvas);
+  color: var(--ink);
+  /* Linear's exact Inter tuning: alt digits/letters + optical sizing */
+  font-feature-settings: "cv01", "ss03";
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Consistent keyboard focus across every interactive element. :where() keeps
+   specificity at 0 so component-level focus styles still win. */
+@layer base {
+  :where(button, a[href], [role="button"], [tabindex="0"], summary):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Dialog / overlay entrance */
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+/* Skeleton shimmer — the single sanctioned "gradient": a sheen that sweeps
+   across every loading placeholder. Base fill = --selected, sheen animates via
+   a translated ::after overlay. Honors prefers-reduced-motion. */
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-6);
+  background-color: var(--selected);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skeleton-sheen) 50%,
+    transparent 100%
+  );
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+/* View transition */
+@keyframes viewFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.view-fade {
+  animation: viewFadeIn var(--speed-highlight) var(--ease-out-quart) both;
+}
+
+/* Honor users who ask for less motion (shimmer, fades, progress bar, hovers) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Hide scrollbars (keep scroll functionality) */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Markdown rendering for AI chat — every color routed through the tokens so it
+   flips with the theme instead of shipping its own light/dark pair. */
+.md-content {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: inherit;
+  word-wrap: break-word;
+}
+.md-content > *:first-child {
+  margin-top: 0;
+}
+.md-content > *:last-child {
+  margin-bottom: 0;
+}
+.md-content p {
+  margin: 0.35rem 0;
+}
+.md-content strong {
+  font-weight: var(--font-weight-semibold);
+  color: var(--ink);
+}
+.md-content em {
+  font-style: italic;
+}
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4 {
+  font-weight: var(--font-weight-bold);
+  margin: 0.85rem 0 0.4rem;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.md-content h1 {
+  font-size: 1.05rem;
+}
+.md-content h2 {
+  font-size: 0.98rem;
+}
+.md-content h3 {
+  font-size: 0.92rem;
+}
+.md-content h4 {
+  font-size: 0.88rem;
+}
+.md-content ul,
+.md-content ol {
+  margin: 0.4rem 0;
+  padding-left: 1.2rem;
+}
+.md-content ul {
+  list-style: disc;
+}
+.md-content ol {
+  list-style: decimal;
+}
+.md-content li {
+  margin: 0.15rem 0;
+}
+.md-content li > p {
+  margin: 0;
+}
+.md-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md-content a:hover {
+  opacity: 0.8;
+}
+.md-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  background: var(--selected);
+  padding: 0.12rem 0.35rem;
+  border-radius: var(--radius-4);
+  color: var(--primary);
+}
+.md-content pre {
+  background: var(--sub-bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-8);
+  overflow-x: auto;
+  margin: 0.6rem 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+.md-content pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+.md-content blockquote {
+  border-left: 3px solid var(--primary);
+  padding: 0.1rem 0 0.1rem 0.75rem;
+  margin: 0.5rem 0;
+  color: var(--muted);
+  font-style: italic;
+}
+.md-content hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 0.75rem 0;
+}
+.md-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+  font-size: 0.82rem;
+}
+.md-content th,
+.md-content td {
+  border: 1px solid var(--line);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+.md-content th {
+  background: var(--sub-bg);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Chat surface reading size. The Claude kit sets the assistant body at 16px/1.6
+   (conversa.css) — a deliberately larger reading scale than the platform's 14px
+   dense UI text. Applied only where a conversation is rendered. */
+.md-content--chat {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.md-content--chat p {
+  margin: 0.5rem 0;
+}
+
+/* Tabelas largas em vez de tabelas quebradas — opt-in.
+   O default (`width: 100%`) faz a tabela caber sempre, quebrando as células, o
+   que serve a uma tabela de duas colunas. O agente de RAG responde dado
+   comercial em tabelas de sete ou oito colunas: encolhidas, elas ficam
+   ilegíveis. Aqui a tabela cresce até o conteúdo e o container é que rola —
+   quem aplica esta classe assume o `overflow-x: auto`. Nada que já existe muda:
+   a classe é adicional. */
+.md-content--wide-tables table {
+  width: max-content;
+  max-width: none;
+}

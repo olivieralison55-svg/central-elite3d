@@ -31,3 +31,4 @@ de markdown no início do bloco (`# `, `## `, `### `, `- `, `1. `, `> `, `[] `,
   `atualizado_em` se acontecer.
 - **Papéis**: admin e mentor escrevem (`escreverNotas`), diretoria lê. O limite
   real é o RLS da migration `20261013_mentorado_notas.sql`.
+- **Anexos**: imagens e documentos entram na nota pelo bucket privado `notas-anexos`, citados como `anexo:<caminho>` (AD-010).

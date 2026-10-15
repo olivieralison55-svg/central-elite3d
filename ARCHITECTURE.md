@@ -6,113 +6,123 @@ Documento técnico. Para o guia de uso, ver [README.md](README.md).
 
 ## Visão geral
 
-Aplicação de página única em **HTML e JavaScript puros, num único arquivo**
-(`index.html`, ~1.870 linhas). Sem framework, sem build, sem `package.json`.
-O único outro código versionado é `tests/`, que roda no Node sem dependência.
-O navegador fala direto com o Postgres do Supabase via PostgREST.
+Aplicação **Next.js 15 (App Router) com React 19 e TypeScript**, em `src/`. É uma
+aplicação de cliente: toda leitura e escrita de dado sai do navegador, com a
+sessão do Supabase Auth do usuário, e nenhum Server Component, rota do Next ou
+middleware toca o banco (AD-007). Fora de `src/` ficam `supabase/` (migrations e
+edge functions), `scripts/` (paridade com o app antigo e gates de publicação) e
+`public/`. O navegador fala direto com o Postgres do Supabase via PostgREST.
 
 ```
-navegador (index.html)
-   │  supabase-js (CDN)
+navegador (Next.js, React)
+   │  supabase-js (pacote npm, só em src/lib/data/)
    ▼
 Supabase  ──  Postgres + Auth + RLS
    ▲
    │  service role
-   ├── edge function  sync-google-calendar   ← pg_cron, a cada 15 min
-   └── edge function  diagnostico-api        ← projeto separado (diagnostico-elite3d)
+   ├── edge functions (9, em supabase/functions/)
+   │     sync-google-calendar   ← pg_cron, a cada 15 min
+   │     lia-webhook            ← webhook da Lia
+   │     sync-stlseller         ← pg_cron, a cada 6 h
+   │     nps-forms              ← n8n, a cada 6 h
+   │     sync-experiencia       ← pg_cron, a cada 6 h
+   │     nps-analista           ← pg_cron, diário
+   │     circle-presenca        ← webhook do Circle
+   │     buscar-transcricoes    ← pg_cron, diário
+   │     sync-transcricoes      ← pg_cron, a cada 10 min
+   └── edge function  diagnostico-api  ← projeto separado (diagnostico-elite3d)
 ```
 
-**Não existe camada de servidor própria.** Não há middleware, rota de API nem
-função de servidor neste repositório. Isso tem uma consequência que governa todo
-o resto: **a autorização real é o RLS do Postgres.** O `pode()` do JavaScript
-serve para montar a interface, não para proteger dado — qualquer pessoa com um
-login válido pode conversar com a API direto e receberá exatamente o que as
-policies permitirem, independente do que a tela mostra.
+**Não existe camada de servidor própria.** Não há middleware que toque o banco,
+rota de API nem função de servidor no app; as únicas funções de servidor são as
+edge functions acima, que rodam no Supabase. Isso tem uma consequência que
+governa todo o resto: **a autorização real é o RLS do Postgres.** O `pode()` do
+TypeScript serve para montar a interface, não para proteger dado — qualquer
+pessoa com um login válido pode conversar com a API direto e receberá
+exatamente o que as policies permitirem, independente do que a tela mostra.
 
 ### Stack
 
 | | |
 |---|---|
-| Front | HTML + CSS + JS sem framework, arquivo único |
-| Dependências | `@supabase/supabase-js@2` e `Chart.js@4.4.1`, ambas por CDN |
+| Front | Next.js 15.5 (App Router), React 19, TypeScript, Tailwind 3.4. Páginas de cliente; nada é renderizado no servidor que dependa de sessão, dado ou relógio |
+| Dependências | `@supabase/supabase-js`, `dompurify`, `zod`, `lucide-react`, `react-hot-toast`, `next`, `react` e `react-dom`, todas em versão exata e com `pnpm-lock.yaml` versionado. Nada é carregado de CDN |
+| Design system | Cópia verificável do design system da plataforma (`src/design-system/`, `src/components/ui/`, `scripts/sync-design-system.mjs`; AD-006, AD-007, AD-008) |
 | Banco / Auth | Supabase — Postgres 17, Auth por e-mail e senha |
-| Automação | 5 jobs `pg_cron` + Edge Functions (Deno) + 3 workflows n8n (STLSeller, NPS, Experiência) + analista de IA (Claude) |
-| Deploy | Vercel, automático no push para `main`. Sem etapa de build |
+| Automação | 7 jobs `pg_cron` + Edge Functions (Deno) + 4 workflows n8n (STLSeller, NPS, Experiência, Transcrições) + analista de IA (Claude) |
+| Deploy | Vercel pela `main`, com `vercel.json` (`framework: nextjs`). Ver *Publicar e voltar* |
 | Projeto Supabase | `matgynpiscyoshnjzolo` (região `sa-east-1`) |
-| Testes | `tests/` — 132 asserções em Node puro, sem dependência. Nenhum lint |
+| Testes | Vitest: `pnpm test` (offline, sem banco) e `pnpm parity` (compara com o app antigo). Nenhum lint, nenhum CI |
 
-A chave usada no front (`SUPABASE_KEY`, formato `sb_publishable_…`) é **pública
-por desenho** e pode ficar no repositório. A `service_role` **não** aparece aqui
-— vive apenas nas variáveis de ambiente das Edge Functions.
+A chave usada no front (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, formato
+`sb_publishable_…`) é **pública por desenho** e pode ficar no repositório.
+`src/lib/data/config.ts` a valida contra uma lista de permissão, e o
+`next.config.ts` interrompe o build e o `next dev` se a chave ou a URL não forem
+as de produção. A `service_role` **não** aparece aqui — vive apenas nas
+variáveis de ambiente das Edge Functions, e uma varredura de teste falha se o
+texto dela entrar em `src/`.
 
 ---
 
-## Organização do `index.html`
+## Organização do código
 
-Três blocos: `<style>` (tokens do design system e componentes), o HTML da casca
-(tela de login, shell, navegação, modal, toast) e o `<script>` inline dividido em
-seções marcadas por comentário:
-
-| Seção | Responsabilidade |
+| Onde | Responsabilidade |
 |---|---|
-| `CONFIG` | Cliente Supabase, defaults do Chart.js, faixas de faturamento, listas de mentores e etapas, estado global |
-| `AUTH` | `boot`, `doLogin`, `afterLogin`, `doLogout` |
-| `DATA` | `loadAll` — carrega tudo de uma vez, com escopo por papel |
-| `HELPERS` | `esc`, formatadores de data e moeda, `pill*`, `progBar`, `situacaoDe` |
-| `SESSÕES EM GRUPO` | `agruparGrupo`, `statusGrupo`, `resumoStatusGrupo` e o registro `GRUPO_REG` |
-| `CAMPO DE DATA` | `dateField`/`monthField` e o popover `dp*`, usados por todo campo de data |
-| `ORDENAÇÃO GENÉRICA` | `toggleSort`/`applySort`, reaproveitados por todas as tabelas |
-| `BUSCA POR MENTORADO` | `casaBusca`/`buscaField`/`setBusca` e `btnNovoMentorado`, repetidos nas cinco telas |
-| `ENDEREÇO (roteador)` | `lerEndereco`/`aplicarEndereco`/`irPara` e `render`, que despacham para a tela do hash |
-| `DASHBOARD` … `ROTAS / MARCOS` | As cinco telas |
-| `FICHA DO MENTORADO` | Página com endereço próprio, em três abas: `cadastro`, `financeiro`, `sessoes` |
-| `SESSÃO (form)`, `NOVO MENTORADO` | Modais de escrita |
-| grupo (dentro de `SESSÕES`) | `openGrupo`/`confirmarGrupo` e `openSessaoGrupo`/`criarSessaoGrupo` |
+| `src/app/` | Rotas do App Router: `(app)/<tela>/page.tsx` para cada uma das 10 telas, `(app)/mentorado/[id]/[[...aba]]` para a ficha, `page.tsx` na raiz (a ponte do link antigo `#/…`), `layout.tsx` e `not-found.tsx` |
+| `src/middleware.ts` | Só decodifica o caminho de `/mentorado/…` e manda codificação inválida ao Dashboard. Não toca o banco |
+| `src/components/shell/` | A casca: login, sessão, contextos (`useSessao`, `useDados`, a `Ui` com os filtros), carga de dados, menu e o executor de escrita `useEscrita` |
+| `src/components/modules/<tela>/` | Uma pasta por tela e a ficha (`ficha/`, com as 5 abas), mais `comum/` para o que as telas dividem |
+| `src/components/ui/`, `src/design-system/` | Primitivos copiados do design system da plataforma. Lacuna de primitivo vai para o AD-008 |
+| `src/lib/*.ts` | Regra de negócio pura, sem React nem rede: `papeis`, `endereco`, `matriz`, `painel`, `sessoes`, `financeiro`, `nps`, `ia`, `stlseller`, `datas`, `busca` e as demais. O componente só renderiza o que ela devolve |
+| `src/lib/data/` | A porta única para o Supabase: `cliente`, `auth`, `config`, `leituras` (paginadas de 1.000 em 1.000), `escritas`, `esquemas` (Zod) e `paginar`. É o único lugar que importa `@supabase/supabase-js` |
+| `scripts/parity/`, `scripts/gates/` | Paridade com o app antigo e as verificações de publicação (`verificar-build.mjs`, `sondar-rls.mjs`) |
 
-Todo o estado vive em variáveis de módulo (`M`, `P`, `S`, `ROTAS`, `MARCOS`,
-`MM`, `CANAIS_DB`, `MC`, `FAT`, `ORFAS`, `view`, `filtro`, `myRole`, mais
-`GRUPO_REG`, `grupoAberto` e `dpState`). O ciclo é
-sempre o mesmo: escrever no banco → `loadAll()` → `render()`. Não há atualização
-otimista nem cache.
+O estado vive em React context (`src/components/shell/contexto.tsx`): `useSessao`
+(usuário, papel e `pode`), `useDados` (a carga do usuário) e a `Ui`, com os
+filtros e a seleção que sobrevivem à troca de tela. O ciclo é sempre o mesmo:
+escrever pela porta (`useEscrita`, que confere a capacidade antes) → `recarregar()`.
+A recarga lê tudo de novo e **só a última pedida vale** (`src/lib/recarga.ts`);
+uma recarga que falha mantém a carga anterior e avisa por toast. Não há
+atualização otimista nem cache.
 
 ### A tela é o endereço
 
-`view`, `fichaId` e `fichaAba` não são escritos à mão em lugar nenhum: quem os
-define é `aplicarEndereco()`, lendo `location.hash`. Trocar de tela é trocar o
-hash — `irPara()` faz isso, o `hashchange` chama `aplicarEndereco()`, e ele
-chama `render()`. `setView` e `openMentorado` sobrevivem como atalhos para
-`irPara`, porque são chamados de dezenas de `onclick` espalhados pelas telas.
+Cada tela é um caminho do Next, e a ficha tem o seu. A tela e a aba são lidas do
+caminho por `src/lib/endereco.ts`; trocar de tela é navegar.
 
 | Endereço | Tela |
 |---|---|
-| `#/dash`, `#/mentorados`, `#/sessoes`, `#/rotas`, `#/financeiro` | as cinco telas |
-| `#/mentores` | tela Mentores (só `verFinanceiro`): carteira, 1:1, grupo, agenda, NPS, calls transcritas e leitura da Análise IA por mentor |
-| `#/mentorado/<id>` | ficha, aba de cadastro |
-| `#/mentorado/<id>/financeiro`, `#/mentorado/<id>/sessoes` | ficha, nas outras duas abas |
+| `/dash`, `/acompanhamento`, `/mentorados`, `/sessoes`, `/rotas` | as telas de todos os papéis |
+| `/mentores`, `/analise` (STLSeller), `/nps`, `/financeiro` | só com `verFinanceiro` |
+| `/ia` | Análise IA, só com `verIa` |
+| `/mentorado/<id>` | ficha, aba Cadastro |
+| `/mentorado/<id>/financeiro`, `/sessoes`, `/notas`, `/stlseller` | ficha, nas outras quatro abas |
 
-**Hash e não caminho** porque o deploy é estático e sem build: `/mentorado/<id>`
-pedido direto devolveria 404 antes de o JS rodar. Passar a caminho de verdade
-exigiria um `vercel.json` com rewrite de tudo para `index.html`.
+A raiz `/` lê o hash do link antigo (`#/mentorado/<id>/financeiro`) e leva ao
+caminho novo, sem entrada nova no histórico. O caminho é montado só a partir das
+formas conhecidas: nada do hash é copiado para a URL.
 
 Três consequências que não são óbvias:
 
 - **O endereço é público, a permissão não.** Um link da aba financeira mandado a
-  um mentor abre a ficha nas sessões, e `#/financeiro` volta para o dashboard.
-  O recorte por papel não pode morar só no menu, que o link contorna.
-- **`dadosProntos` existe por causa do boot.** O hash pode pedir um render antes
-  do primeiro `loadAll()` — `render()` não desenha até os dados chegarem, senão a
-  ficha de alguém que existe piscaria como "não encontrada".
+  um mentor abre a ficha nas sessões, e `/financeiro` abre o Dashboard para quem
+  não vê financeiro (`telaPermitida` e `abaVisivel`). O recorte por papel não
+  pode morar só no menu, que o link contorna.
+- **A tela só desenha depois da primeira carga.** O endereço pode pedir a ficha
+  antes de os dados chegarem; `dados.tsx` mostra o Skeleton até lá, senão a ficha
+  de alguém que existe piscaria como "não encontrada".
 - **Os submodais continuam modais.** Parcela, sessão, confirmação e exclusão
-  abrem por cima da ficha e voltam para ela com `openMentorado(mid)` sem
-  `secao` — sem `secao`, a aba atual é mantida. Como o endereço não muda nesse
-  caso, `irPara` chama `aplicarEndereco` direto: `hashchange` não dispara para o
-  endereço em que já se está.
+  abrem por cima da ficha, sem mudar o endereço.
+
+Com o App Router, o caminho direto (`/mentorado/<id>`) funciona no deploy: é o
+`vercel.json` com `framework: nextjs` que faz a Vercel servir o app do Next em
+vez do arquivo estático.
 
 ---
 
 ## Modelo de dados
 
-11 tabelas e 2 views no schema `public`. Nomes e valores em português; colunas de
+24 tabelas e 3 views no schema `public`. Nomes e valores em português; colunas de
 estado são `text`, não enums.
 
 ### Núcleo
@@ -426,8 +436,9 @@ identificado — útil para descobrir e-mail faltando no mapa.
 A Lia é o gestor de pagamentos. O fluxo é de **mão única**: nada aqui escreve
 nela; a aplicação só reflete o que ela informa.
 
-**Esta é a única função publicada com `verify_jwt` FALSE**, e tem que ser: a
-Lia não faz login no Supabase e não manda JWT. Quem garante a procedência é o
+**Esta é uma das 3 funções publicadas com `verify_jwt` FALSE** (as outras duas
+são `nps-forms` e `circle-presenca`, que também recebem chamada sem JWT e se
+autenticam por token), e tem que ser: a Lia não faz login no Supabase e não manda JWT. Quem garante a procedência é o
 header `X-Lia-Signature` — HMAC-SHA1 do **corpo cru** assinado com a
 `LIA_API_KEY`. Por isso o handler lê `request.text()` antes de qualquer parse:
 reserializar o JSON muda espaços e invalida a assinatura. A comparação é de
@@ -541,7 +552,7 @@ edge function sync-stlseller ──rpc──▶ stlseller_sincronizar(payload)
                                           ▼
           stlseller_mentorados · stlseller_pedidos_marketplace · stlseller_produtos_vendidos
                                           ▲
-                          index.html, aba STLSeller (admin e diretoria)
+                          app, tela STLSeller (admin e diretoria)
 ```
 
 A **view `vw_mentorados_status_real` é a fonte da lista**: todos os status do
@@ -582,7 +593,7 @@ Forçar uma rodada agora (resposta em `net._http_response`):
 do $$ begin execute (select command from cron.job where jobname = 'sync-stlseller-6h'); end $$;
 ```
 
-**Tela STLSeller (`#/analise`, menu lateral)** — a visão da carteira sobre as
+**Tela STLSeller (`/analise`, menu lateral)** — a visão da carteira sobre as
 mesmas três tabelas: bruto vendido, quanto dele foi atribuído a anúncio
 (cobertura), pedidos e % de cancelados, concentração do bruto nos 5 maiores,
 distribuição do `status_real`, tabela ordenável por mentorado com filtros, os
@@ -615,7 +626,7 @@ npx supabase@latest functions deploy sync-stlseller --project-ref matgynpiscyosh
 
 ### NPS — n8n a cada 6 h → edge function `nps-forms`
 
-Traz para a tela **NPS** (`#/nps`) as notas que o mentorado dá à sessão.
+Traz para a tela **NPS** (`/nps`) as notas que o mentorado dá à sessão.
 
 ```
 Planilha "Pesquisa de Satisfação com a Sessão - Elite 3D (respostas)"
@@ -625,18 +636,18 @@ n8n-ops · "[Central Elite3D] NPS - planilha -> nps-forms (6h)" (oNBtTs1TVwtsAaa
    │  Schedule a cada 6 h (minuto 40, America/Sao_Paulo) · service account @lucasstlflix
    │  POST, header X-NPS-Token
    ▼
-edge function nps-forms ──upsert on origem_id──▶ nps_respostas ◀── index.html, tela NPS
+edge function nps-forms ──upsert on origem_id──▶ nps_respostas ◀── tela NPS do app
 ```
 
 **A aba certa não é a do link.** O `gid=274559119` que circula é a aba
 "Dashboard" (só gráfico, zero célula); "Respostas NPS 2" tem **s** no nome. O nó
 do Sheets aponta pelo gid 1875301760, não pelo nome.
 
-**`nps-forms`, a tabela e a view `nps_mentores_mensal` não nasceram aqui.**
+**`nps-forms`, a tabela e a view `nps_mentores_mensal` nasceram fora do repo.**
 Foram aplicadas direto no projeto em 23/09/2026 (migrations `nps_mentores` e
-`nps_forms`), pensadas para um Apps Script no próprio Forms, e **o código da
-função não está versionado neste repo** — `functions download nps-forms` é a
-única cópia. O n8n passou a ser o alimentador: o `NPS_FORMS_TOKEN` foi
+`nps_forms`), pensadas para um Apps Script no próprio Forms. O código da função
+**está versionado** em `supabase/functions/nps-forms/`. O n8n passou a ser o
+alimentador: o `NPS_FORMS_TOKEN` foi
 regenerado nessa data e vive só no secret da função e na credencial n8n
 `Central Elite3D - nps-forms`; um Apps Script instalado antes disso recebe 401.
 
@@ -682,7 +693,7 @@ edge function sync-experiencia ──upsert on origem_id──▶ experiencia_re
 
 nps_respostas + experiencia_respostas ──▶ edge function nps-analista
   + mentorado_dossies (AD-003) + presença em grupo (sessoes ordem ≥ 90) ──▶ Claude (claude-opus-5-5)
-   ▲ pg_cron nps-analista-diario (0 11 UTC = 08:00 Brasília)      └──insert──▶ nps_analises
+   ▲ pg_cron nps-analista-diario (0 10 UTC = 07:00 Brasília)      └──insert──▶ nps_analises
 ```
 
 **Lida pelo Drive, não pelo nó Sheets.** A service account `@software`
@@ -721,12 +732,12 @@ rodada se o modelo devolver um `mentorado_id` que não veio dos dados: um id
 inventado viraria link para a ficha errada. `fallbacks: "default"` cobre recusa de classificador.
 A chave é o secret `ANTHROPIC_API_KEY` da função, a mesma ANTHROPIC_API_KEY da plataforma-product-ops.
 
-**Tela Análise IA** (`#/ia`, admin e diretoria): três abas — **Visão geral**
+**Tela Análise IA** (`/ia`, com `verIa`: admin, diretoria e o recorte do mentor): três abas — **Visão geral**
 (resumo e alertas, mais grave primeiro), **Por mentor** e **Por mentorado**:
 cada uma é uma lista de integrantes (números calculados do NPS carregado, risco,
 quantos prós e contras) e o clique abre a tela única da pessoa — leitura, prós e
 contras lado a lado, pauta para a conversa e o histórico de respostas. **Tela
-NPS** (`#/nps`): só números, em duas abas — **NPS das sessões** e **Pesquisa de
+NPS** (`/nps`): só números, em duas abas — **NPS das sessões** e **Pesquisa de
 Experiência** (NPS da mentoria, índice de experiência = média da grade,
 clareza dos próximos passos, índice por item com o pior primeiro, e as
 respostas abertas). **Nada vai para os
@@ -826,8 +837,8 @@ diferentes:
 
 | Onde | O quê |
 |---|---|
-| `index.html` → `MENTORES` | Quem aparece nos formulários e recebe novos agendamentos |
-| `index.html` → `MENTORES_HIST` | Quem saiu: some dos formulários, continua contando no histórico |
+| `src/lib/constantes.ts` → `MENTORES` | Quem aparece nos formulários e recebe novos agendamentos |
+| `src/lib/constantes.ts` → `MENTORES_HIST` | Quem saiu: some dos formulários, continua contando no histórico |
 | edge function → `EMAIL_MENTOR` e `MENTORES` | E-mail → nome, mais os apelidos do fallback |
 
 Esquecer o `EMAIL_MENTOR` faz as sessões daquele mentor entrarem sem mentor
@@ -867,16 +878,14 @@ um checkup. Isso não distorce o fechamento — distorce a trilha.
 
 ### Os alertas do dashboard apontam linhas, não telas
 
-Cada alerta publica em `FOCO_ALERTA` os ids das linhas que ele contou, e o link
-chama `focarSessoes(<nome do alerta>)` — **o nome, nunca o id**. Passar id por
-handler inline seria furo de escape: `esc()` não protege dentro de `onclick`,
-porque `&#39;` volta a ser `'` no parse de JS. É a mesma razão pela qual
-`openGrupo` recebe um índice de `GRUPO_REG`.
+Cada alerta calcula os ids das linhas que contou (`focoDoAviso`, em
+`src/lib/matriz.ts`) e os guarda na `Ui` como `foco`, com o título e a dica. O
+clique vai para Sessões e zera os filtros de tipo e mentor.
 
-`foco` recorta `renderSessoes` para esses ids, **antes** dos filtros de tipo e
-mentor — um filtro ativo não deveria conseguir esconder a linha que o alerta
-aponta, e por isso `focarSessoes` também os zera. `aplicarEndereco` descarta o
-foco ao sair da tela: ele pertence ao alerta que trouxe a pessoa até ali.
+`foco` recorta Sessões para esses ids, **antes** dos filtros de mentor, tipo e
+busca (`recortarSessoes`, `src/lib/sessoes.ts`) — um filtro ativo não deveria
+conseguir esconder a linha que o alerta aponta. A casca descarta o foco ao sair
+da tela de Sessões: ele pertence ao alerta que trouxe a pessoa até ali.
 
 Sob foco, "Concluídas" não corta em 30. O alerta pode apontar uma sessão de
 meses atrás, e o corte esconderia exatamente a linha que a pessoa veio conferir.
@@ -919,69 +928,67 @@ participante**, e a interface reagrupa com `agruparGrupo()` pela chave
 
 - **Não existe id de encontro.** Mudar data ou hora de parte dos participantes
   parte o encontro em dois, porque a chave muda.
-- **Toda contagem de sessão precisa declarar o tipo.** `progBar`, a legenda da
-  trilha na ficha e o alerta de +30 dias usam `sessoes1a1De`; voltar a somar
-  `S` inteiro infla a trilha de 12 sessões.
+- **Toda contagem de sessão precisa declarar o tipo.** a barra de
+  progresso, a legenda da trilha na ficha e o alerta de +30 dias usam `sessoes1a1De`; voltar a somar
+  todas as sessões infla a trilha de 12 sessões.
 - **O alerta de +30 dias ignora encontro em grupo de propósito.** Se contasse,
   quem só aparece no plantão nunca acenderia o alerta — que é justamente o caso
   que ele existe para pegar.
-- **`openGrupo` recebe um índice de `GRUPO_REG`, não a etapa.** É deliberado:
-  `esc()` não protege dentro de handler inline, porque `&#39;` volta a ser `'`
-  quando o atributo é parseado como JavaScript. Interpolar texto de coluna num
-  `onclick` reabriria o XSS que a passada de `esc()` fechou.
+- **Não há handler inline.** O React monta cada botão com a função na mão e o
+  encontro em grupo é referenciado pela chave `etapa + data + hora`; nenhum
+  texto de coluna vira atributo de evento.
 
 ### Capacidades, não `isAdmin`
 
 O front decide o que mostrar por `pode("capacidade")`, sobre o mapa
-`CAPACIDADES` no início do script. Antes era um booleano `isAdmin`, que
+`CAPACIDADES` de `src/lib/papeis.ts`. Antes era um booleano `isAdmin`, que
 significava duas coisas ao mesmo tempo — *vê o financeiro* e *pode escrever*. O
 papel `diretoria` separa as duas, e um booleano não expressa isso.
 
-As capacidades são `verFinanceiro`, `criarMentorado`, `editarMentorado`,
-`editarFinanceiro`, `escreverSessao`, `criarSessao`, `escreverRotas` e
-`excluir`. Cada papel é uma lista de uma linha, o que deixa o recorte inteiro
-legível de uma vez — `diretoria: ["verFinanceiro"]` diz tudo.
+As capacidades são `verFinanceiro`, `verIa`, `criarMentorado`,
+`editarMentorado`, `editarFinanceiro`, `escreverSessao`, `criarSessao`,
+`escreverRotas`, `escreverNotas` e `excluir`. Cada papel é uma lista, o que deixa
+o recorte inteiro legível de uma vez: `diretoria` tem `verFinanceiro` e `verIa`
+e nenhuma de escrita; `mentor` tem `escreverSessao`, `escreverRotas`,
+`escreverNotas` e `verIa` — **não** tem `criarSessao`, então o mentor edita e
+confirma sessão mas não cria.
 
-Ao acrescentar botão de escrita, envolva em `pode(...)`. A suíte tem uma
-varredura que reprova qualquer handler de escrita aparecendo nas telas de
-`diretoria`, com controle negativo em `admin` para garantir que o detector não
-está passando vazio — então esquecer o `pode(...)` falha o teste, não a produção.
-Ainda assim, isso é interface: quem impede a escrita é o RLS.
+Ao acrescentar botão de escrita, envolva em `pode(...)` e marque o botão com
+`data-escrita="W.."`. O executor `useEscrita` recusa a escrita sem a capacidade,
+e a suíte tem testes por papel (o controle some para quem não tem a capacidade).
+Ainda assim, isso é interface: quem impede a escrita é o RLS, e o
+`scripts/gates/sondar-rls.mjs` confere que ele recusa o que cada papel não pode.
 
 ### Excluir mentorado é cascata, e o RLS não recusa — filtra
 
 As cinco filhas de `mentorados` são `ON DELETE CASCADE`: `sessoes`, `parcelas`,
-`mentorado_marcos`, `mentorado_canais` e `faturamento_mensal`. Um `delete` na
-ficha apaga o histórico inteiro da pessoa, e as sessões concluídas que saem
+`mentorado_marcos`, `mentorado_canais` e `faturamento_mensal`. Ainda em cascata
+pelo mesmo `delete`, caem as notas, as transcrições e os dossiês do mentorado, e
+as cobranças da Lia ficam **órfãs** (sem o mentorado ao qual ligar). Um `delete`
+na ficha apaga o histórico inteiro da pessoa, e as sessões concluídas que saem
 mudam o fechamento dos mentores daquele mês. Nada disso apareceria num
-`confirm()` do navegador, então a confirmação é um modal próprio
-(`openExcluirMentorado`): `resumoExclusao(id)` conta o que vai embora, o texto
-diz o efeito no fechamento, e o botão só destrava com o nome digitado
-(`conferirNomeExclusao`). A comparação passa por `chaveNome` — sem caixa, sem
-acento, sem espaço sobrando: o campo existe para provar intenção, não para
-cobrar ortografia.
+`confirm()` do navegador, então a confirmação é um `ConfirmDialog` próprio, na aba
+Cadastro: `resumoExclusao` (`src/lib/mentorados.ts`) conta o que vai embora, o
+texto diz o efeito no fechamento, e o botão só destrava com o nome digitado. A
+comparação passa por `chaveNome` — sem caixa, sem acento, sem espaço sobrando: o
+campo existe para provar intenção, não para cobrar ortografia.
 
 O `delete` vai com `.select("id")` de propósito. **O RLS do Postgres não recusa
 um delete sem permissão: ele filtra as linhas.** Sem policy aplicável a resposta
 volta sem erro e com zero linhas, e um `if(error)` sozinho declararia sucesso —
-a ficha reapareceria no `loadAll()` seguinte, sem explicação. Hoje `admin` tem
+a ficha reapareceria na recarga seguinte, sem explicação. Hoje `admin` tem
 `mentorados_admin_all` (`ALL`), então o caminho feliz funciona; a checagem de
-`data.length` é o que mantém a mensagem honesta se a policy mudar. Vale para
-qualquer `delete`/`update` novo que precise afirmar que escreveu.
+linhas é o que mantém a mensagem honesta se a policy mudar. A porta
+(`src/lib/data/escritas.ts`) trata zero linhas como falha em **toda** escrita.
 
-### A busca de mentorado é por tela, e o input precisa do id
+### A busca de mentorado é por tela
 
-`filtro` guarda um termo por tela (`q` em Mentorados, `qDash`, `qSessoes`,
-`qFin`, `qRotas`). São separados de propósito: um termo compartilhado faria quem
-buscou um nome em Sessões abrir o Financeiro já recortado por ele, sem ter
-pedido. A comparação é `casaBusca(termo, ...campos)` — sem caixa, sem acento e
-por partes, a mesma em todas as telas.
-
-O campo sai de `buscaField(campo, placeholder)`, que dá ao input o id
-`busca_<campo>`. **O id não é decoração**: cada tecla dispara `setBusca`, que
-re-renderiza a tela inteira por `innerHTML` e recria o input; é pelo id que ele é
-reencontrado para devolver o foco e a posição do cursor. Um campo de busca novo
-deve usar esse helper — um `<input>` solto perde o teclado a cada letra.
+`Ui.filtro` guarda um termo por tela (`q` em Mentorados, `qDash`, `qSessoes`,
+`qFin`, `qRotas`, `qAnalise`, `qNps`). São separados de propósito: um termo
+compartilhado faria quem buscou um nome em Sessões abrir o Financeiro já
+recortado por ele, sem ter pedido. A comparação é `casaBusca(termo, ...campos)`
+(`src/lib/busca.ts`) — sem caixa, sem acento e por partes, a mesma em todas as
+telas.
 
 A busca recorta listas, nunca os contadores: cards, alertas do dashboard e o
 subtítulo de cada tela continuam somando a operação inteira. Onde a busca esvazia
@@ -992,24 +999,11 @@ Nos encontros em grupo o filtro é aplicado **depois** de `agruparGrupo`: filtra
 linha a linha deixaria o encontro com um participante só, e a coluna
 *Participantes* passaria a mentir sobre quem esteve na sala.
 
-A lista de participantes do modal de grupo é a exceção que não re-renderiza:
-`filtrarParticipantes` esconde por atributo `hidden`, porque as marcações vivem
-só no DOM e um re-render perderia quem já tinha sido selecionado. Por isso existe
-a regra `[hidden]{display:none!important}` — o `display:flex` de `.chk` ganharia
-do atributo por especificidade.
+### Datas são texto `AAAA-MM-DD`, e "hoje" é do cliente
 
-### O campo de data guarda o valor num input hidden
-
-`dateField(id, ...)` monta um `<input type="hidden">` com o **mesmo id** que o
-`<input type="date">` tinha antes, mais um botão que abre o calendário. É o que
-mantém todo `$("#id").value` funcionando sem tocar nos `salvar*`, e o evento
-`change` continua sendo disparado como no input nativo. Ao acrescentar um campo
-de data novo, use `dateField`/`monthField` — um `<input type="date">` solto faz
-o sistema voltar a ter dois comportamentos diferentes.
-
-O popover é filho de `<body>` com `position:fixed`, de propósito: dentro do modal
-ele seria cortado pelo `overflow-y` do `.overlay`. O `z-index` precisa ficar
-acima de 50, que é o do overlay.
+O campo de data e o de mês são os componentes do design system, e o valor que
+sai deles é o texto `AAAA-MM-DD` (ou `AAAA-MM`) que o banco guarda. A escrita
+recebe a data de quem chama; "hoje" nunca fica dentro da porta.
 
 ### `cancelado` e `situacao` são a mesma informação
 
@@ -1020,106 +1014,142 @@ como fallback. Ao mexer aqui, mexa nos dois.
 
 ### Fuso horário
 
-`HOJE` usa `toLocaleDateString("sv-SE", {timeZone:"America/Sao_Paulo"})` para
-sair no formato `YYYY-MM-DD` já no fuso da operação. Já houve bug aqui:
+`hojeSP()` (`src/lib/datas.ts`) usa `toLocaleDateString("sv-SE", {timeZone:"America/Sao_Paulo"})`
+para sair no formato `YYYY-MM-DD` já no fuso da operação, e é calculado **na hora
+do uso**: o `HOJE` do app antigo era fixado no carregamento, e com a aba aberta
+de um dia para o outro todo prazo ficava um dia atrás. Já houve bug aqui:
 `toISOString()` devolve UTC e entre 21h e meia-noite em Brasília o dia virava,
 adiantando vencimentos e "próximas sessões". **Não troque por `toISOString()`.**
 
-### Escape de HTML é obrigatório na renderização
+### O React escapa; HTML só entra no editor de notas, sanitizado
 
-As telas são montadas por template string e `innerHTML`. Colunas de texto do
-banco **precisam** passar por `esc()` — inclusive dentro de atributos. Já houve
-XSS armazenado aqui: valores de `sessoes.status`, `sessoes.etapa`,
-`contrato_status`, `criterios_pendentes` e outros eram interpolados crus, e quem
-conseguia escrever nessas colunas executava script no navegador de quem abrisse
-a tela, inclusive admin.
+As telas são componentes React, que escapam todo texto interpolado. Já houve XSS
+armazenado no app antigo (colunas de texto interpoladas cruas em `innerHTML`), e
+o `CHECK` em `sessoes.status` fecha só um dos veículos: as outras colunas seguem
+sendo texto livre. Por isso:
 
-O `CHECK` em `sessoes.status` fecha um dos veículos, mas as outras colunas
-seguem sendo texto livre. **Ao adicionar qualquer campo novo na tela, use
-`esc()`.**
+- **HTML inserido só no editor de notas**, e só passando por `sanitizarNota(`
+  (DOMPurify, `src/lib/notas.ts`). Uma varredura de teste (`src/test/varreduras.test.ts`)
+  reprova qualquer outro ponto que insira HTML.
+- Um teste renderiza as telas com payload de XSS nos nomes e confere o texto
+  escapado (`&lt;img`) em vez de ausente, para não confundir escape com dado
+  descartado (`src/test/xss.test.tsx`).
+- Os nomes das categorias coletivas vêm da constante `ETAPAS_GRUPO`, não do
+  banco.
 
-Duas notas sobre a divisão de sessões: os nomes das categorias coletivas vêm da
-constante `ETAPAS_GRUPO`, não do banco, mas passam por `esc()` de todo jeito; e
-nenhum texto de coluna é interpolado dentro de `onclick` — encontro em grupo é
-referenciado por índice. Ver *Encontro em grupo é N linhas* acima.
+### As dependências vêm do npm, em versão exata
 
-### Dependências vêm de CDN sem verificação de integridade
-
-`supabase-js` está fixado em major flutuante (`@2`) e nenhuma das duas tags tem
-`integrity`. Um release ruim ou um CDN comprometido executa com acesso total ao
-banco no navegador de todos. Fixar versão exata e adicionar SRI é barato.
+`@supabase/supabase-js` e `dompurify` ficam fixados em versão exata, com
+`pnpm-lock.yaml` e `pnpm install --frozen-lockfile` no deploy. Nada é carregado
+de outra origem, e a `Content-Security-Policy` do `next.config.ts` só libera
+`connect-src` para o próprio site e o Supabase de produção. A varredura
+`STACK-08` falha se uma origem externa aparecer.
 
 ---
 
-## Rodando localmente
+## Rodar
 
-Não há build. Mas **não abra o arquivo por `file://`**: as telas são montadas por
-JavaScript e ambos os containers começam com `display:none`, então a página fica
-em branco. Sirva por HTTP:
-
-```bash
-python -m http.server 8080
-```
-
-E acesse `http://localhost:8080`. O login funciona normalmente contra o Supabase
-de produção — **atenção: é o banco real, não um ambiente de teste.** Não existe
-projeto de staging hoje.
-
-## Testes
+Requisitos: Node 24 (use o `nvm`: `nvm use default`) e `pnpm` 9.9.0 (o
+`packageManager` do `package.json`).
 
 ```bash
-node tests/testes.mjs
+pnpm install --frozen-lockfile
+pnpm dev                 # http://localhost:3000
 ```
 
-Sem dependência, sem instalar nada, sem tocar o banco. Sai com código 1 se algo
-falhar, então serve em hook de pre-push ou CI.
+Sem variável de ambiente: a URL e a chave publicável de produção são o padrão
+(`src/lib/data/config.ts`). `NEXT_PUBLIC_SUPABASE_URL` e
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (veja `.env.example`) só existem para
+trocar de projeto, e o `next.config.ts` recusa qualquer valor que não seja o de
+produção. O login funciona normalmente contra o Supabase de produção —
+**atenção: é o banco real, não um ambiente de teste.** Não existe projeto de
+staging hoje.
 
-`tests/ambiente.mjs` extrai o `<script>` inline do `index.html`, executa num
-escopo controlado com stubs mínimos de browser, e guarda o `innerHTML` atribuído
-a cada seletor. `carregarApp()` devolve uma instância nova por chamada — o estado
-do app vive no closure do `new Function`, então dois papéis não se contaminam.
-As escritas no Supabase são capturadas em vez de enviadas, o que permite afirmar
-sobre o payload: é assim que se verifica que um encontro em grupo grava uma linha
-por participante, com a mesma etapa, data e mentor.
+## Testar
 
-O que está coberto — deliberadamente, o que já quebrou aqui ou quebraria calado:
+```bash
+pnpm typecheck           # tsc --noEmit
+pnpm test                # vitest; sem rede e sem banco
+pnpm parity              # paridade com o app antigo, fora do pnpm test
+```
 
-- **Escape de HTML** em toda tela e modal, com payload de XSS armazenado num nome
-  de mentorado. O critério é ausência de `<img` cru **mais** presença de
-  `&lt;img`: provar só a ausência não distingue escape de dado descartado no
-  caminho.
-- **`diretoria` não recebe handler de escrita** em nenhuma tela ou modal, com
-  controle negativo em `admin` provando que a varredura acha quando existe.
-- **Nenhum texto de coluna dentro de `onclick`** — encontro em grupo referenciado
-  por índice.
-- **Permissões por papel:** o que mentor não vê (Financeiro, alertas financeiros,
-  registrar sessão em grupo) e o que vê (confirmar presença).
-- **Separação 1:1 x grupo:** classificação por etapa, agrupamento por
-  etapa+data+hora, e as contagens que precisam ficar 1:1 (barra de progresso,
-  legenda da trilha).
-- **Formato de data e de moeda**, incluindo o eixo do gráfico e o contrato do
-  campo de data (o `input hidden` com o id de antes).
+`pnpm test` roda `src/**/*.test.{ts,tsx}` e `scripts/**/*.test.{ts,mjs}` no
+`node`, sem browser. O que está coberto — deliberadamente, o que já quebrou aqui
+ou quebraria calado:
+
+- **Regra de negócio** em `src/lib/*.test.ts`: o dashboard e seus alertas, a
+  matriz de fechamento, sessões 1:1 e em grupo, financeiro, NPS, Análise IA,
+  STLSeller, datas e moeda.
+- **Telas e casca**, renderizadas com fixtures (`src/test/fixtures.ts`): o que
+  cada papel vê, a ligação de cada botão com a regra e a escrita certas, o payload
+  de cada escrita, e o escape de HTML com payload de XSS.
+- **Permissões por papel**: `diretoria` não recebe controle de escrita em
+  nenhuma tela, e o mentor não vê Financeiro.
+- **Varreduras de texto** (`src/test/varreduras.test.ts`): `supabase-js` só em
+  `src/lib/data/`, sem `service_role`, sem origem externa, sem `window.confirm`,
+  sem cor fora dos tokens.
+- **A porta de dados** (`src/lib/data/`): schemas Zod, paginação e o tratamento de
+  zero linhas como falha.
+- **Os scripts de gate** (`scripts/**/*.test.*`), sem rede.
 
 O que **não** está coberto, e por isso não substitui uma passada no browser:
-layout, CSS, evento real, posicionamento do popover do calendário, e qualquer
-coisa que dependa de estar logado.
+layout, CSS, evento real, e qualquer coisa que dependa de estar logado.
 
-## Deploy
+`pnpm parity` compara os números do app antigo (o `index.html` do merge-base,
+lido por `git show`) com os do novo, sobre um snapshot de produção. **O snapshot
+vive fora do repositório**, em `~/.central-elite3d-paridade/` (ou no caminho de
+`PARIDADE_SNAPSHOT`), porque tem nome, e-mail, nota e financeiro: nunca o copie
+para o repo nem o cole em evidência. Quem o gera é o dono, num terminal dele
+(`pnpm parity:snapshot`), com a senha pedida sem eco. A saída da paridade lista
+só `métrica | chave | tipo`, sem valor; os valores ficam num arquivo 0600 na
+pasta do snapshot.
 
-Push para `main` → a Vercel publica automaticamente em
-`central-elite3d.vercel.app`. Sem etapa de build, sem CI, sem verificação
-automática. Vale conferir a tela depois de cada deploy.
+Verificações de publicação, depois do build:
 
-Alterações de banco não estão versionadas neste repositório: são aplicadas como
-migrations no projeto Supabase. As duas mais recentes são
-`harden_profiles_role_privilege_escalation` e `constrain_sessoes_status_domain`.
+```bash
+pnpm build
+node scripts/gates/verificar-build.mjs                     # sem sb_secret_, sem JWT não anônimo, classe da fonte no CSS
+node --import ./scripts/gates/alias.mjs scripts/gates/sondar-rls.mjs   # G3.14: o RLS recusa o que cada papel não pode
+```
 
-### A edge function é versionada aqui; o deploy é manual
+O segundo script pede, sem eco, o e-mail e a senha de uma conta de UAT
+(diretoria ou mentor) e mexe só no registro de teste.
 
-`supabase/functions/sync-google-calendar/index.ts` passou a viver no repo em
-08/09/2026 — antes existia só no Supabase, sem histórico nem diff. **O push não
-a publica:** a Vercel serve só o `index.html`, e a função roda no Supabase. Para
-publicar, da raiz do repo:
+## Publicar e voltar
+
+**Publicar.** A Vercel publica pela `main`, no mesmo projeto e domínio de antes
+(`central-elite3d.vercel.app`). O `vercel.json` da raiz (`framework: nextjs`,
+`pnpm install --frozen-lockfile`, `pnpm build`) diz à Vercel que o repositório é
+um app Next.js e não um site estático. Não há CI: rode `pnpm typecheck`,
+`pnpm test` e `pnpm build` antes do merge e confira a tela depois do deploy.
+
+**Voltar.** Se algo der errado depois do corte, o Lucas desfaz o merge:
+
+```bash
+git revert -m 1 <merge>     # e push na main
+```
+
+O revert devolve a `main` ao que ela era antes do corte: sem `vercel.json` e com
+o `index.html` na raiz, a Vercel volta a publicar um site estático. Um deploy
+estático serve **todo arquivo do repositório** (`/supabase/…`, `/docs/…`,
+`/.specs/…`), então o commit da volta leva um **`.vercelignore` que publica só
+`index.html` e `favicon.png`**. O ensaio da volta (G4.3) publica, como preview,
+uma branch descartável a partir da `main` com esse `.vercelignore`, e confere o
+app antigo respondendo e os arquivos do repositório dando 404. A alternativa, sem
+commit, é o "Instant Rollback" do dono do projeto na Vercel. O alvo é o app
+antigo respondendo em até 15 minutos depois do gatilho (login falha num papel,
+papel vendo dado fora do recorte, divergência na paridade ao vivo, escrita que
+não grava, erro no console, tela sem estilo).
+
+Alterações de banco são migrations em `supabase/migrations/` (16 hoje); o núcleo
+do schema, anterior a elas, **não** está versionado. As duas mais recentes são
+`20261013_experiencia_adesao.sql` e `20261013_transcricoes_e_dossies.sql`.
+
+### As edge functions são versionadas aqui; o deploy é manual
+
+As 9 funções vivem em `supabase/functions/<nome>/index.ts`. **O push não as
+publica:** a Vercel serve só o app, e as funções rodam no Supabase. Para
+publicar uma, da raiz do repo (exemplo com `sync-google-calendar`):
 
 ```bash
 npx supabase@latest login
@@ -1127,12 +1157,12 @@ npx supabase@latest functions deploy sync-google-calendar --project-ref matgynpi
 ```
 
 Docker não é necessário (a CLI cai para deploy via API; `--use-api` força).
-`--project-ref` dispensa o `supabase link`. O `verify_jwt = true` está fixado em
-`supabase/config.toml` de propósito: a função escreve em `sessoes` com a
-`service_role` key, e um deploy que o virasse para `false` a deixaria aberta a
-qualquer chamada sem token.
+`--project-ref` dispensa o `supabase link`. O `verify_jwt = true` das 6 funções que exigem JWT está
+fixado em `supabase/config.toml` de propósito: `sync-google-calendar` escreve em
+`sessoes` com a `service_role` key, e um deploy que a virasse para `false` a
+deixaria aberta a qualquer chamada sem token.
 
-**Ao mexer nela, confira se o arquivo do repo está à frente do que roda:**
+**Ao mexer numa função, confira se o arquivo do repo está à frente do que roda:**
 `get_edge_function` pelo MCP devolve o código publicado.
 
 ---
@@ -1153,11 +1183,9 @@ Em ordem aproximada de retorno sobre esforço.
    acesso de mentor sem nenhum aviso na tela.
 2. **`sessoes.mentor` como FK** em vez de texto livre. Destrava o item 1, o
    filtro "meus mentorados" e a carga confiável por mentor.
-3. **A suíte não cobre os alertas nem o browser.** `tests/` cobre escape de HTML,
-   permissões por papel e a separação de sessões, mas o cálculo dos alertas do
-   dashboard (parada há +30 dias, órfãs do Calendar, aguardando confirmação) só é
-   verificado por "renderizou sem lixo" — não há asserção sobre quem deveria
-   entrar em cada lista. Nada roda em browser, nada roda em CI.
+3. **A suíte não cobre o browser, e nada roda em CI.** O `pnpm test` roda no
+   `node`: cobre regra, telas renderizadas, escape de HTML e permissões por
+   papel, mas não layout, CSS nem evento real, e só roda quando alguém o chama.
 4. **Sem histórico nem autoria** em `mentorados` e `sessoes` — nem `updated_at`,
    nem quem alterou. Impossível auditar mudanças.
 5. **~~`unique (mentorado_id, etapa)`~~ — não faça.** Este débito estava
@@ -1186,4 +1214,5 @@ Em ordem aproximada de retorno sobre esforço.
 9. **Features construídas e não alimentadas:** `parcelas.valor` vazio,
    `faturamento_mensal` e `mentorado_marcos` quase sem uso, `mentorado_canais`
    vazia. Ou se resolve a origem do dado, ou se remove a feature.
-10. **Sem ambiente de staging.** Todo teste é contra produção.
+10. **Sem ambiente de staging.** O `pnpm test` é offline, mas rodar o app, a
+    paridade e os gates é contra produção.
