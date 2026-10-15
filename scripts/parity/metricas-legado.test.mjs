@@ -4,11 +4,11 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { carregarLegado, indexDoMergeBase } from "./legado.mjs";
+import { carregarLegado, indexDoLegado } from "./legado.mjs";
 import { METRICAS, par01, par02, par03, par04, par05, par06, par07, par08, par09, par10, par11, par12, par13, par14, par15, par16, par17 } from "./metricas-legado.mjs";
 import { relacoesDeTeste } from "./snapshot-de-teste";
 
-// GATE-06, PAR-01…PAR-17: as métricas do app antigo (o index.html do merge-base) sobre os fixtures
+// GATE-06, PAR-01…PAR-17: as métricas do app antigo (o index.html do commit LEGADO) sobre os fixtures
 // do harness antigo, com "hoje" fixo em 25/09/2026 ao meio-dia de Brasília. Os valores esperados
 // saem das regras do mapeamento §3 aplicadas aos fixtures, à mão.
 
@@ -18,7 +18,7 @@ let arquivo = "";
 
 beforeAll(() => {
   pasta = mkdtempSync(join(tmpdir(), "metricas-legado-"));
-  arquivo = indexDoMergeBase({ cwd: RAIZ, destino: join(pasta, "index.html") }).arquivo;
+  arquivo = indexDoLegado({ cwd: RAIZ, destino: join(pasta, "index.html") }).arquivo;
 });
 afterAll(() => {
   vi.useRealTimers();

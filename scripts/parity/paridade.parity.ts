@@ -5,10 +5,10 @@ import { fileURLToPath } from "node:url";
 import { afterAll, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { indexDoMergeBase } from "./legado.mjs";
+import { indexDoLegado } from "./legado.mjs";
 import { codigoDeSaida, divergenciasDoSnapshot, gravarDivergencias, linhasDoRelatorio } from "./relatorio";
 
-// G2.5 (GATE-06, GATE-07, SEC-02): o app antigo do merge-base e o novo sobre o mesmo snapshot, com
+// G2.5 (GATE-06, GATE-07, SEC-02): o app antigo (commit LEGADO) e o novo sobre o mesmo snapshot, com
 // o relógio no "hoje" do snapshot, nos 3 papéis.
 //
 //   pnpm parity                                   # o snapshot mais novo de ~/.central-elite3d-paridade
@@ -38,19 +38,19 @@ afterAll(() => {
   rmSync(temporaria, { recursive: true, force: true });
 });
 
-it("paridade com o app antigo do merge-base", async () => {
+it("paridade com o app antigo (commit LEGADO)", async () => {
   const caminho = arquivoDoSnapshot();
   const { data, relacoes } = SNAPSHOT.parse(JSON.parse(readFileSync(caminho, "utf8")));
   // O "hoje" do snapshot ao meio-dia em Brasília, antes de carregar os dois apps: o antigo fixa o
   // HOJE no carregamento.
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(`${data}T15:00:00Z`));
-  const { arquivo, sha } = indexDoMergeBase({ cwd: RAIZ, destino: join(temporaria, "index.html") });
+  const { arquivo, sha } = indexDoLegado({ cwd: RAIZ, destino: join(temporaria, "index.html") });
 
   const divergencias = await divergenciasDoSnapshot({ relacoes, data, arquivo });
 
   const gravado = gravarDivergencias(dirname(caminho), data, divergencias);
-  console.log([`merge-base ${sha} · snapshot de ${data} · ${divergencias.length} divergência(s)`, ...linhasDoRelatorio(divergencias), `valores: ${gravado}`].join("\n"));
+  console.log([`legado ${sha} · snapshot de ${data} · ${divergencias.length} divergência(s)`, ...linhasDoRelatorio(divergencias), `valores: ${gravado}`].join("\n"));
   // Só a contagem na falha: o diff do expect imprimiria os valores.
   expect(codigoDeSaida(divergencias), `${divergencias.length} divergência(s) fora do Apêndice A`).toBe(0);
 });

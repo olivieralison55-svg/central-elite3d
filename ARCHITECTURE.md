@@ -1095,7 +1095,7 @@ ou quebraria calado:
 O que **não** está coberto, e por isso não substitui uma passada no browser:
 layout, CSS, evento real, e qualquer coisa que dependa de estar logado.
 
-`pnpm parity` compara os números do app antigo (o `index.html` do merge-base,
+`pnpm parity` compara os números do app antigo (o `index.html` do commit `pre-nextjs`,
 lido por `git show`) com os do novo, sobre um snapshot de produção. **O snapshot
 vive fora do repositório**, em `~/.central-elite3d-paridade/` (ou no caminho de
 `PARIDADE_SNAPSHOT`), porque tem nome, e-mail, nota e financeiro: nunca o copie
