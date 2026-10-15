@@ -2001,10 +2001,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] NPS = `round(100 · (#nota ≥ 9 − #nota ≤ 6) / n)`; média com 1 casa; semana de segunda a domingo; resposta às 22h de domingo em Brasília conta no domingo
-- [ ] Índice da Experiência (0/25/50/75/100, média das médias), clareza e índice por item, pior primeiro
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 513 → 525
+- [x] NPS = `round(100 · (#nota ≥ 9 − #nota ≤ 6) / n)`; média com 1 casa; semana de segunda a domingo; resposta às 22h de domingo em Brasília conta no domingo
+- [x] Índice da Experiência (0/25/50/75/100, média das médias), clareza e índice por item, pior primeiro
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 513 → 525
 
 **Tests**: unit
 **Gate**: quick

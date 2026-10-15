@@ -632,9 +632,9 @@ Depois do G6, problema vira correção para a frente, não revert.
 | NOTE-07 | P1: Notas — atalhos (AC7) | Execute | Implementing |
 | NOTE-08 | P1: Notas — link http/https (AC8) | Execute | Implementing |
 | GER-01 | P1: Gerenciais — STLSeller (AC1) | Execute | Implementing |
-| GER-02 | P1: Gerenciais — fórmula do NPS (AC2) | - | Pending |
+| GER-02 | P1: Gerenciais — fórmula do NPS (AC2) | Execute | Implementing |
 | GER-03 | P1: Gerenciais — paginação do NPS (AC3) | Execute | Implementing |
-| GER-04 | P1: Gerenciais — filtro de mentor volta as respostas (AC4) | - | Pending |
+| GER-04 | P1: Gerenciais — filtro de mentor volta as respostas (AC4) | Execute | Implementing |
 | GER-05 | P1: Gerenciais — recorte do mentor na IA (AC5) | - | Pending |
 | GER-06 | P1: Gerenciais — formato antigo da IA (AC6) | - | Pending |
 | GER-07 | P1: Gerenciais — Mentores (AC7) | - | Pending |
