@@ -57,7 +57,8 @@ const linksAssinados = vi.hoisted(() => vi.fn<(caminhos: readonly string[]) => P
 vi.mock("@/lib/data/leituras", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/data/leituras")>()), lerNota, linksAssinados }));
 const salvarNota = vi.hoisted(() => vi.fn<(mentoradoId: string, conteudo: string, atualizadoEm: string) => Promise<ResultadoEscrita>>());
 const enviarAnexo = vi.hoisted(() => vi.fn<(mentoradoId: string, arquivo: File) => Promise<ResultadoEscrita>>());
-vi.mock("@/lib/data/escritas", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/data/escritas")>()), salvarNota, enviarAnexo }));
+const removerAnexo = vi.hoisted(() => vi.fn<(caminho: string) => Promise<ResultadoEscrita>>());
+vi.mock("@/lib/data/escritas", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/data/escritas")>()), salvarNota, enviarAnexo, removerAnexo }));
 // O sanitizador de verdade não roda sem DOM (design, componente 11): o falso marca o que limpou,
 // ou falta, como num navegador sem suporte. Sem marca, devolve a entrada, como o DOMPurify faz com
 // HTML já limpo e com "" (purify.es.mjs:1182).
@@ -82,18 +83,27 @@ vi.mock("@/components/ui/input", async (importOriginal) => {
 vi.mock("@/components/ui/dialog", async () => {
   const { createElement } = await import("react");
   return {
-    default: (props: { open: boolean; onClose(): void; title?: ReactNode; children: ReactNode }) => {
+    default: (props: { open: boolean; onClose(): void; title?: ReactNode; children: ReactNode; footer?: ReactNode }) => {
       gravar("dialog", props);
-      return props.open ? createElement("dialog-falso", { "data-titulo": props.title }, props.children) : null;
+      return props.open ? createElement("dialog-falso", { "data-titulo": props.title }, props.children, props.footer) : null;
     },
   };
 });
 
 type Ouvinte = (evento: Record<string, unknown>) => void;
 
-// Um anexo no DOM do editor: o que o resolvedor lê e troca.
-function anexoFalso(tagName: "IMG" | "A", atributos: Record<string, string>) {
-  return { tagName, atributos, getAttribute: (nome: string) => atributos[nome] ?? null, setAttribute: (nome: string, valor: string) => void (atributos[nome] = valor) };
+// Um anexo no DOM do editor: o que o resolvedor lê e troca, e o que a exclusão tira.
+function anexoFalso(tagName: "IMG" | "A", atributos: Record<string, string>, textContent = "") {
+  const falso = {
+    tagName,
+    atributos,
+    textContent,
+    removido: false,
+    getAttribute: (nome: string) => atributos[nome] ?? null,
+    setAttribute: (nome: string, valor: string) => void (atributos[nome] = valor),
+    remove: () => void (falso.removido = true),
+  };
+  return falso;
 }
 
 // O nó do editor: guarda o HTML, os anexos que o querySelectorAll devolve e os ouvintes que o efeito liga.
@@ -114,7 +124,7 @@ function elementoFalso(anexos: ReturnType<typeof anexoFalso>[] = []) {
     ouvintes,
     anexos,
     acrescentados: [] as string[][],
-    querySelectorAll: () => anexos,
+    querySelectorAll: () => anexos.filter((anexo) => !anexo.removido),
     contains: (no: unknown) => no === DENTRO,
     [ACRESCENTAR](posicao: string, html: string) {
       this.acrescentados.push([posicao, html]);
@@ -223,6 +233,7 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
     salvarNota.mockReset();
     salvarNota.mockResolvedValue({ ok: true, linhas: 1 });
     enviarAnexo.mockReset();
+    removerAnexo.mockReset();
     linksAssinados.mockReset();
     linksAssinados.mockResolvedValue({ ok: true, dados: new Map() });
   });
@@ -769,6 +780,100 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
     expect(toastErro.mock.calls).toEqual([["Os anexos da nota não abriram: permission denied"]]);
     expect(semLink.atributos.src).toBe("anexo:m1/u1-a.png");
     expect(render({ papel: "diretoria" }).html).toContain('role="textbox"');
+  });
+
+  // W22: a lista "Anexos" abaixo do editor.
+  const botao = (lista: typeof vistos, rotulo: string) => lista.find((v) => v.tipo === "button" && v.props["aria-label"] === rotulo)?.props;
+  const anexosDaFicha = () => [
+    anexoFalso("IMG", { src: "anexo:m1/u1-foto.png", alt: "Foto Ação.png" }),
+    anexoFalso("A", { href: "anexo:m1/u2-plano.pdf", class: "anexo" }, "Plano.pdf"),
+    anexoFalso("IMG", { src: "anexo:m1/u1-foto.png", alt: "Foto Ação.png" }),
+  ];
+
+  it("W22 e lição c: a lista Anexos mostra cada imagem e documento com ícone, nome e Abrir; Excluir só para quem tem escreverNotas, nunca para a diretoria", async () => {
+    const abrir = vi.fn();
+    vi.stubGlobal("window", { open: abrir });
+    for (const papel of ["admin", "mentor", "diretoria"] as const) {
+      const { limpar } = await montar({ papel, anexos: anexosDaFicha() });
+      const { html, vistos: lista } = render({ papel });
+      const secao = html.match(/<section aria-label="Anexos da nota"[^]*?<\/section>/)?.[0] ?? "";
+      expect(secao, papel).toContain(">Anexos</h3>");
+      expect([...secao.matchAll(/<li /g)].length, papel).toBe(2);
+      for (const trecho of ["Foto Ação.png", "Plano.pdf", "lucide-image", "lucide-file-text", "Abrir"]) expect(secao, `${papel} ${trecho}`).toContain(trecho);
+      expect([botao(lista, "Abrir Foto Ação.png")?.children, botao(lista, "Abrir Plano.pdf")?.children], papel).toEqual(["Abrir", "Abrir"]);
+      const edita = papel !== "diretoria";
+      expect([botao(lista, "Excluir Foto Ação.png")?.["data-escrita"], botao(lista, "Excluir Plano.pdf")?.["data-escrita"]], papel).toEqual(edita ? ["W22", "W22"] : [undefined, undefined]);
+      expect(secao.includes('data-escrita="W22"'), papel).toBe(edita);
+      expect(secao.includes("Excluir"), papel).toBe(edita);
+      // Abrir pede o link assinado e o abre em outra aba, para os três papéis.
+      linksAssinados.mockResolvedValue({ ok: true, dados: new Map([["m1/u2-plano.pdf", assinada("m1/u2-plano.pdf")]]) });
+      chamar(botao(lista, "Abrir Plano.pdf")?.onClick);
+      await vazar();
+      expect(abrir.mock.calls.at(-1), papel).toEqual([assinada("m1/u2-plano.pdf"), "_blank", "noopener,noreferrer"]);
+      linksAssinados.mockResolvedValue({ ok: true, dados: new Map() });
+      limpar();
+      react.valores.length = 0;
+      react.refs.length = 0;
+    }
+    // Sem anexo, a lista diz que não há nenhum.
+    await montar();
+    expect(render().html).toContain("Nenhum anexo nesta nota.");
+  });
+
+  it("W22: a lista se atualiza no input; Excluir pede confirmação num ConfirmDialog, apaga pela porta, tira do DOM toda citação do caminho e agenda a gravação; com erro do Storage nada sai e o toast mostra o erro", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { el } = await montar();
+    expect(render().html).toContain("Nenhum anexo nesta nota.");
+    el.anexos.push(...anexosDaFicha());
+    digitarNota(el, '<p>a</p><img src="anexo:m1/u1-foto.png" alt="Foto Ação.png"><a href="anexo:m1/u2-plano.pdf" class="anexo">Plano.pdf</a><img src="anexo:m1/u1-foto.png" alt="Foto Ação.png">');
+    expect(render().html).toContain("Foto Ação.png");
+    await descarregarPendencias();
+    salvarNota.mockClear();
+
+    chamar(botao(render().vistos, "Excluir Foto Ação.png")?.onClick);
+    const aberto = render();
+    expect(aberto.html).toContain('<dialog-falso data-titulo="Excluir anexo">');
+    expect(aberto.html).toContain("Excluir &quot;Foto Ação.png&quot;? O arquivo é apagado e sai da nota.");
+    expect(removerAnexo).not.toHaveBeenCalled();
+    const confirmar = (lista: typeof vistos) => lista.find((v) => v.tipo === "button" && v.props.children !== "Cancelar" && v.props.className === "!bg-danger hover:!bg-danger/90")?.props;
+
+    // O Storage recusou: a nota fica igual, o diálogo segue aberto e o toast mostra o erro.
+    removerAnexo.mockResolvedValue({ ok: false, erro: "permission denied" });
+    chamar(confirmar(aberto.vistos)?.onClick);
+    await vazar();
+    expect(removerAnexo.mock.calls).toEqual([["m1/u1-foto.png"]]);
+    expect(el.anexos.map((anexo) => anexo.removido)).toEqual([false, false, false]);
+    expect(toastErro.mock.calls.at(-1)).toEqual(['"Foto Ação.png" não foi excluído: permission denied']);
+    expect(render().html).toContain('<dialog-falso data-titulo="Excluir anexo">');
+    expect(salvarNota).not.toHaveBeenCalled();
+
+    // Apagou: as duas citações da imagem saem do DOM, o documento fica, a lista e a nota mudam.
+    removerAnexo.mockResolvedValue({ ok: true, linhas: 1 });
+    chamar(confirmar(render().vistos)?.onClick);
+    await vazar();
+    expect(removerAnexo.mock.calls.at(-1)).toEqual(["m1/u1-foto.png"]);
+    expect(el.anexos.map((anexo) => anexo.removido)).toEqual([true, false, true]);
+    expect(toastSucesso.mock.calls.at(-1)).toEqual(["Anexo excluído"]);
+    const depois = render().html;
+    expect(depois).not.toContain("dialog-falso");
+    expect(depois).not.toContain("Foto Ação.png");
+    expect(depois).toContain("Plano.pdf");
+    await vi.advanceTimersByTimeAsync(1000);
+    await vazar();
+    expect(salvarNota).toHaveBeenCalledTimes(1);
+  });
+
+  it("WRITE-08 e W22: tirada a escreverNotas, a exclusão confirmada não chega à porta e nada sai da nota", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const caps = new Set<Capacidade>(["escreverNotas"]);
+    const { el } = await montar({ caps, anexos: anexosDaFicha() });
+    chamar(botao(render({ caps }).vistos, "Excluir Plano.pdf")?.onClick);
+    const aberto = render({ caps });
+    caps.delete("escreverNotas");
+    chamar(aberto.vistos.find((v) => v.tipo === "button" && v.props.className === "!bg-danger hover:!bg-danger/90")?.props.onClick);
+    await vazar();
+    expect(removerAnexo).not.toHaveBeenCalled();
+    expect(el.anexos.some((anexo) => anexo.removido)).toBe(false);
   });
 
   it("o estilo do anexo mora em marca.css: imagem no máximo da coluna com raio 8, documento com o FileText antes do nome", () => {

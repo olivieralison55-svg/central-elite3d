@@ -17,6 +17,7 @@ import {
   excluirMentorado,
   nomeSaneado,
   refletirFinanceiro,
+  removerAnexo,
   restaurarCobranca,
   type ResultadoEscrita,
   salvarCanalMentorado,
@@ -671,6 +672,10 @@ function storageFalso(resposta: { data: unknown; error: { message: string } | nu
             pedidos.push(["upload", ...args]);
             return Promise.resolve(resposta);
           },
+          remove: (...args: unknown[]) => {
+            pedidos.push(["remove", ...args]);
+            return Promise.resolve(resposta);
+          },
         };
       },
     },
@@ -713,5 +718,22 @@ describe("anexo das notas (AD-010)", () => {
     expect(await enviarAnexo("m1", arquivo, storageFalso({ data: null, error: null }).db, () => "u")).toEqual({ ok: false, zeroLinhas: true });
     expect(await enviarAnexo("m1", arquivo, storageFalso({ data: { path: 7 }, error: null }).db, () => "u")).toEqual({ ok: false, erro: "notas-anexos: schema mismatch" });
     expect(erroNoConsole.mock.calls.at(-1)?.[0]).toBe("[central-elite3d] notas-anexos: schema mismatch");
+  });
+
+  it("W22: removerAnexo apaga o caminho no bucket notas-anexos; o objeto apagado é sucesso, a lista vazia (RLS que recusa) é zeroLinhas e o erro volta com a mensagem", async () => {
+    const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const caminho = "m1/2b0d6c3e-1111-4222-8333-444455556666-plano.pdf";
+    const f = storageFalso({ data: [{ name: caminho, bucket_id: "notas-anexos" }], error: null });
+    expect(await removerAnexo(caminho, f.db)).toEqual({ ok: true, linhas: 1 });
+    expect(f.pedidos).toEqual([
+      ["from", "notas-anexos"],
+      ["remove", [caminho]],
+    ]);
+    expect(await removerAnexo(caminho, storageFalso({ data: [], error: null }).db)).toEqual({ ok: false, zeroLinhas: true });
+    expect(await removerAnexo(caminho, storageFalso({ data: null, error: { message: "new row violates row-level security policy" } }).db)).toEqual({
+      ok: false,
+      erro: "new row violates row-level security policy",
+    });
+    expect(erroNoConsole.mock.calls.at(-1)).toEqual(["[central-elite3d] notas-anexos", { message: "new row violates row-level security policy" }]);
   });
 });

@@ -2,6 +2,7 @@ import type { Config, UponSanitizeAttributeHookEvent } from "dompurify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  anexosDaNota,
   atalhoPara,
   caminhosDeAnexo,
   canonizarAnexos,
@@ -321,6 +322,25 @@ describe("regras das notas (NOTE-02, NOTE-03, NOTE-04, NOTE-05, NOTE-07, NOTE-08
     expect(citacoesDoAnexo(raiz, "m1/u1-a.png", base)).toEqual([img, assinada]);
     expect(citacoesDoAnexo(raiz, "m1/u9-z.png", base)).toEqual([]);
     expect(seletores).toEqual(["img[src], a[href]", "img[src], a[href]"]);
+  });
+
+  it("AD-010 e W22: anexosDaNota lista cada imagem e documento citado uma vez, resolvido ou não, com o nome do alt ou do texto do link", () => {
+    const base = "https://projeto.supabase.co";
+    const elemento = (tagName: string, atributos: Record<string, string>, textContent = "") => ({ tagName, textContent, getAttribute: (nome: string) => atributos[nome] ?? null });
+    const raiz = {
+      querySelectorAll: () => [
+        elemento("IMG", { src: `${base}/storage/v1/object/sign/notas-anexos/m1/u1-foto.png?token=t`, alt: "Foto Ação.png" }),
+        elemento("A", { href: "anexo:m1/u2-plano.pdf", class: "anexo" }, " Plano.pdf "),
+        elemento("IMG", { src: "anexo:m1/u1-foto.png", alt: "repetida" }),
+        elemento("A", { href: "https://exemplo.com/doc" }, "link comum"),
+        elemento("IMG", { src: "anexo:m1/u3-sem-nome.png" }),
+      ],
+    } as unknown as ParentNode;
+    expect(anexosDaNota(raiz, base)).toEqual([
+      { caminho: "m1/u1-foto.png", imagem: true, nome: "Foto Ação.png" },
+      { caminho: "m1/u2-plano.pdf", imagem: false, nome: "Plano.pdf" },
+      { caminho: "m1/u3-sem-nome.png", imagem: true, nome: "u3-sem-nome.png" },
+    ]);
   });
 
   it("EDGE: conferirArquivo recusa tipo fora da lista (SVG incluído) e arquivo acima de 10 MB, com a mensagem do toast", () => {

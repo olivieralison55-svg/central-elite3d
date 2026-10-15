@@ -6,7 +6,7 @@ import { ordemDaEtapa } from "@/lib/constantes";
 import { cliente } from "./cliente";
 import type { Parcela, Resultado } from "./esquemas";
 
-// As escritas W01–W21 (mapeamento §4.2), uma função por escrita, com os nomes de hoje. Relação,
+// As escritas W01–W22 (mapeamento §4.2; W22 é a emenda do AD-010), uma função por escrita, com os nomes de hoje. Relação,
 // operação, payload e `onConflict` são os do index.html (WRITE-01). O que muda é o `.select`,
 // que traz as linhas afetadas para conferir (WRITE-02). Capacidade, trava e sessão ficam no
 // executor (src/lib/escrita.ts), por onde toda escrita passa. Toda função recebe o cliente por
@@ -220,6 +220,12 @@ export async function enviarAnexo(mentoradoId: string, arquivo: File, db: Supaba
     return { ok: false, erro: "notas-anexos: schema mismatch" };
   }
   return { ok: true, linhas: 1, caminho: objeto.data.path };
+}
+
+// W22: excluir o anexo de uma nota (AD-010, emenda). O `remove` do Storage devolve os objetos
+// apagados; o RLS que recusa não dá erro, devolve a lista vazia, e isso é zeroLinhas.
+export function removerAnexo(caminho: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("notas-anexos", db.storage.from("notas-anexos").remove([caminho]));
 }
 
 // Rpc sem linha para conferir: o que volta é o erro dela, nunca ignorado (WRITE-06, WRITE-07).

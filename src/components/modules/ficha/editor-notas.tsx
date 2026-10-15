@@ -1,6 +1,27 @@
 "use client";
 
-import { Bold, Code, Heading1, Heading2, Heading3, ImagePlus, Italic, Link, List, ListChecks, ListOrdered, type LucideIcon, Minus, Paperclip, Pilcrow, Quote, Strikethrough, Underline } from "lucide-react";
+import {
+  Bold,
+  Code,
+  FileText,
+  Heading1,
+  Heading2,
+  Heading3,
+  ImageIcon,
+  ImagePlus,
+  Italic,
+  Link,
+  List,
+  ListChecks,
+  ListOrdered,
+  type LucideIcon,
+  Minus,
+  Paperclip,
+  Pilcrow,
+  Quote,
+  Strikethrough,
+  Underline,
+} from "lucide-react";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -8,17 +29,20 @@ import { useSessao } from "@/components/shell/contexto";
 import { useEscrita } from "@/components/shell/use-escrita";
 import Alert from "@/components/ui/alert";
 import Button from "@/components/ui/button";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import Dialog from "@/components/ui/dialog";
 import FormField from "@/components/ui/form-field";
 import Input from "@/components/ui/input";
 import { PROSE_CLASS } from "@/components/ui/prose";
 import Skeleton from "@/components/ui/skeleton";
 import { SUPABASE_URL } from "@/lib/data/config";
-import { enviarAnexo, type ResultadoEscrita, salvarNota } from "@/lib/data/escritas";
+import { enviarAnexo, removerAnexo, type ResultadoEscrita, salvarNota } from "@/lib/data/escritas";
 import { lerNota, linksAssinados } from "@/lib/data/leituras";
 import { fmtInstante } from "@/lib/datas";
 import {
   ANEXO,
+  type AnexoDaNota,
+  anexosDaNota,
   atalhoPara,
   caminhosDeAnexo,
   canonizarAnexos,
@@ -76,6 +100,12 @@ async function gravarNota(mentoradoId: string, conteudo: string): Promise<Result
 async function enviar(mentoradoId: string, arquivo: File): Promise<ResultadoEscrita> {
   const enviado = await enviarAnexo(mentoradoId, arquivo);
   return !enviado.ok && "erro" in enviado ? { ok: false, erro: `"${arquivo.name}" não foi enviado: ${enviado.erro}` } : enviado;
+}
+
+// W22 (AD-010, emenda): o anexo apagado do bucket, com o nome do arquivo no erro do Storage.
+async function excluir(anexo: AnexoDaNota): Promise<ResultadoEscrita> {
+  const removido = await removerAnexo(anexo.caminho);
+  return !removido.ok && "erro" in removido ? { ok: false, erro: `"${anexo.nome}" não foi excluído: ${removido.erro}` } : removido;
 }
 
 // AD-010: os `anexo:` da nota viram links assinados no DOM, para ler e para editar. Sem link, a
@@ -212,6 +242,20 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
   };
   const enviarRef = useRef(enviarArquivo);
   enviarRef.current = enviarArquivo;
+  // W22: a lista "Anexos" sai do DOM do editor (ao abrir, a cada input e depois de inserir ou
+  // excluir, que disparam input). Excluir apaga o arquivo do bucket e, só depois, as citações dele.
+  const [anexos, setAnexos] = useState<AnexoDaNota[]>([]);
+  const [excluindo, setExcluindo] = useState<AnexoDaNota | null>(null);
+  const exclusao = useEscrita("escreverNotas", (alvo: AnexoDaNota) => excluir(alvo), "Anexo excluído");
+  const confirmarExclusao = async () => {
+    const el = editor.current;
+    if (!el || !excluindo) return;
+    // Falhou no Storage: nada sai da nota, e o toast já mostrou o erro.
+    if (!(await exclusao.executar(excluindo))) return;
+    for (const no of citacoesDoAnexo(el, excluindo.caminho, SUPABASE_URL)) no.remove();
+    setExcluindo(null);
+    el.dispatchEvent(new Event("input"));
+  };
 
   useEffect(() => {
     // NOTE-03: sem sanitizador o editor não abre: nada de HTML na tela e nada gravado.
@@ -236,6 +280,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
       const aoDigitar = () => {
         autosave.mudou(el.innerHTML);
         setAviso("Editando…");
+        setAnexos(anexosDaNota(el, SUPABASE_URL));
       };
       const aoTeclar = (e: KeyboardEvent) => {
         if (e.key !== " " && e.key !== "Enter") return;
@@ -330,6 +375,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
       }
       el.innerHTML = sanitizarNota(lida.dados?.conteudo ?? "") ?? "";
       setEstado({ fase: "pronto" });
+      setAnexos(anexosDaNota(el, SUPABASE_URL));
       if (lida.dados) setAviso(`Salvo ${fmtInstante(lida.dados.atualizado_em)}`);
       // NOTE-06: quem não escreve só lê; os anexos abrem para os dois.
       if (edita) desligar = ligar(el);
@@ -454,6 +500,47 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
         data-vazio={editavel ? "Escreva aqui… use # para título, - para lista, [] para checklist." : "Sem notas."}
         className={`${PROSE_CLASS} ${CHECKLIST} nota-anexos min-h-40 rounded-8 border border-line bg-background p-4 outline-none focus:border-primary/70 empty:before:text-muted empty:before:content-[attr(data-vazio)] ${estado.fase === "carregando" ? "hidden" : ""}`}
       />
+      {estado.fase === "pronto" && (
+        <section aria-label="Anexos da nota" data-escrita={editavel ? "W22" : undefined} className="space-y-2">
+          <h3 className="text-sm font-medium text-ink">Anexos</h3>
+          {anexos.length === 0 ? (
+            <p className="text-xs text-muted">Nenhum anexo nesta nota.</p>
+          ) : (
+            <ul className="divide-y divide-line rounded-8 border border-line">
+              {anexos.map((item) => {
+                const Icone = item.imagem ? ImageIcon : FileText;
+                return (
+                  <li key={item.caminho} className="flex items-center gap-2 px-3 py-2 text-sm">
+                    <Icone aria-hidden size={16} className="shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1 truncate" title={item.nome}>
+                      {item.nome}
+                    </span>
+                    <Button variant="ghost" size="sm" aria-label={`Abrir ${item.nome}`} onClick={() => void abrirAnexo(item.caminho).catch((erro: unknown) => console.error("[central-elite3d] abrir anexo", erro))}>
+                      Abrir
+                    </Button>
+                    {editavel && (
+                      <Button variant="outline" size="sm" className="text-danger" data-escrita="W22" aria-label={`Excluir ${item.nome}`} onClick={() => setExcluindo(item)}>
+                        Excluir
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+      {editavel && (
+        <ConfirmDialog
+          open={excluindo !== null}
+          title="Excluir anexo"
+          description={`Excluir "${excluindo?.nome ?? ""}"? O arquivo é apagado e sai da nota. A ação não pode ser desfeita.`}
+          confirmLabel="Excluir anexo"
+          busy={exclusao.ocupado}
+          onConfirm={() => void confirmarExclusao().catch((erro: unknown) => console.error("[central-elite3d] excluir anexo", erro))}
+          onClose={() => setExcluindo(null)}
+        />
+      )}
       <Dialog open={linkAberto} onClose={() => setLinkAberto(false)} title="Inserir link">
         <LinkForm aoInserir={inserirLink} />
       </Dialog>
