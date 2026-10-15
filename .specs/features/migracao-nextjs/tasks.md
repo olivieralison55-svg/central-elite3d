@@ -1845,9 +1845,9 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Entrega `AAAA-MM`; os anos vêm por prop
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 476 → 479
+- [x] Entrega `AAAA-MM`; os anos vêm por prop
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 476 → 479
 
 **Tests**: unit
 **Gate**: quick
