@@ -1818,11 +1818,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Régua soma os canais da rota no mês corrente com `unidade = mes` e no acumulado com `acumulado`
-- [ ] `criterios_ok` guarda o texto; `progresso` e `criterios_pendentes` derivados
-- [ ] Os casos do grupo "Rotas"
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 464 → 476
+- [x] Régua soma os canais da rota no mês corrente com `unidade = mes` e no acumulado com `acumulado`
+- [x] `criterios_ok` guarda o texto; `progresso` e `criterios_pendentes` derivados
+- [x] Os casos do grupo "Rotas"
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 464 → 476
 
 **Tests**: unit
 **Gate**: quick

@@ -612,10 +612,10 @@ Depois do G6, problema vira correção para a frente, não revert.
 | OPS-13 | P1: Operação — cadastro e Lia (AC13) | Execute | Implementing |
 | OPS-14 | P1: Operação — status nulo visível (AC14) | Execute | Implementing |
 | OPS-15 | P1: Operação — status nulo preservado (AC15) | Execute | Implementing |
-| OPS-16 | P1: Operação — critério sem re-render (AC16) | - | Pending |
-| OPS-17 | P1: Operação — um marco aberto (AC17) | - | Pending |
+| OPS-16 | P1: Operação — critério sem re-render (AC16) | Execute | Implementing |
+| OPS-17 | P1: Operação — um marco aberto (AC17) | Execute | Implementing |
 | OPS-18 | P1: Operação — critérios por texto (AC18) | Execute | Implementing |
-| OPS-19 | P1: Operação — régua por unidade (AC19) | - | Pending |
+| OPS-19 | P1: Operação — régua por unidade (AC19) | Execute | Implementing |
 | OPS-20 | P1: Operação — moeda BRL (AC20) | Execute | Implementing |
 | FIN-01 | P1: Dinheiro — busca não esconde (AC1) | Execute | Implementing |
 | FIN-02 | P1: Dinheiro — vincular com 1 cadastro (AC2) | Execute | Implementing |
