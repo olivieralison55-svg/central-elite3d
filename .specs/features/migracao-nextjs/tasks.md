@@ -2183,11 +2183,11 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] diretoria: 0 controles
-- [ ] admin: ≥ 10 controles
-- [ ] mentor: só W01, W03, W04, W06, W07, W09 e W10
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 567 → 570
+- [x] diretoria: 0 controles
+- [x] admin: ≥ 10 controles
+- [x] mentor: só W01, W03, W04, W06, W07, W09 e W10
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 567 → 570
 
 **Tests**: unit
 **Gate**: quick

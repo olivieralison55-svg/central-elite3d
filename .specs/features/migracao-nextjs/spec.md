@@ -596,7 +596,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | WRITE-06 | P1: Escritas — falha do `lia_adotar_orfas` (AC6) | Execute | Implementing |
 | WRITE-07 | P1: Escritas — falha do `lia_refletir_financeiro` (AC7) | Execute | Implementing |
 | WRITE-08 | P1: Escritas — capacidade no handler (AC8) | Execute | Implementing |
-| WRITE-09 | P1: Escritas — diretoria sem controle de escrita (AC9) | - | Pending |
+| WRITE-09 | P1: Escritas — diretoria sem controle de escrita (AC9) | Execute | Implementing |
 | OPS-01 | P1: Operação — painel de atenção (AC1) | Execute | Implementing |
 | OPS-02 | P1: Operação — matriz conta reunião (AC2) | Execute | Implementing |
 | OPS-03 | P1: Operação — mentor normalizado (AC3) | Execute | Implementing |
