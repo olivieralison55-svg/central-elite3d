@@ -22,7 +22,7 @@ import { stlsellerDe } from "@/lib/stlseller";
 // mentoria sabem da pessoa, lidos no BigQuery pelo n8n e gravados nas tabelas stlseller_* pelo sync.
 // Somente leitura: nada aqui escreve, e o que diverge da ficha se corrige na origem.
 
-const STATUS_REAL: ReadonlyMap<string, [BadgeVariant, string]> = new Map([
+export const STATUS_REAL: ReadonlyMap<string, [BadgeVariant, string]> = new Map([
   ["pago", ["success", "Pago"]],
   ["pendente", ["warning", "Pagamento pendente"]],
   ["inadimplente_ou_cancelado", ["danger", "Inadimplente ou cancelado"]],
@@ -38,8 +38,8 @@ const MAX_PRODUTOS = 50;
 type Numero = number | string | null | undefined;
 // Nulo é "o marketplace não informou" (o Mercado Livre não manda o líquido), não zero.
 const informado = (valor: Numero): valor is number | string => valor !== null && valor !== undefined && valor !== "";
-const numOuTraco = (valor: Numero) => (informado(valor) ? Number(valor).toLocaleString("pt-BR") : "—");
-const brlOuTraco = (valor: Numero) => (informado(valor) ? fmtBRL(valor) : "—");
+export const numOuTraco = (valor: Numero) => (informado(valor) ? Number(valor).toLocaleString("pt-BR") : "—");
+export const brlOuTraco = (valor: Numero) => (informado(valor) ? fmtBRL(valor) : "—");
 
 const PEDIDOS: Column<StlPedido>[] = [
   { key: "marketplace", header: "Marketplace", render: (o) => o.marketplace },

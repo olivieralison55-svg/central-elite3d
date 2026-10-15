@@ -1975,10 +1975,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Link de anúncio por `linkSeguro`, com `rel="noopener noreferrer"`
-- [ ] Falha de R14–R16 vira `EmptyState` com "Tentar de novo"
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 509 → 513
+- [x] Link de anúncio por `linkSeguro`, com `rel="noopener noreferrer"`
+- [x] Falha de R14–R16 vira `EmptyState` com "Tentar de novo"
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 509 → 513
 
 **Tests**: unit
 **Gate**: quick
