@@ -97,20 +97,23 @@ function anexoFalso(tagName: "IMG" | "A", atributos: Record<string, string>) {
 }
 
 // O nó do editor: guarda o HTML, os anexos que o querySelectorAll devolve e os ouvintes que o efeito liga.
+// Mais de um ouvinte por tipo, como no navegador: o clique do checklist e o do link.
 function elementoFalso(anexos: ReturnType<typeof anexoFalso>[] = []) {
-  const ouvintes = new Map<string, Ouvinte>();
+  const ouvintes = new Map<string, Ouvinte[]>();
   return {
     innerHTML: "",
     focos: 0,
     ouvintes,
     anexos,
     querySelectorAll: () => anexos,
-    addEventListener: (tipo: string, fn: Ouvinte) => void ouvintes.set(tipo, fn),
+    addEventListener: (tipo: string, fn: Ouvinte) => void ouvintes.set(tipo, [...(ouvintes.get(tipo) ?? []), fn]),
     removeEventListener: (tipo: string, fn: Ouvinte) => {
-      if (ouvintes.get(tipo) === fn) ouvintes.delete(tipo);
+      const restantes = (ouvintes.get(tipo) ?? []).filter((ouvinte) => ouvinte !== fn);
+      if (restantes.length) ouvintes.set(tipo, restantes);
+      else ouvintes.delete(tipo);
     },
     dispatchEvent(evento: { type: string } & Record<string, unknown>) {
-      ouvintes.get(evento.type)?.(evento);
+      for (const ouvinte of ouvintes.get(evento.type) ?? []) ouvinte(evento);
       return true;
     },
     focus() {
@@ -255,8 +258,8 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
     expect(editor(html)).not.toContain("data-escrita");
     expect(html).not.toContain('role="toolbar"');
     expect(html).toContain("Somente leitura para o seu papel.");
-    // Sem edição, nada fica ligado: nem ouvinte, nem gravação na saída.
-    expect([el.ouvintes.size, documento.ouvintes.size]).toEqual([0, 0]);
+    // Sem edição, só o clique que abre o link fica ligado: nenhum ouvinte de edição, nem gravação na saída.
+    expect([[...el.ouvintes.keys()], el.ouvintes.get("click")?.length, documento.ouvintes.size]).toEqual([["click"], 1, 0]);
     await descarregarPendencias();
     expect(salvarNota).not.toHaveBeenCalled();
   });
@@ -458,6 +461,50 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
     expect(documento.comandos).toContainEqual(["createLink", false, "https://exemplo.com/doc"]);
     expect([removerTodos.mock.calls.length, adicionar.mock.calls]).toEqual([1, [[intervalo]]]);
     expect(render().html).not.toContain("dialog-falso");
+  });
+
+  it("NOTE-08 e AD-010: um clique num link abre o http(s) em outra aba, no editor e no só leitura; arrastar seleção e javascript: não abrem; o anexo: pede o link assinado e abre quando ele chega", async () => {
+    class ElementoBase {}
+    vi.stubGlobal("Element", ElementoBase);
+    const abrir = vi.fn();
+    vi.stubGlobal("window", { open: abrir });
+    const clicar = (el: Elemento, href: string | null) => {
+      const prevenir = vi.fn();
+      const target = Object.assign(new ElementoBase(), { closest: (seletor: string) => (seletor === "a[href]" && href !== null ? { getAttribute: () => href } : null) });
+      el.dispatchEvent({ type: "click", target, preventDefault: prevenir, offsetX: 100 });
+      return prevenir;
+    };
+    for (const papel of ["admin", "diretoria"] as const) {
+      abrir.mockClear();
+      const { el, limpar } = await montar({ papel });
+      expect(clicar(el, "https://exemplo.com/doc"), papel).toHaveBeenCalledTimes(1);
+      expect(abrir.mock.calls, papel).toEqual([["https://exemplo.com/doc", "_blank", "noopener,noreferrer"]]);
+      expect(clicar(el, "javascript:alert(1)"), papel).toHaveBeenCalledTimes(1);
+      expect(clicar(el, null), papel).not.toHaveBeenCalled();
+      // O clique que termina uma seleção arrastada sobre o link só seleciona.
+      documento.selecao = { isCollapsed: false };
+      expect(clicar(el, "https://exemplo.com/outro"), papel).not.toHaveBeenCalled();
+      documento.selecao = { isCollapsed: true };
+      expect(abrir.mock.calls, papel).toHaveLength(1);
+      linksAssinados.mockResolvedValue({ ok: true, dados: new Map([["m1/u2-b.pdf", assinada("m1/u2-b.pdf")]]) });
+      clicar(el, "anexo:m1/u2-b.pdf");
+      expect(abrir.mock.calls, papel).toHaveLength(1);
+      await vazar();
+      expect(linksAssinados.mock.calls.at(-1), papel).toEqual([["m1/u2-b.pdf"]]);
+      expect(abrir.mock.calls.at(-1), papel).toEqual([assinada("m1/u2-b.pdf"), "_blank", "noopener,noreferrer"]);
+      linksAssinados.mockResolvedValue({ ok: true, dados: new Map() });
+      limpar();
+      react.valores.length = 0;
+      react.refs.length = 0;
+    }
+    // Sem link assinado, nada abre e o toast diz por quê.
+    abrir.mockClear();
+    const { el } = await montar();
+    linksAssinados.mockResolvedValue({ ok: false, erro: "permission denied" });
+    clicar(el, "anexo:m1/u2-b.pdf");
+    await vazar();
+    expect(abrir).not.toHaveBeenCalled();
+    expect(toastErro.mock.calls.at(-1)).toEqual(["O anexo não abriu: permission denied"]);
   });
 
   it("WRITE-08: o W10 pede escreverNotas; tirada a capacidade, a gravação pendente não chega à porta", async () => {
@@ -672,6 +719,7 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
   it("o estilo do anexo mora em marca.css: imagem no máximo da coluna com raio 8, documento com o FileText antes do nome", () => {
     const css = readFileSync(`${RAIZ}src/app/marca.css`, "utf8");
     expect(css).toMatch(/\.nota-anexos img \{[^}]*max-width: 100%;[^}]*border-radius: 8px;/);
+    expect(css).toMatch(/\.nota-anexos a\[href\] \{[^}]*cursor: pointer;/);
     expect(css).toMatch(/\.nota-anexos a\.anexo::before \{[^}]*mask: url\("data:image\/svg\+xml[^"]*M15 2H6a2 2 0 0 0-2 2v16/);
     expect(readFileSync(`${RAIZ}src/app/globals.css`, "utf8")).not.toContain("nota-anexos");
     expect(readFileSync(`${RAIZ}src/components/modules/ficha/editor-notas.tsx`, "utf8")).toContain("nota-anexos");

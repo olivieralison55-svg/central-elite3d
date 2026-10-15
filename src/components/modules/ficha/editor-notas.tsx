@@ -18,6 +18,7 @@ import { enviarAnexo, type ResultadoEscrita, salvarNota } from "@/lib/data/escri
 import { lerNota, linksAssinados } from "@/lib/data/leituras";
 import { fmtInstante } from "@/lib/datas";
 import {
+  ANEXO,
   atalhoPara,
   caminhosDeAnexo,
   canonizarAnexos,
@@ -85,6 +86,36 @@ async function resolver(el: HTMLElement): Promise<void> {
     return;
   }
   resolverAnexos(el, links.dados);
+}
+
+// O anexo abre em outra aba pelo link assinado pedido na hora: o `anexo:` ainda sem link não navega.
+async function abrirAnexo(caminho: string): Promise<void> {
+  const links = await linksAssinados([caminho]);
+  if (!links.ok) {
+    toast.error(`O anexo não abriu: ${links.erro}`);
+    return;
+  }
+  const url = linkValido(links.dados.get(caminho) ?? "");
+  if (!url) {
+    toast.error("O anexo não abriu: o arquivo não está no bucket.");
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+// No contenteditable o clique num link só põe o cursor: aqui ele abre o endereço em outra aba, no
+// editor e no quadro só leitura. Arrastar para selecionar não abre, e só http(s) sai (NOTE-08).
+function abrirLink(e: MouseEvent): void {
+  const link = e.target instanceof Element ? e.target.closest("a[href]") : null;
+  if (!link || document.getSelection()?.isCollapsed === false) return;
+  e.preventDefault();
+  const href = link.getAttribute("href") ?? "";
+  if (href.startsWith(ANEXO)) {
+    void abrirAnexo(href.slice(ANEXO.length)).catch((erro: unknown) => console.error("[central-elite3d] abrir anexo", erro));
+    return;
+  }
+  const url = linkValido(href);
+  if (url) window.open(url, "_blank", "noopener,noreferrer");
 }
 
 const ACEITA_IMAGEM = TIPOS_IMAGEM.join(",");
@@ -284,6 +315,7 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
     };
     let vivo = true;
     let desligar: () => void = () => undefined;
+    let soltarClique: () => void = () => undefined;
     const abrir = async () => {
       // SEC-06: a leitura confere a sessão do supabase-js contra o usuário da tela.
       const lida = await lerNota(mentoradoId, usuario.id);
@@ -298,11 +330,14 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
       if (lida.dados) setAviso(`Salvo ${fmtInstante(lida.dados.atualizado_em)}`);
       // NOTE-06: quem não escreve só lê; os anexos abrem para os dois.
       if (edita) desligar = ligar(el);
+      el.addEventListener("click", abrirLink);
+      soltarClique = () => el.removeEventListener("click", abrirLink);
       await resolver(el);
     };
     void abrir().catch((erro: unknown) => console.error("[central-elite3d] abrir nota", erro));
     return () => {
       vivo = false;
+      soltarClique();
       desligar();
     };
   }, [mentoradoId, usuario.id, edita]);

@@ -52,6 +52,10 @@
   height: auto;
   border-radius: 8px;
 }
+/* O link e o documento abrem com um clique (editor-notas.tsx, abrirLink): o cursor diz isso. */
+.nota-anexos a[href] {
+  cursor: pointer;
+}
 .nota-anexos a.anexo::before {
   content: "";
   display: inline-block;
