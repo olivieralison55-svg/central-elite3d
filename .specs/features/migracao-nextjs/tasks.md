@@ -2104,9 +2104,9 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Carteira: ativos cuja última 1:1 Concluída foi com o mentor
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 542 → 550
+- [x] Carteira: ativos cuja última 1:1 Concluída foi com o mentor
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 542 → 550
 
 **Tests**: unit
 **Gate**: quick

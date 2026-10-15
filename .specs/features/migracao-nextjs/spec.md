@@ -637,7 +637,7 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GER-04 | P1: Gerenciais — filtro de mentor volta as respostas (AC4) | Execute | Implementing |
 | GER-05 | P1: Gerenciais — recorte do mentor na IA (AC5) | Execute | Implementing |
 | GER-06 | P1: Gerenciais — formato antigo da IA (AC6) | Execute | Implementing |
-| GER-07 | P1: Gerenciais — Mentores (AC7) | - | Pending |
+| GER-07 | P1: Gerenciais — Mentores (AC7) | Execute | Implementing |
 | GER-08 | P1: Gerenciais — aviso de adesão (AC8) | Execute | Implementing |
 | UI-01 | P1: Design system — cópia literal (AC1) | Execute | Implementing |
 | UI-02 | P1: Design system — sem cor crua (AC2) | Execute | Implementing |
