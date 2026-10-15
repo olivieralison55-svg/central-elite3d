@@ -663,8 +663,8 @@ Depois do G6, problema vira correção para a frente, não revert.
 | GATE-08 | P1: Gates — rede da diretoria (AC8) | Execute | Implementing |
 | GATE-09 | P1: Gates — registro de teste (AC9) | - | Pending |
 | GATE-10 | P1: Gates — matriz igual depois do UAT (AC10) | - | Pending |
-| GATE-11 | P1: Gates — sem chave secreta no bundle (AC11) | - | Pending |
-| GATE-12 | P1: Gates — classe da fonte no CSS (AC12) | - | Pending |
+| GATE-11 | P1: Gates — sem chave secreta no bundle (AC11) | Execute | Implementing |
+| GATE-12 | P1: Gates — classe da fonte no CSS (AC12) | Execute | Implementing |
 | GATE-13 | P1: Gates — merge só com go e gate na main (AC13) | - | Pending |
 | GATE-14 | P1: Gates — volta em até 15 min (AC14) | - | Pending |
 | GATE-15 | P1: Gates — tag e ensaio da volta (AC15) | - | Pending |

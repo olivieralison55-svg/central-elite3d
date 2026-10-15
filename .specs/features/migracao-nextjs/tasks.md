@@ -2342,10 +2342,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] `scripts/gates/verificar-build.test.mjs` com uma pasta falsa: acha um valor `sb_secret_…`; acha um JWT `service_role`; não acusa o JWT `anon` nem a palavra solta `sb_secret_`; acha e não acha a classe
-- [ ] Roda sobre o `.next/` real depois do `pnpm build` e sai com 0
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 615 → 622
+- [x] `scripts/gates/verificar-build.test.mjs` com uma pasta falsa: acha um valor `sb_secret_…`; acha um JWT `service_role`; não acusa o JWT `anon` nem a palavra solta `sb_secret_`; acha e não acha a classe
+- [x] Roda sobre o `.next/` real depois do `pnpm build` e sai com 0
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 615 → 622
 
 **Tests**: unit
 **Gate**: build
