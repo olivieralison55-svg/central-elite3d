@@ -2078,10 +2078,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Mentor: lê R21, sem a aba Por mentor, sem resumo e sem respostas de NPS
-- [ ] Falha de R18 não afeta esta tela
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 537 → 542
+- [x] Mentor: lê R21, sem a aba Por mentor, sem resumo e sem respostas de NPS
+- [x] Falha de R18 não afeta esta tela
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 537 → 542
 
 **Tests**: unit
 **Gate**: quick

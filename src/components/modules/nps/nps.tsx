@@ -1,6 +1,7 @@
 "use client";
 
 import { LinkFicha } from "@/components/modules/comum/celulas";
+import { Nota, Perguntas } from "@/components/modules/comum/nota-nps";
 import { CabecalhoOrdenavel, ordemEscolhida } from "@/components/modules/comum/ordenacao";
 import { SeloBusca } from "@/components/modules/comum/selo-busca";
 import { type Ui, useDados, useUi } from "@/components/shell/contexto";
@@ -34,8 +35,6 @@ import {
   scoreNps,
   TAMANHO_PERIODOS,
   TAMANHO_RESPOSTAS,
-  tomDaNota,
-  tomDaResposta,
   tomDoIndice,
 } from "@/lib/nps";
 
@@ -53,30 +52,6 @@ const PERIODOS: Record<PeriodoNps, string> = { semana: "Semana", mes: "Mês" };
 // GER-03: aba e período voltam as duas páginas para 1; o mentor, só a das respostas (GER-04).
 type Filtro = Ui["filtro"];
 const VOLTA_AS_DUAS = { npsPagPeriodo: 1, npsPagResp: 1 } as const;
-
-const Nota = ({ nota }: { nota: number | null }) => <Badge variant={tomDaNota(nota)}>{String(nota ?? "—")}</Badge>;
-
-function Perguntas({ r }: { r: NpsResposta }) {
-  const itens = [
-    r.clareza && { rotulo: "Clareza dos próximos passos", valor: r.clareza },
-    r.direcionamento && { rotulo: "Direcionamento adequado", valor: r.direcionamento },
-  ].filter((i): i is { rotulo: string; valor: string } => !!i);
-  if (!itens.length && !r.apoio) return null;
-  return (
-    <div className="mt-1.5 space-y-1 text-xs text-muted">
-      {itens.length > 0 && (
-        <p className="flex flex-wrap items-center gap-1.5">
-          {itens.map((i) => (
-            <span key={i.rotulo} className="inline-flex items-center gap-1">
-              {i.rotulo} <Badge variant={tomDaResposta(i.valor)}>{i.valor}</Badge>
-            </span>
-          ))}
-        </p>
-      )}
-      {r.apoio && <p className="whitespace-pre-line">{`Quer mais apoio em: ${r.apoio}`}</p>}
-    </div>
-  );
-}
 
 function PainelSessoes() {
   const { dados } = useDados();
