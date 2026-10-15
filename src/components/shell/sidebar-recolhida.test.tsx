@@ -38,6 +38,10 @@ describe("sidebar recolhível (como a product-ops)", () => {
     expect(html).toContain(">Mentorados</a>");
   });
 
+  it("o conteúdo fica numa coluna centrada de até 1200px, com a sidebar aberta ou recolhida", () => {
+    for (const recolhida of [false, true]) expect(tela(recolhida), String(recolhida)).toMatch(/<main[^>]*><div class="mx-auto w-full max-w-\[1200px\]"><p>tela<\/p><\/div><\/main>/);
+  });
+
   it("recolhida: 68px, o selo 3D nas duas cores, ícones sem rótulo (o nome no title), avatar e Sair; o conteúdo começa em 68px", () => {
     const html = tela(true);
     const aside = /<aside[\s\S]*?<\/aside>/.exec(html)?.[0] ?? "";

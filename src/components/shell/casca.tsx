@@ -37,7 +37,10 @@ export function Moldura({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-canvas">
       <Menu recolhido={recolhido} alternar={() => setRecolhido((r) => !r)} />
-      <main className={`px-4 py-6 transition-all md:px-8 md:py-8 ${recolhido ? "md:ml-[68px]" : "md:ml-[240px]"}`}>{permitida ? children : <Carregando />}</main>
+      <main className={`px-4 py-6 transition-all md:px-8 md:py-8 ${recolhido ? "md:ml-[68px]" : "md:ml-[240px]"}`}>
+        {/* Largura de leitura: em tela larga o conteúdo fica centrado, sem se espalhar até a borda. */}
+        <div className="mx-auto w-full max-w-[1200px]">{permitida ? children : <Carregando />}</div>
+      </main>
     </div>
   );
 }
