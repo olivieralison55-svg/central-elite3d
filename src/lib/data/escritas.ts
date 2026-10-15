@@ -15,9 +15,10 @@ import type { Parcela, Resultado } from "./esquemas";
 // O RLS filtra `update` e `delete` sem permissão sem devolver erro: 0 linhas não é sucesso. A
 // escrita de várias linhas que volta com menos do que pediu também não (THREAT-11). `aviso` é a
 // falha de um passo depois da escrita, que já gravou (WRITE-07). `id` é o da linha criada (W14).
-// `adotadas` é quantas cobranças da Lia o W11b puxou para o mentorado.
+// `adotadas` é quantas cobranças da Lia o W11b puxou para o mentorado. `caminho` é o do anexo
+// enviado ao Storage (AD-010).
 export type ResultadoEscrita =
-  | { ok: true; linhas: number; aviso?: string; id?: string; adotadas?: number }
+  | { ok: true; linhas: number; aviso?: string; id?: string; adotadas?: number; caminho?: string }
   | { ok: false; erro: string }
   | { ok: false; zeroLinhas: true }
   | { ok: false; linhas: number; esperadas: number };
@@ -182,6 +183,43 @@ export function salvarNota(mentoradoId: string, conteudo: string, atualizadoEm: 
     "mentorado_notas",
     db.from("mentorado_notas").upsert({ mentorado_id: mentoradoId, conteudo, atualizado_em: atualizadoEm }).select("mentorado_id"),
   );
+}
+
+// O nome do arquivo no caminho do anexo: minúsculo, sem acento e só [a-z0-9._-], com no máximo 80
+// caracteres (AD-010). O nome original fica no HTML da nota, não no Storage.
+export function nomeSaneado(nome: string): string {
+  const limpo = nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return (limpo || "arquivo").slice(0, 80);
+}
+
+const OBJETO_ENVIADO = z.object({ path: z.string().min(1) });
+
+// O anexo de uma nota (AD-010): `<mentorado_id>/<uuid>-<nome-saneado>` no bucket privado, sem
+// sobrescrever. Tamanho e tipo o cliente confere antes, e o bucket confere de novo. O sucesso traz o
+// caminho, que a nota guarda como `anexo:<caminho>`. Sem objeto na resposta, nada foi gravado.
+export async function enviarAnexo(mentoradoId: string, arquivo: File, db: SupabaseClient = cliente(), novoId: () => string = () => crypto.randomUUID()): Promise<ResultadoEscrita> {
+  const caminho = `${mentoradoId}/${novoId()}-${nomeSaneado(arquivo.name)}`;
+  const { data, error } = await db.storage.from("notas-anexos").upload(caminho, arquivo, { upsert: false, contentType: arquivo.type });
+  if (error) {
+    console.error("[central-elite3d] notas-anexos", error);
+    return { ok: false, erro: error.message };
+  }
+  if (!data) {
+    console.error("[central-elite3d] notas-anexos", "sem objeto");
+    return { ok: false, zeroLinhas: true };
+  }
+  const objeto = OBJETO_ENVIADO.safeParse(data);
+  if (!objeto.success) {
+    console.error("[central-elite3d] notas-anexos: schema mismatch", objeto.error.issues);
+    return { ok: false, erro: "notas-anexos: schema mismatch" };
+  }
+  return { ok: true, linhas: 1, caminho: objeto.data.path };
 }
 
 // Rpc sem linha para conferir: o que volta é o erro dela, nunca ignorado (WRITE-06, WRITE-07).

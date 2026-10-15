@@ -5,7 +5,7 @@ import { datasetDeTeste } from "@/test/fixtures";
 
 import { PAGINADAS } from "../../../scripts/parity/snapshot.mjs";
 import type { Dataset, Relacao } from "./esquemas";
-import { carregarTudo, lerNota } from "./leituras";
+import { carregarTudo, lerNota, linksAssinados } from "./leituras";
 
 type Resposta = { data: unknown; error: { message: string } | null };
 
@@ -349,5 +349,59 @@ describe("carga inteira e nota (DATA-02, DATA-04, DATA-06, DATA-07, DATA-08, GAT
     expect(doUsuario.pedidos.map((p) => p.chamadas)).toEqual([
       [["from", "mentorado_notas"], ["select", "conteudo,atualizado_em"], ["eq", "mentorado_id", "m1"], ["maybeSingle"]],
     ]);
+  });
+});
+
+// O Storage falso dos links: anota bucket e argumentos e responde do cenário. Nenhuma rede.
+function assinador(resposta: Resposta) {
+  const pedidos: unknown[][] = [];
+  const db = {
+    storage: {
+      from(bucket: string) {
+        pedidos.push(["from", bucket]);
+        return {
+          createSignedUrls: (...args: unknown[]) => {
+            pedidos.push(["createSignedUrls", ...args]);
+            return Promise.resolve(resposta);
+          },
+        };
+      },
+    },
+  };
+  return { db: db as unknown as SupabaseClient, pedidos };
+}
+
+describe("links dos anexos das notas (AD-010)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("linksAssinados: createSignedUrls(caminhos, 3600) no bucket notas-anexos, e o mapa caminho → URL, sem os que o Storage recusou", async () => {
+    const f = assinador({
+      data: [
+        { path: "m1/u1-a.png", signedUrl: "https://x/storage/v1/object/sign/notas-anexos/m1/u1-a.png?token=t1", signedURL: "/object/sign/notas-anexos/m1/u1-a.png?token=t1", error: null },
+        { path: "m1/u2-b.pdf", signedUrl: null, signedURL: null, error: "Either the object does not exist or you do not have access to it" },
+        { path: null, signedUrl: null, signedURL: null, error: "not found" },
+      ],
+      error: null,
+    });
+    const lido = await linksAssinados(["m1/u1-a.png", "m1/u2-b.pdf", "m1/u3-c.pdf"], f.db);
+    expect(lido.ok && [...lido.dados]).toEqual([["m1/u1-a.png", "https://x/storage/v1/object/sign/notas-anexos/m1/u1-a.png?token=t1"]]);
+    expect(f.pedidos).toEqual([
+      ["from", "notas-anexos"],
+      ["createSignedUrls", ["m1/u1-a.png", "m1/u2-b.pdf", "m1/u3-c.pdf"], 3600],
+    ]);
+  });
+
+  it("linksAssinados: lista vazia não pede nada; erro e resposta fora do formato voltam como falha, no console", async () => {
+    const vazio = assinador({ data: [], error: null });
+    const lido = await linksAssinados([], vazio.db);
+    expect(lido.ok && lido.dados.size).toBe(0);
+    expect(vazio.pedidos).toEqual([]);
+    const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await linksAssinados(["m1/u1-a.png"], assinador({ data: null, error: { message: "permission denied" } }).db)).toEqual({ ok: false, erro: "permission denied" });
+    expect(erroNoConsole.mock.calls.at(-1)).toEqual(["[central-elite3d] notas-anexos", { message: "permission denied" }]);
+    expect(await linksAssinados(["m1/u1-a.png"], assinador({ data: [{ path: 1 }], error: null }).db)).toEqual({ ok: false, erro: "notas-anexos: schema mismatch" });
+    expect(erroNoConsole.mock.calls.at(-1)?.[0]).toBe("[central-elite3d] notas-anexos: schema mismatch");
   });
 });

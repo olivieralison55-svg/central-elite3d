@@ -11,9 +11,11 @@ import {
   delParcela,
   delSessao,
   descartarCobranca,
+  enviarAnexo,
   type EncontroGrupo,
   excluirFaturamento,
   excluirMentorado,
+  nomeSaneado,
   refletirFinanceiro,
   restaurarCobranca,
   type ResultadoEscrita,
@@ -654,5 +656,62 @@ describe("escritas financeiras W15–W21 (WRITE-01, WRITE-02, WRITE-07, FIN-04)"
       expect(erroNoConsole.mock.calls.at(-1), w).toEqual([`[central-elite3d] ${rel}`, { message: mensagem }]);
       expect(rpcsDe(f.pedidos), w).toEqual([]);
     }
+  });
+});
+
+// O Storage falso: anota bucket e argumentos do upload e responde do cenário. Nenhuma rede.
+function storageFalso(resposta: { data: unknown; error: { message: string } | null }) {
+  const pedidos: unknown[][] = [];
+  const db = {
+    storage: {
+      from(bucket: string) {
+        pedidos.push(["from", bucket]);
+        return {
+          upload: (...args: unknown[]) => {
+            pedidos.push(["upload", ...args]);
+            return Promise.resolve(resposta);
+          },
+        };
+      },
+    },
+  };
+  return { db: db as unknown as SupabaseClient, pedidos };
+}
+
+describe("anexo das notas (AD-010)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("nomeSaneado: minúsculo, sem acento, só [a-z0-9._-] e no máximo 80 caracteres", () => {
+    expect(nomeSaneado("Relatório Março (final).PDF")).toBe("relatorio-marco-final-.pdf");
+    expect(nomeSaneado("Ação & Reação__v2.docx")).toBe("acao-reacao__v2.docx");
+    expect(nomeSaneado("../../etc/passwd")).toBe("..-..-etc-passwd");
+    expect(nomeSaneado("<script>.png")).toBe("script-.png");
+    expect(nomeSaneado("日本.png")).toBe(".png");
+    expect(nomeSaneado("!!!")).toBe("arquivo");
+    expect(nomeSaneado(`${"a".repeat(100)}.png`)).toHaveLength(80);
+  });
+
+  it("enviarAnexo: upload no bucket notas-anexos em <mentorado>/<uuid>-<nome>, com upsert: false e o contentType do arquivo; o sucesso traz o caminho", async () => {
+    const arquivo = new File(["x"], "Foto Ação.PNG", { type: "image/png" });
+    const caminho = "m1/2b0d6c3e-1111-4222-8333-444455556666-foto-acao.png";
+    const f = storageFalso({ data: { id: "o1", path: caminho, fullPath: `notas-anexos/${caminho}` }, error: null });
+    expect(await enviarAnexo("m1", arquivo, f.db, () => "2b0d6c3e-1111-4222-8333-444455556666")).toEqual({ ok: true, linhas: 1, caminho });
+    expect(f.pedidos).toEqual([
+      ["from", "notas-anexos"],
+      ["upload", caminho, arquivo, { upsert: false, contentType: "image/png" }],
+    ]);
+  });
+
+  it("enviarAnexo: o erro do Storage volta com a mensagem e vai ao console; sem objeto é zeroLinhas; objeto fora do formato é schema mismatch", async () => {
+    const erroNoConsole = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const arquivo = new File(["x"], "a.pdf", { type: "application/pdf" });
+    const recusado = storageFalso({ data: null, error: { message: "The object exceeded the maximum allowed size" } });
+    expect(await enviarAnexo("m1", arquivo, recusado.db, () => "u")).toEqual({ ok: false, erro: "The object exceeded the maximum allowed size" });
+    expect(erroNoConsole.mock.calls.at(-1)).toEqual(["[central-elite3d] notas-anexos", { message: "The object exceeded the maximum allowed size" }]);
+    expect(await enviarAnexo("m1", arquivo, storageFalso({ data: null, error: null }).db, () => "u")).toEqual({ ok: false, zeroLinhas: true });
+    expect(await enviarAnexo("m1", arquivo, storageFalso({ data: { path: 7 }, error: null }).db, () => "u")).toEqual({ ok: false, erro: "notas-anexos: schema mismatch" });
+    expect(erroNoConsole.mock.calls.at(-1)?.[0]).toBe("[central-elite3d] notas-anexos: schema mismatch");
   });
 });

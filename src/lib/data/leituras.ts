@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { z } from "zod";
+import { z } from "zod";
 
 import { INICIO_COBRANCA_NPS, PRAZO_RESPOSTA_DIAS } from "@/lib/constantes";
 import { type Papel, pode } from "@/lib/papeis";
@@ -148,4 +148,26 @@ export async function lerNota(
   }
   const lido = validarLinhas("mentorado_notas", ESQUEMAS.mentorado_notas, data === null ? [] : [data]);
   return lido.ok ? { ok: true, dados: lido.dados[0] ?? null } : lido;
+}
+
+const LINKS_ASSINADOS = z.array(z.object({ path: z.string().nullable(), signedUrl: z.string().nullable(), error: z.string().nullable() }));
+
+// Os links dos anexos das notas (AD-010): assinados por 1 h, pedidos por quem está logado. O
+// caminho que o Storage recusa (apagado, sem permissão) fica fora do mapa, e a nota mostra o
+// `anexo:` sem link. Lista vazia não sai.
+export async function linksAssinados(caminhos: readonly string[], db: SupabaseClient = cliente()): Promise<Resultado<Map<string, string>>> {
+  if (caminhos.length === 0) return { ok: true, dados: new Map() };
+  const { data, error } = await db.storage.from("notas-anexos").createSignedUrls([...caminhos], 3600);
+  if (error) {
+    console.error("[central-elite3d] notas-anexos", error);
+    return { ok: false, erro: error.message };
+  }
+  const lidos = LINKS_ASSINADOS.safeParse(data);
+  if (!lidos.success) {
+    console.error("[central-elite3d] notas-anexos: schema mismatch", lidos.error.issues);
+    return { ok: false, erro: "notas-anexos: schema mismatch" };
+  }
+  const links = new Map<string, string>();
+  for (const { path, signedUrl, error: recusa } of lidos.data) if (path && signedUrl && !recusa) links.set(path, signedUrl);
+  return { ok: true, dados: links };
 }
