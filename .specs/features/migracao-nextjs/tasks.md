@@ -2027,10 +2027,10 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Trocar aba ou período volta as duas paginações para 1; trocar o mentor volta só as respostas
-- [ ] Falha de R18 afeta só a aba Experiência
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 525 → 531
+- [x] Trocar aba ou período volta as duas paginações para 1; trocar o mentor volta só as respostas
+- [x] Falha de R18 afeta só a aba Experiência
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 525 → 531
 
 **Tests**: unit
 **Gate**: quick
