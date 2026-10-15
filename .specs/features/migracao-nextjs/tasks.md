@@ -2129,9 +2129,9 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Falha de R17, R19 ou R22 vira `Alert` e o resto renderiza
-- [ ] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [ ] Test count: 550 → 554
+- [x] Falha de R17, R19 ou R22 vira `Alert` e o resto renderiza
+- [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
+- [x] Test count: 550 → 554
 
 **Tests**: unit
 **Gate**: build
