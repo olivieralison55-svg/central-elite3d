@@ -1870,9 +1870,9 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 **Done when**:
 
-- [ ] Enter escolhe o primeiro que casa; sem escolha, o primeiro ativo
-- [ ] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [ ] Test count: 479 → 483
+- [x] Enter escolhe o primeiro que casa; sem escolha, o primeiro ativo
+- [x] Gate check passes: `pnpm typecheck` e `pnpm test`
+- [x] Test count: 479 → 483
 
 **Tests**: unit
 **Gate**: quick
