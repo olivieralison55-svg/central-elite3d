@@ -8,7 +8,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Test count contract.** Every `Test count:` line in this file uses the literal shape `Test count: N → M` (numbers, arrow, numbers - `->` also parses). The LAST such line in the file is the declaration external collectors judge against a count they take themselves; free prose there (`+10 new`, `≥971`) is measured as an out-of-contract declaration, not as a number.
 
-**Contagem estimada.** Os `N → M` abaixo são estimativa de desenho. Cada task grava no próprio commit a contagem real que o `pnpm test` imprimiu, e a task seguinte começa dela.
+**Contagem real.** Os `N → M` abaixo nasceram como estimativa de desenho. Cada task gravou no próprio commit a contagem real que o `pnpm test` imprimiu, e no fechamento do Execute (15/10/2026, decisão do Lucas) as linhas passaram a trazer esses valores medidos.
 
 ---
 
@@ -332,7 +332,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Nenhum `dangerouslySetInnerHTML` no layout
 - [x] `pnpm build` gera o HTML de `/` com o `<script src="/theme-init.js">` dentro do `<head>`
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 76 → 79
+- [x] Test count: 76 → 80
 
 **Tests**: unit
 **Gate**: build
@@ -367,7 +367,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] UI-03: nenhum `next/font/google` nem `Manrope` em `src/`
 - [x] UI-05: nenhum `window.confirm`, `window.prompt`, `window.alert`, `confirm(`, `prompt(` ou `alert(` em `src/`
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 79 → 89
+- [x] Test count: 80 → 92
 
 **Tests**: unit
 **Gate**: build
@@ -397,7 +397,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] O middleware não lê cookie nem sessão
 - [x] Se a PoC falhar: parar e reabrir o NAV-03 como emenda (Critical Rule 6)
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 89 → 92
+- [x] Test count: 92 → 95
 
 **Tests**: unit
 **Gate**: quick
@@ -426,7 +426,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] papel nulo ou fora de (`admin`, `diretoria`, `mentor`): nenhuma capacidade e `ehPapel` falso
 - [x] Menu: Dashboard, Acompanhamento, Mentorados, Sessões, Rotas e Análise IA para os 3 papéis; Mentores, STLSeller, NPS e Financeiro só para admin e diretoria
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 92 → 98
+- [x] Test count: 95 → 100
 
 **Tests**: unit
 **Gate**: quick
@@ -455,7 +455,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Vetores do THREAT-01 devolvem `null`: `#//evil.example/login`, `#/\\evil.example`, `#/%2F%2Fevil.example`, `#/%09/evil.example`, `#javascript:alert(1)`
 - [x] `/financeiro`, `/analise`, `/nps` e `/mentores` sem `verFinanceiro` → `/dash`; abas `financeiro` e `stlseller` sem `verFinanceiro` → `sessoes`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 98 → 113
+- [x] Test count: 100 → 111
 
 **Tests**: unit
 **Gate**: quick
@@ -484,7 +484,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `usuarioDaSessao()` devolve o id da sessão atual ou `null`
 - [x] Nenhuma chamada a `signUp`, `resetPasswordForEmail`, `signInWithOtp` ou `signInWithOAuth` (varredura no teste)
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 113 → 123
+- [x] Test count: 111 → 124
 
 **Tests**: unit
 **Gate**: quick
@@ -512,7 +512,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] perfil válido → `pronto` com o papel; sem linha ou com erro → `semPerfil` com pedido de `signOut`; papel nulo ou desconhecido → `papelInvalido`
 - [x] `SIGNED_OUT` em qualquer fase → `anonimo`, sem perfil; `SIGNED_IN` de outro usuário → `lendoPerfil` desse usuário; `TOKEN_REFRESHED` não muda a fase
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 123 → 133
+- [x] Test count: 124 → 134
 
 **Tests**: unit
 **Gate**: quick
@@ -541,7 +541,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `src/test/render.test.tsx`: `renderTela` entrega os quatro valores; o stub de navegação registra `ir` e `substituir`
 - [x] `fixtures.ts` monta um `Dataset` com os mentorados m1–m4, as sessões s1–s5 e g1–g5, as parcelas p1–p3, a rota rica, as cobranças, o STLSeller, o NPS, a Experiência e a análise de `tests/ambiente.mjs`
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 133 → 137
+- [x] Test count: 134 → 140
 
 **Tests**: unit
 **Gate**: build
@@ -571,7 +571,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Render por fase: `anonimo` → login; `semPerfil` e `papelInvalido` → telas da T17; `pronto` → filhos
 - [x] Nenhuma leitura de dado antes de `pronto`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 137 → 141
+- [x] Test count: 140 → 146
 
 **Tests**: unit
 **Gate**: quick
@@ -599,7 +599,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Sem link de cadastro nem de recuperação de senha
 - [x] Ao desmontar, a senha some (estado local)
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 141 → 147
+- [x] Test count: 146 → 152
 
 **Tests**: unit
 **Gate**: quick
@@ -625,7 +625,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Cada tela com o texto do AC e o botão Sair
 - [x] Nenhuma leitura de dado nessas fases
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 147 → 150
+- [x] Test count: 152 → 155
 
 **Tests**: unit
 **Gate**: quick
@@ -652,7 +652,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Na ficha, o item aceso é o `voltarPara`
 - [x] `ThemeToggle` presente; nenhum CSS próprio na casca
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 150 → 155
+- [x] Test count: 155 → 161
 
 **Tests**: unit
 **Gate**: quick
@@ -680,7 +680,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] A navegação usa só o roteador do Next (voltar e avançar nativos)
 - [x] O servidor renderiza só `Skeleton` (nada de sessão, dado ou relógio)
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 155 → 160
+- [x] Test count: 161 → 167
 
 **Tests**: unit
 **Gate**: quick
@@ -706,7 +706,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] As duas páginas só chamam `caminhoDoHash` e `substituir` (a lógica e os testes estão na T11)
 - [x] `pnpm build` lista `/` e a página 404
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 160 → 160
+- [x] Test count: 167 → 170
 
 **Tests**: none
 **Gate**: build
@@ -735,7 +735,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `sessoes.status` aceita texto fora de `S_STATUS`; `numeric` que o PostgREST entrega como string é aceito
 - [x] Linha inválida falha com o caminho do campo
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 160 → 172
+- [x] Test count: 170 → 177
 
 **Tests**: unit
 **Gate**: quick
@@ -762,7 +762,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `order` acumula a coluna de hoje e o desempate; `range` de 1.000 em 1.000; para na página com menos de 1.000
 - [x] Erro numa página devolve `{ ok: false }`; linha fora do schema escreve `[central-elite3d] <relação>: schema mismatch` e devolve falha
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 172 → 178
+- [x] Test count: 177 → 182
 
 **Tests**: unit
 **Gate**: quick
@@ -792,7 +792,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `lerNota` faz `select("conteudo,atualizado_em").eq("mentorado_id", id).maybeSingle()`
 - [x] Sem sessão ou com sessão de outro usuário que não `usuarioId`: nenhuma leitura sai e o resultado diz que a sessão mudou
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 178 → 192
+- [x] Test count: 182 → 193
 
 **Tests**: unit
 **Gate**: quick
@@ -818,7 +818,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Duas recargas sobrepostas com respostas fora de ordem: vale a da última pedida
 - [x] Recarga que falha mantém o dataset anterior e devolve o erro
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 192 → 196
+- [x] Test count: 193 → 196
 
 **Tests**: unit
 **Gate**: quick
@@ -847,7 +847,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Trocar de usuário desmonta o provider e descarta os dados
 - [x] `AvisoRelacoes`: relação essencial com falha troca o conteúdo por `EmptyState` com "Tentar de novo"; complementar com falha põe um `Alert` com o nome dela e renderiza o resto
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 196 → 202
+- [x] Test count: 196 → 206
 
 **Tests**: unit
 **Gate**: build
@@ -880,7 +880,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Resposta sem erro e com 0 linhas → `{ ok: false, zeroLinhas: true }`
 - [x] W01 e W02 com menos linhas que as pedidas → `{ ok: false, linhas, esperadas }`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 202 → 215
+- [x] Test count: 206 → 215
 
 **Tests**: unit
 **Gate**: quick
@@ -939,7 +939,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] W13: `delete().eq("id", id).select("id")`
 - [x] W14: `insert` com `nome`, `email`, `data_fechamento`, `entrada_status`, `entrada_forma_pgto`, `contrato_status`, `restante_status`, `cancelado: false`, e `.select().single()`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 223 → 231
+- [x] Test count: 223 → 232
 
 **Tests**: unit
 **Gate**: quick
@@ -967,7 +967,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] W18: `status` aberta ↔ paga; W19: `insert` com `numero` = maior + 1 e `status: "aberta"`; W20: `numero`, `vencimento`, `valor`, `status`; W21: `delete`
 - [x] 0 linhas → `zeroLinhas`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 231 → 243
+- [x] Test count: 232 → 243
 
 **Tests**: unit
 **Gate**: quick
@@ -1000,7 +1000,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] W11 seguido de W11b com falha: "Cadastro salvo, mas as cobranças da Lia não foram puxadas:" seguido do erro
 - [x] Falha de `lia_refletir_financeiro`: o erro num toast
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 243 → 253
+- [x] Test count: 243 → 252
 
 **Tests**: unit
 **Gate**: quick
@@ -1026,7 +1026,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `ocupado` é `true` durante a escrita e vai para o `loading` do `Button`
 - [x] A capacidade vem do papel da sessão
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 253 → 255
+- [x] Test count: 252 → 255
 
 **Tests**: unit
 **Gate**: build
@@ -1321,7 +1321,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Status fora de `S_STATUS` não quebra
 - [x] Os casos do grupo "1:1 × grupo"
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 308 → 320
+- [x] Test count: 308 → 318
 
 **Tests**: unit
 **Gate**: quick
@@ -1350,7 +1350,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Ids de `dobradas`, `semData`, `semMentor` e `etapaDeduzida`
 - [x] Os casos dos grupos "Matriz por mentor" e "Alertas que focam linhas"
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 320 → 332
+- [x] Test count: 318 → 330
 
 **Tests**: unit
 **Gate**: quick
@@ -1377,7 +1377,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Os contadores ignoram a busca
 - [x] Aviso de adesão só para mentor, com denominador > 0 e taxa < 0,7
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 332 → 348
+- [x] Test count: 330 → 343
 
 **Tests**: unit
 **Gate**: quick
@@ -1405,7 +1405,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Busca recorta listas sem mudar cards, contadores e subtítulos
 - [x] `EmptyState` em lista vazia
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 348 → 356
+- [x] Test count: 343 → 353
 
 **Tests**: unit
 **Gate**: quick
@@ -1432,7 +1432,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `resumoExclusao` conta os 4 tipos de hoje
 - [x] Os casos dos grupos "Exclusão", "E-mail do mentorado" e "Ficha criada pela Lia"
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 356 → 366
+- [x] Test count: 353 → 360
 
 **Tests**: unit
 **Gate**: quick
@@ -1459,7 +1459,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Ordenação pela T37; linha leva à ficha por `<Link>`
 - [x] "+ Novo mentorado" só com `criarMentorado`, com `data-escrita="W14"`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 366 → 372
+- [x] Test count: 360 → 368
 
 **Tests**: unit
 **Gate**: quick
@@ -1486,7 +1486,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Nome obrigatório; e-mail normalizado; e-mail duplicado com a mensagem própria
 - [x] Erro mantém o formulário aberto com o que foi digitado
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 372 → 376
+- [x] Test count: 368 → 380
 
 **Tests**: unit
 **Gate**: quick
@@ -1514,7 +1514,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Blocos Aguardando confirmação, Agendadas, Concluídas (últimas 30) e Bloqueadas
 - [x] Marcas por linha: contada, ignorada, sem data, sem mentor, etapa deduzida
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 376 → 384
+- [x] Test count: 380 → 393
 
 **Tests**: unit
 **Gate**: quick
@@ -1541,7 +1541,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Participantes com busca, "selecionar visíveis" e "limpar"
 - [x] Botões com `data-escrita="W01"` e `"W02"` e `loading` durante o envio
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 384 → 390
+- [x] Test count: 393 → 407
 
 **Tests**: unit
 **Gate**: build
@@ -1571,7 +1571,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Abas `financeiro` e `stlseller` sem `verFinanceiro` desenham `sessoes`
 - [x] Voltar aponta para `voltarPara`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 390 → 398
+- [x] Test count: 407 → 417
 
 **Tests**: unit
 **Gate**: quick
@@ -1599,7 +1599,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Excluir mostra o `resumoExclusao` e libera o botão só com o nome que casa por `chaveNome`
 - [x] `link_drive`, `link_mapa_mental` e `link_whatsapp` por `linkSeguro`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 398 → 406
+- [x] Test count: 417 → 430
 
 **Tests**: unit
 **Gate**: quick
@@ -1628,7 +1628,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Parcela com `lia_bill_id` não é editável; "Adicionar parcela" some se alguma veio da Lia
 - [x] Os casos dos grupos "Cobrança órfã" e "Parcelas da Lia"
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 406 → 420
+- [x] Test count: 430 → 437
 
 **Tests**: unit
 **Gate**: quick
@@ -1654,7 +1654,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Colar "2000.50" mostra R$ 2.000,50 e entrega 2000,5
 - [x] O `NumberInput` do DS não é usado para dinheiro
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 420 → 423
+- [x] Test count: 437 → 440
 
 **Tests**: unit
 **Gate**: quick
@@ -1681,7 +1681,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Diretoria vê os campos só para leitura
 - [x] Parcela número ≥ 1 e único no mentorado; excluir por `ConfirmDialog`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 423 → 431
+- [x] Test count: 440 → 453
 
 **Tests**: unit
 **Gate**: quick
@@ -1708,7 +1708,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Mentor edita e confirma; não cria nem exclui; "+ Nova sessão" só com `criarSessao`
 - [x] Excluir sessão por `ConfirmDialog`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 431 → 439
+- [x] Test count: 453 → 463
 
 **Tests**: unit
 **Gate**: quick
@@ -1737,7 +1737,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `linkValido` aceita `http:` e `https:` e recusa `javascript:`, `data:` e texto solto
 - [x] Autosave: grava 1 s depois da última mudança; `descarregar` em 300 ms grava uma vez com o último HTML
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 439 → 455
+- [x] Test count: 463 → 474
 
 **Tests**: unit
 **Gate**: quick
@@ -1767,7 +1767,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Sem sanitizador: `Alert`, sem HTML e sem gravar
 - [x] Erro do banco no toast; o texto fica no editor
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 455 → 461
+- [x] Test count: 474 → 489
 
 **Tests**: unit
 **Gate**: quick
@@ -1793,7 +1793,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Só para `verFinanceiro`
 - [x] Falha de R14–R16 mostra erro só nesta aba
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 461 → 464
+- [x] Test count: 489 → 499
 
 **Tests**: unit
 **Gate**: build
@@ -1822,7 +1822,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `criterios_ok` guarda o texto; `progresso` e `criterios_pendentes` derivados
 - [x] Os casos do grupo "Rotas"
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 464 → 476
+- [x] Test count: 499 → 520
 
 **Tests**: unit
 **Gate**: quick
@@ -1847,7 +1847,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 - [x] Entrega `AAAA-MM`; os anos vêm por prop
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 476 → 479
+- [x] Test count: 520 → 524
 
 **Tests**: unit
 **Gate**: quick
@@ -1872,7 +1872,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 - [x] Enter escolhe o primeiro que casa; sem escolha, o primeiro ativo
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 479 → 483
+- [x] Test count: 524 → 533
 
 **Tests**: unit
 **Gate**: quick
@@ -1899,7 +1899,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Marcar critério atualiza contador e barra sem fechar o painel nem perder campo
 - [x] Excluir faturamento por `ConfirmDialog`
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 483 → 491
+- [x] Test count: 533 → 560
 
 **Tests**: unit
 **Gate**: quick
@@ -1925,7 +1925,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] A busca não esconde cards, órfãs nem descartadas
 - [x] Falha de R05: erro só nos painéis de órfãs e descartadas
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 491 → 499
+- [x] Test count: 560 → 581
 
 **Tests**: unit
 **Gate**: build
@@ -1952,7 +1952,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 - [x] Recorte "Ativos" como padrão; e-mail STLFLIX primeiro no diagnóstico
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 499 → 509
+- [x] Test count: 581 → 601
 
 **Tests**: unit
 **Gate**: quick
@@ -1978,7 +1978,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Link de anúncio por `linkSeguro`, com `rel="noopener noreferrer"`
 - [x] Falha de R14–R16 vira `EmptyState` com "Tentar de novo"
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 509 → 513
+- [x] Test count: 601 → 610
 
 **Tests**: unit
 **Gate**: quick
@@ -2004,7 +2004,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] NPS = `round(100 · (#nota ≥ 9 − #nota ≤ 6) / n)`; média com 1 casa; semana de segunda a domingo; resposta às 22h de domingo em Brasília conta no domingo
 - [x] Índice da Experiência (0/25/50/75/100, média das médias), clareza e índice por item, pior primeiro
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 513 → 525
+- [x] Test count: 610 → 635
 
 **Tests**: unit
 **Gate**: quick
@@ -2030,7 +2030,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Trocar aba ou período volta as duas paginações para 1; trocar o mentor volta só as respostas
 - [x] Falha de R18 afeta só a aba Experiência
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 525 → 531
+- [x] Test count: 635 → 653
 
 **Tests**: unit
 **Gate**: quick
@@ -2055,7 +2055,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 - [x] `pontos_fortes`, `pontos_de_atencao` e `sinais` lidos nos mesmos blocos de hoje
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 531 → 537
+- [x] Test count: 653 → 669
 
 **Tests**: unit
 **Gate**: quick
@@ -2081,7 +2081,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Mentor: lê R21, sem a aba Por mentor, sem resumo e sem respostas de NPS
 - [x] Falha de R18 não afeta esta tela
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 537 → 542
+- [x] Test count: 669 → 685
 
 **Tests**: unit
 **Gate**: quick
@@ -2106,7 +2106,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 - [x] Carteira: ativos cuja última 1:1 Concluída foi com o mentor
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 542 → 550
+- [x] Test count: 685 → 702
 
 **Tests**: unit
 **Gate**: quick
@@ -2131,7 +2131,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 - [x] Falha de R17, R19 ou R22 vira `Alert` e o resto renderiza
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 550 → 554
+- [x] Test count: 702 → 717
 
 **Tests**: unit
 **Gate**: build
@@ -2160,7 +2160,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Links `javascript:` e `data:` dos fixtures nunca aparecem como `href`
 - [x] Dashboard, Acompanhamento, Mentorados, Sessões, Rotas, Mentores, STLSeller, NPS, Análise IA, Financeiro, Ficha (5 abas) e os corpos de modal
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 554 → 567
+- [x] Test count: 717 → 731
 
 **Tests**: unit
 **Gate**: quick
@@ -2187,7 +2187,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] admin: ≥ 10 controles
 - [x] mentor: só W01, W03, W04, W06, W07, W09 e W10
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 567 → 570
+- [x] Test count: 731 → 734
 
 **Tests**: unit
 **Gate**: quick
@@ -2213,7 +2213,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Páginas: `/dash`, `/acompanhamento`, `/mentorados`, `/sessoes`, `/rotas`, `/mentores`, `/analise`, `/nps`, `/ia`, `/financeiro`, `/mentorado/[id]/[[...aba]]` e `/`
 - [x] Os 20 grupos: Formatadores e campo de data; 1:1 × grupo; Telas do admin; Modais e telas; Escrita do grupo; Papel mentor; Papel diretoria; Controle negativo com admin; Matriz por mentor; Alertas que focam linhas; Busca e botão de criar; Exclusão; Cobrança órfã; Ficha criada pela Lia; Parcelas da Lia; Etapa deduzida; Busca por data; E-mail do mentorado; Rotas; Notas — cada um apontando para um arquivo de teste que existe
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 570 → 572
+- [x] Test count: 734 → 736
 
 **Tests**: unit
 **Gate**: quick
@@ -2239,7 +2239,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `scripts/parity/legado.test.mjs` carrega as fixtures de `tests/ambiente.mjs` pelo cliente falso: admin lê `mentorados`; mentor lê `mentorados_basic`; as rpcs respondem; navegar pelo hash troca o HTML de `#app`
 - [x] Lê o `index.html` de um caminho dado (o do merge-base, extraído por `git show`)
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 572 → 576
+- [x] Test count: 736 → 741
 
 **Tests**: unit
 **Gate**: quick
@@ -2265,7 +2265,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] PAR-01 a PAR-17, cada uma com chave estável e um teste sobre as fixtures antigas
 - [x] Nenhuma métrica devolve nome, e-mail ou comentário
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 576 → 593
+- [x] Test count: 741 → 759
 
 **Tests**: unit
 **Gate**: quick
@@ -2291,7 +2291,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] PAR-01 a PAR-17 com as mesmas chaves da T77
 - [x] Sobre as fixtures antigas, as duas tasks dão o mesmo valor em cada métrica
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 593 → 610
+- [x] Test count: 759 → 778
 
 **Tests**: unit
 **Gate**: quick
@@ -2319,7 +2319,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Linha do snapshot fora do schema conta como divergência
 - [x] `scripts/parity/relatorio.test.ts`: o relatório impresso não carrega valor nem campo pessoal; o arquivo de valores sai com `0600`; a exceção do PAR-09 vale; o código de saída segue o diff
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 610 → 615
+- [x] Test count: 778 → 784
 
 **Tests**: unit
 **Gate**: quick
@@ -2345,7 +2345,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `scripts/gates/verificar-build.test.mjs` com uma pasta falsa: acha um valor `sb_secret_…`; acha um JWT `service_role`; não acusa o JWT `anon` nem a palavra solta `sb_secret_`; acha e não acha a classe
 - [x] Roda sobre o `.next/` real depois do `pnpm build` e sai com 0
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 615 → 622
+- [x] Test count: 784 → 791
 
 **Tests**: unit
 **Gate**: build
@@ -2370,7 +2370,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 
 - [x] `scripts/gates/sondar-rls.test.mjs`: a lista de escritas proibidas por papel sai das capacidades; o alvo só pode ser o registro cujo e-mail é `zzq-migracao@example.invalid`, e qualquer outro é recusado antes de tentar; a saída não tem nome, e-mail nem valor
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 622 → 625
+- [x] Test count: 791 → 795
 
 **Tests**: unit
 **Gate**: build
@@ -2398,7 +2398,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] `src/test/vercel.test.ts`: as 3 chaves com os valores acima
 - [x] A `main` não ganha `vercel.json` antes do merge
 - [x] Gate check passes: `pnpm typecheck` e `pnpm test`
-- [x] Test count: 625 → 627
+- [x] Test count: 795 → 798
 
 **Tests**: unit
 **Gate**: quick
@@ -2425,7 +2425,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] O teste da T75 continua verde sem `tests/`; a paridade lê o app antigo do merge-base por `git show`
 - [x] `pnpm test` sem rede e sem banco
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 627 → 627
+- [x] Test count: 798 → 798
 
 **Tests**: none
 **Gate**: build
@@ -2451,7 +2451,7 @@ Depois da T84: o Verifier do skill (G2.6) e o resto do G2. Os gates seguintes es
 - [x] Cada linha do mapeamento §12 corrigida ou removida
 - [x] Seções de rodar, testar (`pnpm test`, `pnpm parity`), publicar e voltar (`git revert -m 1` com o `.vercelignore` que publica só `index.html` e `favicon.png`)
 - [x] Gate check passes: `pnpm typecheck`, `pnpm test` e `pnpm build`
-- [x] Test count: 627 → 627
+- [x] Test count: 798 → 798
 
 **Tests**: none
 **Gate**: build
@@ -2517,4 +2517,4 @@ Executados na ordem da spec, com evidência em `.specs/features/migracao-nextjs/
 | G5 | no corte | Lucas e agente | GATE-13 (G2.1 na `main` mesclada), GATE-14 (volta em até 15 min), CUT-01 em produção |
 | G6 | 7 dias depois | Lucas e agente | logs; branch, snapshot e arquivo de valores apagados; contas de UAT removidas ou banidas (GATE-09); CUT-04 |
 
-Feature total: Test count: 0 → 627
+Feature total: Test count: 0 → 798
