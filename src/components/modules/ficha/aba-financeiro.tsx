@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Check, Pencil } from "lucide-react";
 import { type ChangeEvent, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -22,6 +22,7 @@ import { addParcela, type CamposParcela, delParcela, type FinanceiroMentorado, s
 import { hojeSP, prazoTexto } from "@/lib/datas";
 import { aceitaParcelaManual, parcelaDaLia, parcelaVencida, proximaParcela } from "@/lib/financeiro";
 import { fmtBRL, lerBRL, mascaraBRL } from "@/lib/moeda";
+import { semMarcador } from "@/lib/marcador";
 
 // A aba Financeiro da ficha (index.html:3276–3309; mapeamento §3.4): o status do contrato, da
 // entrada e do restante, com as formas de pagamento (W11), e as parcelas (W18–W21). Quem não edita
@@ -113,7 +114,16 @@ function Azulejo({ parcela: p, editavel, aoEditar }: { parcela: Parcela; editave
   const conteudo = (
     <span className="flex flex-col items-start gap-1">
       <span className="text-sm font-semibold text-ink">{`#${p.numero ?? ""}${p.valor != null ? ` ${fmtBRL(p.valor)}` : ""}`}</span>
-      <Badge variant={tom}>{p.status === "paga" ? "paga ✓" : p.vencimento ? diaMes(p.vencimento) : "aberta"}</Badge>
+      <Badge variant={tom}>{p.status === "paga" ? (
+          <span className="inline-flex items-center gap-1">
+            paga
+            <Check aria-hidden size={12} />
+          </span>
+        ) : p.vencimento ? (
+          diaMes(p.vencimento)
+        ) : (
+          "aberta"
+        )}</Badge>
     </span>
   );
   return (
@@ -270,7 +280,7 @@ function Parcelas({ mentorado: m }: { mentorado: Mentorado }) {
         <EmptyState title="Sem parcelas (pagamento à vista ou não cadastrado)." />
       )}
       {edita && aceitaParcelaManual(parcelas) && <NovaParcela mentoradoId={m.id} />}
-      <Dialog open={editando !== null} onClose={() => setEditando(null)} title={editando ? `Parcela #${editando.numero ?? ""} · ${m.nome ?? ""}` : undefined}>
+      <Dialog open={editando !== null} onClose={() => setEditando(null)} title={editando ? `Parcela #${editando.numero ?? ""} · ${semMarcador(m.nome)}` : undefined}>
         {editando && <ParcelaForm parcela={editando} aoTerminar={() => setEditando(null)} />}
       </Dialog>
     </section>

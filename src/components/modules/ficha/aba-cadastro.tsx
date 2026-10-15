@@ -19,6 +19,8 @@ import { adotarOrfas, type CadastroMentorado, excluirMentorado, type ResultadoEs
 import { fmtD, hojeSP } from "@/lib/datas";
 import { comAdocao } from "@/lib/escrita";
 import { msgErroMentorado, normalizaEmail, resumoExclusao, situacaoDe } from "@/lib/mentorados";
+import NomeMentorado from "@/components/modules/comum/nome-mentorado";
+import { semMarcador } from "@/lib/marcador";
 
 // A aba Cadastro da ficha (index.html:3233–3274; mapeamento §3.4): nome, fechamento, e-mail e os
 // três links, a situação e a exclusão. Quem não edita mentorado vê o cadastro só para leitura e
@@ -57,7 +59,7 @@ function LeituraCadastro({ mentorado: m }: { mentorado: Mentorado }) {
   return (
     <DescriptionList
       items={[
-        { term: "Nome", value: m.nome || "—" },
+        { term: "Nome", value: m.nome ? <NomeMentorado nome={m.nome} /> : "—" },
         { term: "Data de fechamento", value: fmtD(m.data_fechamento) },
         { term: "E-mail no Google Agenda", value: m.email || "—" },
         { term: "Link Drive", value: link(m.link_drive) },
@@ -212,7 +214,7 @@ function ExcluirMentorado({ mentorado: m }: { mentorado: Mentorado }) {
         description={
           <>
             <p>
-              <strong className="text-ink">{m.nome}</strong>
+              <strong className="text-ink"><NomeMentorado nome={m.nome} /></strong>
               {` e ${partes.length ? `o que está pendurado na ficha — ${partes.join(", ")} — somem` : "a ficha some"} do sistema.`}
             </p>
             {concluidas > 0 && (
@@ -222,7 +224,7 @@ function ExcluirMentorado({ mentorado: m }: { mentorado: Mentorado }) {
             )}
             <p className="mt-2">Não há desfazer, e o histórico não volta.</p>
             <FormField label="Para confirmar, digite o nome do mentorado" htmlFor="excluir-nome" className="mt-4">
-              <Input id="excluir-nome" autoComplete="off" placeholder={m.nome ?? ""} value={digitado} onChange={(e) => setDigitado(e.target.value)} />
+              <Input id="excluir-nome" autoComplete="off" placeholder={semMarcador(m.nome)} value={digitado} onChange={(e) => setDigitado(e.target.value)} />
             </FormField>
           </>
         }

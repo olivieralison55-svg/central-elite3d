@@ -27,6 +27,7 @@ import {
   visaoMentores,
 } from "@/lib/mentores";
 import { fmtMedia, fmtNps, mediaNps, rotuloPeriodoNps, scoreNps } from "@/lib/nps";
+import { semMarcador } from "@/lib/marcador";
 
 // A tela Mentores (renderMentores, index.html:3009–3081; mapeamento §3.11). As regras moram em
 // src/lib/mentores.ts. Só leitura, e só para quem vê o NPS (a casca guarda a rota): a tela mostra
@@ -169,7 +170,7 @@ function Detalhe({ r, hoje }: { r: ResumoMentor; hoje: string }) {
     { key: "etapa", header: "Etapa", render: (s) => s.etapa || "—" },
   ];
   const respostas = ultimasRespostas(r);
-  const quem = (x: NpsResposta) => dados.mentorados.find((m) => m.id === x.mentorado_id)?.nome || x.nome_informado || "—";
+  const quem = (x: NpsResposta) => semMarcador(dados.mentorados.find((m) => m.id === x.mentorado_id)?.nome) || x.nome_informado || "—";
   return (
     <>
       <section aria-label="Números do mentor" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

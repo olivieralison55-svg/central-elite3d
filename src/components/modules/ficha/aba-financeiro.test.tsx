@@ -215,7 +215,9 @@ describe("aba Financeiro (OPS-12, OPS-14, OPS-15, FIN-05, UI-05)", () => {
     const { html } = render(<AbaFinanceiro mentorado={mentorado("m2")} />);
     expect(html).toContain(">Parcelas · 1/2 pagas · #2 vence em 3 dias<");
     expect(html).toContain(`#1 ${fmtBRL(800)}`);
-    expect(html).toContain(">paga ✓<");
+    // "paga" com o ícone Check, sem o caractere.
+    expect(html).toMatch(/>paga<svg[^>]*lucide-check/);
+    expect(html).not.toContain("✓");
     const p3 = datasetDeTeste().parcelas[2].vencimento ?? "";
     expect(html).toContain(`>${p3.slice(8, 10)}/${p3.slice(5, 7)}<`);
     const vazio = render(<AbaFinanceiro mentorado={mentorado("m3")} />).html;

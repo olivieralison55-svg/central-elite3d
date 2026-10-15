@@ -6,16 +6,18 @@ import type { Mentorado } from "@/lib/data/esquemas";
 import { type Aba, caminhoDaFicha } from "@/lib/endereco";
 import { linkSeguro } from "@/lib/links";
 import { situacaoDe } from "@/lib/mentorados";
+import NomeMentorado from "./nome-mentorado";
 
 // Células que várias tabelas repetem (index.html:847–877).
 
 // A primeira célula da linha leva à ficha por um <Link>, alcançável por teclado (design,
 // componente 6). Sem mentorado, só o texto.
 export function LinkFicha({ id, aba, children }: { id: string | null; aba?: Aba; children: ReactNode }) {
-  if (id === null) return <>{children}</>;
+  const conteudo = typeof children === "string" ? <NomeMentorado nome={children} /> : children;
+  if (id === null) return <>{conteudo}</>;
   return (
     <Link href={caminhoDaFicha(id, aba)} className="font-medium text-ink hover:text-primary hover:underline">
-      {children}
+      {conteudo}
     </Link>
   );
 }

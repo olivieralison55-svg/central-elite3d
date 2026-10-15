@@ -7,6 +7,7 @@ import Popover from "@/components/ui/popover";
 import SearchInput from "@/components/ui/search-input";
 import type { Mentorado } from "@/lib/data/esquemas";
 import { casaBusca } from "@/lib/busca";
+import NomeMentorado from "@/components/modules/comum/nome-mentorado";
 
 // A escolha de mentorado da tela Rotas (buscaComboRotas, index.html:1299–1337; AD-008): Popover,
 // SearchInput e uma lista. Digitar só recorta a lista: o mentorado troca no clique ou no Enter.
@@ -77,7 +78,7 @@ export function PainelDeEscolha({ ativos, escolhidoId, termo, onTermo, onEscolhe
                 onClick={() => escolher(m)}
                 className={`flex w-full items-center justify-between gap-2 rounded-6 px-2.5 py-2 text-left text-sm text-ink transition-colors duration-quick ${i === ativo ? "bg-selected" : "hover:bg-selected"}`}
               >
-                <span>{m.nome}</span>
+                <span><NomeMentorado nome={m.nome} /></span>
                 {m.id === escolhidoId && <small className="text-muted">aberto agora</small>}
               </button>
             </li>

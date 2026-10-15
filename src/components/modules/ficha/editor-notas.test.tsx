@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +11,8 @@ import { descarregarPendencias } from "@/lib/sessao";
 import { renderTela } from "@/test/render";
 
 import EditorNotas from "./editor-notas";
+
+const RAIZ = fileURLToPath(new URL("../../../../", import.meta.url));
 
 // Sem DOM, o React do vitest `node` não roda efeito nem liga ref. O falso guarda o estado e as refs
 // entre renders, na ordem em que o componente os pede, como o React faz, e anota cada useEffect
@@ -338,6 +342,23 @@ describe("editor de notas (NOTE-01, NOTE-03, NOTE-05, NOTE-06, NOTE-08, EDGE-04,
     expect(toastErro.mock.calls).toEqual([["Notas não salvas: value too long for type character varying(500000)"]]);
     expect(el.innerHTML).toBe("<p>muito longo</p>");
     expect(render().html).toContain("Erro ao salvar");
+  });
+
+  it("a barra desenha ícones lucide, sem caractere, e cada botão guarda o rótulo de sempre no aria-label", async () => {
+    await montar();
+    const { html, vistos: barra } = render();
+    const rotulos = barra.filter((v) => v.tipo === "button" && v.props["aria-label"]).map((v) => v.props["aria-label"]);
+    expect(rotulos).toEqual(expect.arrayContaining(["Checklist", "Citação", "Link", "Divisor", "Negrito (⌘B)"]));
+    for (const icone of ["list-checks", "quote", "link", "minus", "bold", "heading1", "list-ordered"]) expect(html, icone).toContain(`lucide-${icone}`);
+    expect(html).not.toMatch(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F]/u);
+    expect(html).not.toContain(">¶<");
+  });
+
+  it("a caixa da checklist é CSS (borda e check em SVG), sem ☐ nem ☑", () => {
+    const css = readFileSync(`${RAIZ}src/app/globals.css`, "utf8");
+    expect(css).toMatch(/\.nota-checklist ul\.checklist > li::before \{\s*content: "";/);
+    expect(css).toMatch(/li\.feito::before \{[^}]*background-image: url\("data:image\/svg\+xml/);
+    expect(readFileSync(`${RAIZ}src/components/modules/ficha/editor-notas.tsx`, "utf8")).not.toMatch(/[☐☑]/);
   });
 
   it("NOTE-01: a barra usa os comandos de edição do navegador, sem tirar o foco da seleção, e cada comando agenda a gravação", async () => {

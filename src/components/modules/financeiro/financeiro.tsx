@@ -22,6 +22,7 @@ import { type LinhaFinanceira, motivoOrfa, painelFinanceiro, podeVincular } from
 import { nomeDe } from "@/lib/mentorados";
 import { fmtBRL } from "@/lib/moeda";
 import { aplicarOrdem } from "@/lib/ordem";
+import { semMarcador } from "@/lib/marcador";
 
 // A tela Financeiro (renderFinanceiro, index.html:2105–2200; mapeamento §3.6). A regra mora em
 // src/lib/financeiro.ts (painelFinanceiro); aqui só se desenha o que ela devolve. A busca recorta as
@@ -65,7 +66,7 @@ const valorDaCobranca = (c: Cobranca) => fmtBRL((c.amount_cents || 0) / 100);
 // botão tem a sua trava (WRITE-03).
 function AcoesDaOrfa({ cobranca: c, mentorados, edita }: { cobranca: Cobranca; mentorados: readonly Mentorado[]; edita: boolean }) {
   const alvo = podeVincular(c, mentorados);
-  const vincular = useEscrita("editarFinanceiro", (billId: string, mentoradoId: string) => vincularCobranca(billId, mentoradoId), `Cobrança vinculada a ${alvo?.nome ?? ""}`);
+  const vincular = useEscrita("editarFinanceiro", (billId: string, mentoradoId: string) => vincularCobranca(billId, mentoradoId), `Cobrança vinculada a ${semMarcador(alvo?.nome)}`);
   const descartar = useEscrita("editarFinanceiro", (billId: string, dono: string | null) => descartarCobranca(billId, dono), "Cobrança descartada");
   if (!edita) return null;
   return (
@@ -78,7 +79,7 @@ function AcoesDaOrfa({ cobranca: c, mentorados, edita }: { cobranca: Cobranca; m
           data-escrita="W15"
           onClick={() => void vincular.executar(c.lia_bill_id, alvo.id).catch((erro: unknown) => console.error("[central-elite3d] vincular cobrança", erro))}
         >
-          {`vincular a ${alvo.nome ?? ""}`}
+          {`vincular a ${semMarcador(alvo.nome)}`}
         </Button>
       )}
       <Button

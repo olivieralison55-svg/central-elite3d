@@ -82,6 +82,24 @@ describe("tela Mentorados (OPS-10, UI-06, UI-07, WRITE-09)", () => {
     expect(carla).toContain(">pausado</span>");
   });
 
+  it("o emoji de situação do nome vira ícone na lista, e a busca casa o nome sem ele", () => {
+    const dados = datasetDeTeste();
+    dados.mentorados = dados.mentorados.map((m) => (m.id === "m1" ? { ...m, nome: "🔴 Ana Clara" } : m.id === "m2" ? { ...m, nome: "⚠️Bruno Dias" } : m));
+    const ver = (ui: Partial<Ui>) =>
+      renderTela(
+        <UiContexto.Provider value={{ ui: { ...UI_INICIAL, ...ui }, mudar: () => undefined }}>
+          <Mentorados />
+        </UiContexto.Provider>,
+        { papel: "admin", dados },
+      );
+    const [ana, bruno] = linhas(ver({}));
+    expect(ana).toMatch(/href="\/mentorado\/m1"[^>]*><span[^>]*><svg[^>]*aria-label="risco"[\s\S]*Ana Clara<\/span><\/a>/);
+    expect(bruno).toMatch(/aria-label="alerta"[\s\S]*Bruno Dias<\/span><\/a>/);
+    expect(ana + bruno).not.toMatch(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F]/u);
+    expect(ids(ver(filtro({ q: "ana clara" })))).toEqual(["m1"]);
+    expect(ids(ver(filtro({ q: "bruno" })))).toEqual(["m2"]);
+  });
+
   it("UI-06: a ordem padrão é por nome; o cabeçalho alterna a coluna pela T37 e grava sortState; a seta só aparece na coluna escolhida", () => {
     const padrao = tela("admin");
     chamar(props(padrao.vistos, "ordem", (p) => p.label === "Sessões").onToggle);

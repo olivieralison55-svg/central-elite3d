@@ -17,6 +17,7 @@ import AbaFinanceiro from "./aba-financeiro";
 import AbaSessoes from "./aba-sessoes";
 import AbaStlseller from "./aba-stlseller";
 import EditorNotas from "./editor-notas";
+import NomeMentorado from "@/components/modules/comum/nome-mentorado";
 
 // A ficha do mentorado (renderFicha, index.html:3188–3243; mapeamento §3.4): o topo comum a todas
 // as abas, as abas que o papel abre e o corpo de cada uma. A ficha é o detalhe de uma lista: o
@@ -84,7 +85,7 @@ export default function Ficha({ id, aba }: { id: string; aba?: string }) {
       <PageHeader
         title={
           <span className="inline-flex flex-wrap items-center gap-2">
-            {m.nome}
+            <NomeMentorado nome={m.nome} />
             <SituacaoMentorado mentorado={m} />
           </span>
         }

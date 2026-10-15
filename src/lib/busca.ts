@@ -1,11 +1,14 @@
+import { semMarcador } from "./marcador";
+
 // Busca do index.html (:823–829, :1234–1245, :3703). Toda tela que lista mentorado tem a mesma
 // caixa, com o mesmo comportamento: sem acento, sem caixa e por partes. "ana silva" acha "Ana
 // Paula da Silva", e "jose" acha "José".
 
 type Campo = string | number | null | undefined;
 
+// O emoji de situação na frente do nome ("🟢 Ana") não conta: a busca e a ordem olham só o nome.
 export const normBusca = (valor: Campo): string =>
-  (valor == null ? "" : String(valor)).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  semMarcador(valor == null ? "" : String(valor)).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 // Cada parte do termo precisa aparecer em algum dos campos. Termo vazio não filtra.
 export function casaBusca(termo: Campo, ...campos: Campo[]): boolean {

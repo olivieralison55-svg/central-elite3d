@@ -38,6 +38,8 @@ import {
   sinaisDe,
 } from "@/lib/ia";
 import { fmtMedia, fmtNps } from "@/lib/nps";
+import NomeMentorado, { nomeComIcone } from "@/components/modules/comum/nome-mentorado";
+import { semMarcador } from "@/lib/marcador";
 
 // A tela Análise IA (renderIa, index.html:2766–2918; mapeamento §3.10). As regras moram em
 // src/lib/ia.ts. Os três papéis entram: admin e diretoria leem a análise inteira (R19); o mentor
@@ -63,7 +65,7 @@ function Alertas({ analise }: { analise: Analise }) {
           <ul>
             {alertas.map((a, i) => {
               const { tom, rotulo } = severidadeDe(a.severidade);
-              const quem = [a.mentor && `Mentor: ${a.mentor}`, a.mentorado && `Mentorado: ${a.mentorado}`].filter(Boolean).join(" · ");
+              const quem = [a.mentor && `Mentor: ${a.mentor}`, a.mentorado && `Mentorado: ${semMarcador(a.mentorado)}`].filter(Boolean).join(" · ");
               return (
                 <li key={`${i}:${a.titulo}`} className="space-y-1.5 border-t border-line px-5 py-4 text-sm first:border-t-0">
                   <p className="flex flex-wrap items-center gap-2">
@@ -172,7 +174,7 @@ function TelaPessoa({
                 <li key={r.id} className="border-t border-line px-5 py-3 text-sm first:border-t-0">
                   <p className="flex flex-wrap items-center gap-2">
                     {fmtInstante(r.respondido_em)} · <Nota nota={r.nota} />
-                    <span className="text-xs text-muted">{`${r.mentor || "—"} · ${mentorados.find((m) => m.id === r.mentorado_id)?.nome || r.nome_informado || "—"}`}</span>
+                    <span className="text-xs text-muted">{`${r.mentor || "—"} · ${semMarcador(mentorados.find((m) => m.id === r.mentorado_id)?.nome) || r.nome_informado || "—"}`}</span>
                   </p>
                   {r.comentario && <p className="mt-1 whitespace-pre-line">{r.comentario}</p>}
                   <Perguntas r={r} />
@@ -251,7 +253,7 @@ function PorMentorado({
     const { tom, rotulo } = riscoDe(escolhida.risco);
     return (
       <TelaPessoa
-        nome={f ? <LinkFicha id={f.id}>{f.nome}</LinkFicha> : escolhida.mentorado}
+        nome={f ? <LinkFicha id={f.id}>{f.nome}</LinkFicha> : <NomeMentorado nome={escolhida.mentorado} />}
         sub={
           <>
             {`Mentorado · mentor ${escolhida.mentor} · risco `}
@@ -269,7 +271,7 @@ function PorMentorado({
   }
   const risco = contagemRisco(leituras);
   const colunas: Column<LeituraMentorado>[] = [
-    { key: "nome", header: "Mentorado", render: (l) => <BotaoDeLinha onClick={() => escolher(chaveSelecaoMentorado(l))}>{ficha(l)?.nome ?? l.mentorado}</BotaoDeLinha> },
+    { key: "nome", header: "Mentorado", render: (l) => <BotaoDeLinha onClick={() => escolher(chaveSelecaoMentorado(l))}>{nomeComIcone(ficha(l)?.nome ?? l.mentorado)}</BotaoDeLinha> },
     { key: "mentor", header: "Mentor", render: (l) => l.mentor },
     {
       key: "nota",

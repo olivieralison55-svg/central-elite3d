@@ -1,5 +1,6 @@
 "use client";
 
+import { Bold, Code, Heading1, Heading2, Heading3, Italic, Link, List, ListChecks, ListOrdered, type LucideIcon, Minus, Pilcrow, Quote, Strikethrough, Underline } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { useSessao } from "@/components/shell/contexto";
@@ -24,28 +25,27 @@ import { registrarPendencia } from "@/lib/sessao";
 
 type Estado = { fase: "carregando" } | { fase: "pronto" } | { fase: "erro"; mensagem: string } | { fase: "semSanitizador" };
 
-const BARRA: readonly [ComandoNota, string, string][] = [
-  ["h1", "H1", "Título"],
-  ["h2", "H2", "Subtítulo"],
-  ["h3", "H3", "Seção"],
-  ["p", "¶", "Texto"],
-  ["bold", "B", "Negrito (⌘B)"],
-  ["italic", "I", "Itálico (⌘I)"],
-  ["underline", "U", "Sublinhado (⌘U)"],
-  ["strikeThrough", "S", "Tachado"],
-  ["code", "</>", "Código"],
-  ["ul", "•", "Lista"],
-  ["ol", "1.", "Lista numerada"],
-  ["check", "☑", "Checklist"],
-  ["quote", "❝", "Citação"],
-  ["hr", "—", "Divisor"],
-  ["link", "🔗", "Link"],
+const BARRA: readonly [ComandoNota, LucideIcon, string][] = [
+  ["h1", Heading1, "Título"],
+  ["h2", Heading2, "Subtítulo"],
+  ["h3", Heading3, "Seção"],
+  ["p", Pilcrow, "Texto"],
+  ["bold", Bold, "Negrito (⌘B)"],
+  ["italic", Italic, "Itálico (⌘I)"],
+  ["underline", Underline, "Sublinhado (⌘U)"],
+  ["strikeThrough", Strikethrough, "Tachado"],
+  ["code", Code, "Código"],
+  ["ul", List, "Lista"],
+  ["ol", ListOrdered, "Lista numerada"],
+  ["check", ListChecks, "Checklist"],
+  ["quote", Quote, "Citação"],
+  ["hr", Minus, "Divisor"],
+  ["link", Link, "Link"],
 ];
 
-// As listas de tarefa: a caixa antes do item, e o item feito riscado.
-const CHECKLIST =
-  "[&_ul.checklist]:list-none [&_ul.checklist]:pl-1 [&_ul.checklist>li]:before:mr-2 [&_ul.checklist>li]:before:content-['☐'] " +
-  "[&_ul.checklist>li.feito]:text-muted [&_ul.checklist>li.feito]:line-through [&_ul.checklist>li.feito]:before:content-['☑']";
+// As listas de tarefa: a caixa antes do item (desenhada em CSS, sem caractere; `.nota-checklist` mora
+// em globals.css), e o item feito riscado.
+const CHECKLIST = "nota-checklist [&_ul.checklist]:list-none [&_ul.checklist]:pl-1 [&_ul.checklist>li.feito]:text-muted [&_ul.checklist>li.feito]:line-through";
 
 // W10: o conteúdo já sanitizado, com o instante de quem grava (o relógio fica fora da porta).
 async function gravarNota(mentoradoId: string, conteudo: string): Promise<ResultadoEscrita> {
@@ -261,9 +261,9 @@ export default function EditorNotas({ mentoradoId }: { mentoradoId: string }) {
     <div className="space-y-3">
       {edita ? (
         <div role="toolbar" aria-label="Formatação da nota" className="flex flex-wrap items-center gap-1 rounded-8 border border-line bg-sub-bg p-1">
-          {BARRA.map(([comando, rotulo, titulo]) => (
+          {BARRA.map(([comando, Icone, titulo]) => (
             <Button key={comando} variant="ghost" size="sm" title={titulo} aria-label={titulo} onMouseDown={(e) => e.preventDefault()} onClick={() => comandar(comando)}>
-              {rotulo}
+              <Icone aria-hidden size={16} />
             </Button>
           ))}
           <span className="ml-auto px-2 text-xs text-muted">{aviso}</span>

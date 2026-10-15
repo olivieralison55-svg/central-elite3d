@@ -23,6 +23,8 @@ import { confirmarGrupo, criarSessaoGrupo, type EncontroGrupo as CamposEncontro 
 import { fmtD, hojeSP } from "@/lib/datas";
 import { ehAtivo, nomeDe } from "@/lib/mentorados";
 import { type Encontro, resumoStatusGrupo } from "@/lib/sessoes";
+import NomeMentorado, { nomeComIcone } from "@/components/modules/comum/nome-mentorado";
+import { semMarcador } from "@/lib/marcador";
 
 // Os encontros em grupo (index.html:1990–2102): o detalhe com as presenças e a confirmação em lote
 // (W01), e o registro de um encontro novo, uma linha por participante (W02). Os corpos são
@@ -64,7 +66,7 @@ export function DetalheEncontro({ encontro, aoConfirmar }: { encontro: Encontro;
   const { dados } = useDados();
   const { pode } = useSessao();
   const nome = (id: string | null) => nomeDe(dados.mentorados, id);
-  const presencas = [...encontro.itens].sort((a, b) => nome(a.mentorado_id).localeCompare(nome(b.mentorado_id), "pt-BR"));
+  const presencas = [...encontro.itens].sort((a, b) => semMarcador(nome(a.mentorado_id)).localeCompare(semMarcador(nome(b.mentorado_id)), "pt-BR"));
   const temLinks = !!(encontro.link_meet || encontro.link_gravacao || encontro.link_anotacoes);
   const pendentes = encontro.itens.some((s) => s.status !== "Concluída");
   // Cada presença se corrige pelo formulário da sessão (W03). Gravada, o encontro fecha: o objeto
@@ -81,7 +83,7 @@ export function DetalheEncontro({ encontro, aoConfirmar }: { encontro: Encontro;
         <ul className="divide-y divide-line">
           {presencas.map((s) => (
             <li key={s.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-              <span className="text-ink">{nome(s.mentorado_id)}</span>
+              <span className="text-ink"><NomeMentorado nome={nome(s.mentorado_id)} /></span>
               <span className="flex items-center gap-2">
                 <StatusSessao status={s.status} />
                 {pode("escreverSessao") && s.mentorado_id && (
@@ -135,7 +137,7 @@ export function RegistrarEncontroForm({ aoRegistrar }: { aoRegistrar(): void }) 
   }));
   const [busca, setBusca] = useState("");
   const [marcados, setMarcados] = useState<string[]>([]);
-  const ativos = dados.mentorados.filter(ehAtivo).sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR"));
+  const ativos = dados.mentorados.filter(ehAtivo).sort((a, b) => semMarcador(a.nome).localeCompare(semMarcador(b.nome), "pt-BR"));
   const visiveis = ativos.filter((m) => casaBusca(busca, m.nome));
   const { executar, ocupado } = useEscrita("criarSessao", (ids: string[]) => criarSessaoGrupo(ids, campos), `Encontro registrado para ${marcados.length} participante(s)`);
   const mudar = (campo: keyof CamposEncontro) => (valor: string) => setCampos((atual) => ({ ...atual, [campo]: valor }));
@@ -186,7 +188,7 @@ export function RegistrarEncontroForm({ aoRegistrar }: { aoRegistrar(): void }) 
             {visiveis.map((m) => (
               <Checkbox
                 key={m.id}
-                label={m.nome}
+                label={nomeComIcone(m.nome)}
                 checked={marcados.includes(m.id)}
                 onChange={() => setMarcados((atual) => (atual.includes(m.id) ? atual.filter((id) => id !== m.id) : [...atual, m.id]))}
               />

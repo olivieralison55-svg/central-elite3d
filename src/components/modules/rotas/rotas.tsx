@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Check } from "lucide-react";
+import { type ReactNode, useState } from "react";
 
 import CampoMoeda from "@/components/modules/comum/campo-moeda";
 import { CabecalhoOrdenavel, ordemEscolhida } from "@/components/modules/comum/ordenacao";
@@ -59,6 +60,8 @@ import {
 
 import CampoMes from "./campo-mes";
 import EscolherMentorado, { mentoradoMostrado } from "./escolher-mentorado";
+import NomeMentorado from "@/components/modules/comum/nome-mentorado";
+import { semMarcador } from "@/lib/marcador";
 
 // A tela Rotas (renderRotas, index.html:2321–2606; mapeamento §3.7). As regras moram em
 // src/lib/rotas.ts; aqui só se desenha o que elas devolvem. R07 a R12 são essenciais: sem uma
@@ -68,8 +71,8 @@ const ESSENCIAIS: Relacao[] = ["rotas", "marcos_definicao", "mentorado_marcos", 
 const TABELA_FATURAMENTO = "rota_fat";
 const ANOS_ANTES = 5;
 
-const MARCA: Record<Fase, { texto: string; classe: string }> = {
-  feito: { texto: "✓", classe: "bg-success-accent text-white" },
+const MARCA: Record<Fase, { texto: ReactNode; classe: string }> = {
+  feito: { texto: <Check size={12} strokeWidth={3} />, classe: "bg-success-accent text-white" },
   atual: { texto: "●", classe: "bg-primary text-white" },
   futuro: { texto: "", classe: "border border-line-strong bg-background" },
 };
@@ -333,8 +336,8 @@ function Faturamentos({ canal, mentoradoId, meses, anos }: { canal: Canal; mento
         <StatCard label="Mês anterior" value={fmtBRL(anterior)} caption="referência de comparação" />
       </div>
       <Card>
-        <CardHeader title={`Evolução mensal · ${nomeDe(dados.mentorados, mentoradoId)}`} />
-        <div className="p-4" role="group" aria-label={`Faturamento mensal de ${nomeDe(dados.mentorados, mentoradoId)} no canal ${canal.nome ?? ""}`}>
+        <CardHeader title={`Evolução mensal · ${semMarcador(nomeDe(dados.mentorados, mentoradoId))}`} />
+        <div className="p-4" role="group" aria-label={`Faturamento mensal de ${semMarcador(nomeDe(dados.mentorados, mentoradoId))} no canal ${canal.nome ?? ""}`}>
           <TrendChart points={pontos} view="bar" ratioLabel="" hint="Faturamento do canal nos últimos 12 meses." />
         </div>
       </Card>
@@ -439,7 +442,7 @@ function Conteudo() {
             />
             {sel && (
               <p role="status" className="text-sm text-muted">
-                Mostrando: <b className="text-ink">{nomeDe(dados.mentorados, sel)}</b>
+                Mostrando: <b className="text-ink"><NomeMentorado nome={nomeDe(dados.mentorados, sel)} /></b>
               </p>
             )}
           </div>

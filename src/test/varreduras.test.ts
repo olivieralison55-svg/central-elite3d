@@ -262,6 +262,16 @@ describe("varreduras estáticas", () => {
     expect(varrer(SRC, usaCorCrua)).toEqual([]);
   });
 
+  it("UI-09: nenhum emoji em src/components/modules nem em src/components/shell, fora dos testes", () => {
+    const emoji = /[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu;
+    const regra: Regra = (texto, caminho) =>
+      /^src\/components\/(?:modules|shell)\//.test(caminho) && !/\.test\.tsx?$/.test(caminho) ? achar(texto, emoji) : [];
+    expect(regra("<span>🟢 ok ✓ ❝ ⚠️</span>", "src/components/modules/x.tsx")).toHaveLength(5);
+    expect(regra("<span>🟢</span>", "src/components/modules/x.test.tsx")).toEqual([]);
+    expect(regra("<span>🟢</span>", "src/lib/marcador.ts")).toEqual([]);
+    expect(varrer(SRC, regra)).toEqual([]);
+  });
+
   it("UI-03: nenhum next/font/google nem Manrope", () => {
     const ruim = 'import { Manrope } from "next/font/google";\n.titulo { font-family: "manrope", sans-serif; }';
     expect(carregaOutraFonte(ruim, "x.tsx")).toHaveLength(3);

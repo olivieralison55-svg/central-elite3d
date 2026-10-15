@@ -78,6 +78,27 @@ body {
   color: #10141a;
 }
 
+/* A caixa da lista de tarefas das notas (ul.checklist > li): borda arredondada; a do item feito
+   ganha o verde de sucesso e um check em SVG (o traço branco do SVG fica sobre o fundo verde). */
+.nota-checklist ul.checklist > li::before {
+  content: "";
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.5rem;
+  vertical-align: -0.1em;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 0.25em;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 80%;
+}
+.nota-checklist ul.checklist > li.feito::before {
+  border-color: var(--success-accent);
+  background-color: var(--success-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+
 /* Dialog / overlay entrance */
 @keyframes overlay-in {
   from {

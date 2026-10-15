@@ -22,6 +22,7 @@ import { fmtD } from "@/lib/datas";
 import { nomeDe } from "@/lib/mentorados";
 import { aplicarOrdem } from "@/lib/ordem";
 import { concluidas1a1De, sessoes1a1De, sessoesGrupoDe, trilhaDe } from "@/lib/sessoes";
+import { semMarcador } from "@/lib/marcador";
 
 // A aba Sessões da ficha (index.html:3310–3336) e os modais de sessão (openSessao e
 // openConfirmarSessao, index.html:3593–3682): a trilha 1:1 por etapa, os encontros em grupo por
@@ -140,7 +141,7 @@ export function SessaoDialogo({
   aoTerminar?(): void;
 }) {
   const { dados } = useDados();
-  const titulo = alvo ? `${alvo.sessao ? "Editar sessão" : "Nova sessão"} · ${nomeDe(dados.mentorados, alvo.mentoradoId)}` : undefined;
+  const titulo = alvo ? `${alvo.sessao ? "Editar sessão" : "Nova sessão"} · ${semMarcador(nomeDe(dados.mentorados, alvo.mentoradoId))}` : undefined;
   return (
     <Dialog open={alvo !== null} onClose={onClose} title={titulo}>
       {alvo && <SessaoForm sessao={alvo.sessao} mentoradoId={alvo.mentoradoId} aoTerminar={aoTerminar} />}
@@ -163,7 +164,7 @@ export function ConfirmarSessaoForm({ sessao, aoTerminar }: { sessao: Sessao; ao
   };
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">{`${sessao.etapa ?? ""} · ${nomeDe(dados.mentorados, sessao.mentorado_id)} · ${fmtD(sessao.data)}`}</p>
+      <p className="text-sm text-muted">{`${sessao.etapa ?? ""} · ${semMarcador(nomeDe(dados.mentorados, sessao.mentorado_id))} · ${fmtD(sessao.data)}`}</p>
       <FormField label="Quem atendeu esta sessão?" htmlFor="confirmar-mentor">
         <Select id="confirmar-mentor" options={[{ value: "", label: "Selecione o mentor…" }, ...opcoes(mentoresCom(sessao.mentor))]} value={mentor} onChange={setMentor} />
       </FormField>

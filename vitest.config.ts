@@ -12,6 +12,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // As varreduras renderizam dezenas de telas: ~4 s sozinhas, e estouram os 5 s padrão com a suíte em paralelo.
+    testTimeout: 30_000,
     include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,mjs}"],
   },
 });
