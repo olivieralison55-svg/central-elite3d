@@ -16,9 +16,9 @@ import type { Parcela, Resultado } from "./esquemas";
 // escrita de várias linhas que volta com menos do que pediu também não (THREAT-11). `aviso` é a
 // falha de um passo depois da escrita, que já gravou (WRITE-07). `id` é o da linha criada (W14).
 // `adotadas` é quantas cobranças da Lia o W11b puxou para o mentorado. `caminho` é o do anexo
-// enviado ao Storage (AD-010).
+// enviado ao Storage (AD-010). `senha` é a que admin-usuarios gerou, mostrada uma vez (AD-011).
 export type ResultadoEscrita =
-  | { ok: true; linhas: number; aviso?: string; id?: string; adotadas?: number; caminho?: string }
+  | { ok: true; linhas: number; aviso?: string; id?: string; adotadas?: number; caminho?: string; senha?: string }
   | { ok: false; erro: string }
   | { ok: false; zeroLinhas: true }
   | { ok: false; linhas: number; esperadas: number };

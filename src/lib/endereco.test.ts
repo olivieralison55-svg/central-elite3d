@@ -88,6 +88,8 @@ describe("endereço: caminho, hash antigo e guardas (NAV-01 a NAV-05, CUT-02, SE
     for (const tela of ["dash", "acompanhamento", "mentorados", "sessoes", "rotas", "ia", "mentorado"] as const) {
       expect(PAPEIS.map((papel) => telaPermitida(tela, papel)), tela).toEqual([true, true, true]);
     }
+     // AD-011: a gestão de usuários é só do admin.
+    expect(PAPEIS.map((papel) => telaPermitida("usuarios", papel))).toEqual([true, false, false]);
   });
 
   it("NAV-05: as abas financeiro e stlseller sem verFinanceiro mostram sessoes; as outras ficam", () => {

@@ -14,7 +14,8 @@ export type Capacidade =
   | "excluir"
   | "escreverSessao"
   | "escreverRotas"
-  | "escreverNotas";
+  | "escreverNotas"
+  | "gerirUsuarios";
 
 export const CAPACIDADES: Record<Papel, readonly Capacidade[]> = {
   admin: [
@@ -28,6 +29,7 @@ export const CAPACIDADES: Record<Papel, readonly Capacidade[]> = {
     "escreverNotas",
     "excluir",
     "verIa",
+    "gerirUsuarios",
   ],
   diretoria: ["verFinanceiro", "verIa"],
   // verIa sem verFinanceiro = recorte do mentor na Análise IA (analise_ia_mentor).
@@ -64,6 +66,7 @@ const MENU: ReadonlyArray<ItemMenu & { requer?: Capacidade }> = [
   { caminho: "/nps", rotulo: "NPS", requer: "verFinanceiro" },
   { caminho: "/ia", rotulo: "Análise IA", requer: "verIa" },
   { caminho: "/financeiro", rotulo: "Financeiro", requer: "verFinanceiro" },
+  { caminho: "/usuarios", rotulo: "Usuários", requer: "gerirUsuarios" },
 ];
 
 export function itensDoMenu(papel: Papel): ItemMenu[] {

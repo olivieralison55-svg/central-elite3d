@@ -33,6 +33,7 @@ const ROTAS = [
   "/nps",
   "/rotas",
   "/sessoes",
+  "/usuarios",
 ];
 
 // A tabela de porte do design (componente 11): cada grupo do mapeamento §7 e os testes novos dele.
@@ -70,7 +71,7 @@ function gruposDoMapeamento(): string[] {
 }
 
 describe("estrutura (NAV-01, TEST-01)", () => {
-  it("NAV-01: as 12 rotas existem em src/app, e nenhuma a mais", () => {
+  it("NAV-01: as 13 rotas existem em src/app, e nenhuma a mais", () => {
     expect(rotas()).toEqual(ROTAS);
   });
 

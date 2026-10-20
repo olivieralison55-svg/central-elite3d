@@ -50,10 +50,12 @@ const importaSupabaseForaDaPorta: Regra = (texto, caminho) =>
     ? []
     : achar(texto, /\b(?:from|import|require)\s*\(?\s*["'`]@supabase\/supabase-js(?:\/[^"'`]*)?["'`]/g);
 
-// DATA-08. Rpc com nome que não é texto literal também conta: não dá para provar que está na lista.
+// DATA-08. Rpc ou função com nome que não é texto literal também conta: não dá para provar que está
+// na lista. A única edge function chamada pelo app é a admin-usuarios (AD-011).
 const RPCS = ["experiencia_adesao", "analise_ia_mentor", "lia_adotar_orfas", "lia_refletir_financeiro"];
+const FUNCOES = ["admin-usuarios"];
 const chamaBancoForaDaLista: Regra = (texto) => [
-  ...achar(texto, /\.functions\.invoke\(/g),
+  ...achar(texto, /\.functions\.invoke\(\s*(?:(["'`])([^"'`]*)\1)?/g, (m) => !FUNCOES.includes(m[2] ?? "")),
   ...achar(texto, /\.rpc\(\s*(?:(["'`])([^"'`]*)\1)?/g, (m) => !RPCS.includes(m[2] ?? "")),
 ];
 
@@ -168,9 +170,10 @@ describe("varreduras estáticas", () => {
     expect(varrer(SRC, importaSupabaseForaDaPorta)).toEqual([]);
   });
 
-  it("DATA-08: nenhuma edge function e .rpc( só com as 4 rpcs da lista", () => {
-    const ruim = 'db.functions.invoke("lia-webhook");\ndb.rpc("outra_rpc");\ndb.rpc(nome);';
-    expect(chamaBancoForaDaLista(ruim, "x.ts")).toHaveLength(3);
+  it("DATA-08: edge function só a admin-usuarios, e .rpc( só com as 4 rpcs da lista", () => {
+    const ruim = 'db.functions.invoke("lia-webhook");\ndb.functions.invoke(nome);\ndb.rpc("outra_rpc");\ndb.rpc(nome);';
+    expect(chamaBancoForaDaLista(ruim, "x.ts")).toHaveLength(4);
+    expect(chamaBancoForaDaLista('db.functions.invoke("admin-usuarios", {});', "x.ts")).toEqual([]);
     expect(chamaBancoForaDaLista(RPCS.map((rpc) => `db.rpc("${rpc}", {});`).join("\n"), "x.ts")).toEqual([]);
     expect(varrer(SRC, chamaBancoForaDaLista)).toEqual([]);
   });

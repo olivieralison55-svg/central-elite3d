@@ -3,6 +3,7 @@
 import {
   ChartColumn,
   Clock,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   type LucideIcon,
@@ -45,6 +46,7 @@ const ICONES: Record<string, LucideIcon> = {
   "/nps": Star,
   "/ia": Sparkles,
   "/financeiro": Wallet,
+  "/usuarios": KeyRound,
 };
 
 // Na ficha, o item aceso é a lista de onde ela foi aberta (index.html:1384–1386).
