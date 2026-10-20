@@ -28,6 +28,7 @@ const FILTROS: readonly [string, string][] = [
   ["", "Todos"],
   ["ativos", "Somente ativos"],
   ["pausados", "Somente pausados"],
+  ["cancelados", "Somente cancelados"],
   ["incompletos", "Cadastro incompleto"],
   ["contrato", "Contrato pendente"],
 ];

@@ -11,10 +11,12 @@ const MENTORADOS = [...DADOS.mentorados, cancelado];
 const ids = (filtro: string, busca = "") => filtrarMentorados(MENTORADOS, filtro, busca).lista.map((m) => m.id);
 
 describe("regras de mentorado (OPS-11, OPS-13)", () => {
-  it("os filtros: todos (com cancelados), ativos, pausados, incompletos (com cancelados) e contrato pendente (ativo sem 'Assinado')", () => {
+  it("os filtros: todos (com cancelados), ativos, pausados, cancelados (situação ou o booleano antigo), incompletos (com cancelados) e contrato pendente (ativo sem 'Assinado')", () => {
     expect(ids("")).toEqual(["m1", "m2", "m3", "m4", "m5"]);
     expect(ids("ativos")).toEqual(["m1", "m2", "m3"]);
     expect(ids("pausados")).toEqual(["m4"]);
+    expect(ids("cancelados")).toEqual(["m5"]);
+    expect(filtrarMentorados([{ ...DADOS.mentorados[0], situacao: null, cancelado: true }], "cancelados", "").lista).toHaveLength(1);
     expect(ids("incompletos")).toEqual(["m3", "m5"]);
     expect(ids("contrato")).toEqual(["m2"]);
   });
