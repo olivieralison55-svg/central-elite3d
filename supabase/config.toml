@@ -28,3 +28,8 @@ verify_jwt = true
 # Mesmo motivo: grava em `transcricoes` com a service_role key.
 [functions.buscar-transcricoes]
 verify_jwt = true
+
+# Mesmo motivo: cria, altera e exclui usuários do Auth com a service_role key. Além do JWT
+# válido, a função confere `profiles.role = 'admin'` (AD-011).
+[functions.admin-usuarios]
+verify_jwt = true
