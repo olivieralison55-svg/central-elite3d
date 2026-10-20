@@ -41,7 +41,7 @@ describe("papéis e capacidades (AUTH-07, NAV-04, NAV-06, WRITE-08)", () => {
     expect(["admin", "diretoria", "mentor"].filter(ehPapel)).toEqual(["admin", "diretoria", "mentor"]);
   });
 
-  it("menu: os 6 itens comuns para os 3 papéis; Mentores, STLSeller, NPS e Financeiro só para admin e diretoria", () => {
+  it("menu: os 6 itens comuns para os 3 papéis; Mentores, STLSeller, NPS e Financeiro só para admin e diretoria; Usuários só para admin", () => {
     const completo = [
       ["/dash", "Dashboard"],
       ["/acompanhamento", "Acompanhamento"],
@@ -55,7 +55,7 @@ describe("papéis e capacidades (AUTH-07, NAV-04, NAV-06, WRITE-08)", () => {
       ["/financeiro", "Financeiro"],
     ];
     const doMenu = (papel: "admin" | "diretoria" | "mentor") => itensDoMenu(papel).map((i) => [i.caminho, i.rotulo]);
-    expect(doMenu("admin")).toEqual(completo);
+    expect(doMenu("admin")).toEqual([...completo, ["/usuarios", "Usuários"]]);
     expect(doMenu("diretoria")).toEqual(completo);
     expect(doMenu("mentor")).toEqual([
       ["/dash", "Dashboard"],

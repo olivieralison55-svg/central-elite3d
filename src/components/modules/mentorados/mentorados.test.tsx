@@ -129,12 +129,12 @@ describe("tela Mentorados (OPS-10, UI-06, UI-07, WRITE-09)", () => {
   it("OPS-10: filtro e busca: o filtro grava statusFin, a busca grava q, e a lista mostra o que os dois deixaram, com o selo", () => {
     const admin = tela("admin");
     const segmentos = props(admin.vistos, "filtro");
-    expect(segmentos.items).toEqual(["Todos", "Somente ativos", "Somente pausados", "Cadastro incompleto", "Contrato pendente"]);
+    expect(segmentos.items).toEqual(["Todos", "Somente ativos", "Somente pausados", "Somente cancelados", "Cadastro incompleto", "Contrato pendente"]);
     expect(segmentos.value).toBe("Todos");
     chamar(segmentos.onChange, "Cadastro incompleto");
     chamar(props(admin.vistos, "busca").onChange, { target: { value: "bruno" } });
     expect(admin.mudancas).toEqual([filtro({ statusFin: "incompletos" }), filtro({ q: "bruno" })]);
-    expect(props(tela("mentor").vistos, "filtro").items).toEqual(["Todos", "Somente ativos", "Somente pausados", "Cadastro incompleto"]);
+    expect(props(tela("mentor").vistos, "filtro").items).toEqual(["Todos", "Somente ativos", "Somente pausados", "Somente cancelados", "Cadastro incompleto"]);
 
     const busca = tela("admin", filtro({ q: "bruno" })).html;
     expect(ids(busca)).toEqual(["m2"]);

@@ -3,7 +3,7 @@ import { type Papel, pode } from "./papeis";
 // O endereço de cada tela, porte do roteador de hash de hoje (index.html:1344–1400). Os nomes
 // ficam: o caminho `/sessoes` é o hash `#/sessoes` sem o `#`.
 
-export const TELAS = ["dash", "acompanhamento", "mentorados", "sessoes", "rotas", "mentores", "analise", "nps", "ia", "financeiro"] as const;
+export const TELAS = ["dash", "acompanhamento", "mentorados", "sessoes", "rotas", "mentores", "analise", "nps", "ia", "financeiro", "usuarios"] as const;
 export type Tela = (typeof TELAS)[number];
 
 export const ABAS_FICHA = ["cadastro", "financeiro", "sessoes", "notas", "stlseller"] as const;
@@ -59,6 +59,7 @@ export const caminhoDaFicha = (id: string, aba: Aba = "cadastro"): string =>
 // NAV-04: link colado não abre o que o menu esconde.
 export function telaPermitida(tela: Endereco["tela"], papel: Papel): boolean {
   if (tela === "ia") return pode(papel, "verIa");
+  if (tela === "usuarios") return pode(papel, "gerirUsuarios");
   if (TELAS_FINANCEIRAS.has(tela)) return pode(papel, "verFinanceiro");
   return true;
 }

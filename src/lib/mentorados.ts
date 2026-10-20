@@ -20,6 +20,7 @@ export const nomeDe = (mentorados: readonly Mentorado[], id: string | null): str
 const FILTROS: ReadonlyMap<string, (m: Mentorado) => boolean> = new Map([
   ["ativos", ehAtivo],
   ["pausados", (m: Mentorado) => situacaoDe(m) === "pausado"],
+  ["cancelados", (m: Mentorado) => situacaoDe(m) === "cancelado"],
   ["incompletos", (m: Mentorado) => !!m.cadastro_incompleto],
   ["contrato", (m: Mentorado) => ehAtivo(m) && m.contrato_status !== "Assinado"],
 ]);
