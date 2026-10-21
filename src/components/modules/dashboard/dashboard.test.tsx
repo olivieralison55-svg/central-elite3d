@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { DadosContexto, UI_INICIAL, type Ui, UiContexto } from "@/components/shell/contexto";
+import Badge from "@/components/ui/badge";
 import EmptyState from "@/components/ui/empty-state";
 import { LINK_PESQUISA_EXP } from "@/lib/constantes";
 import type { Dataset, ErrosDeCarga, Sessao } from "@/lib/data/esquemas";
@@ -292,6 +293,19 @@ describe("Dashboard e Acompanhamento (OPS-01, OPS-04, OPS-10, NAV-10, GER-08, UI
     expect(aberta.html).toContain("15/10/2099 · 20:00 · Michelle · 2 participante(s)");
     handler(aberta.vistos, "dialog", (p) => p.open === true, "onClose")();
     expect(tela(<Dashboard modo="completo" />, "admin", { manter: true }).html).not.toContain("dialog-falso");
+  });
+
+  it("Contatar abre o Canal WhatsApp da ficha em aba nova; sem link http(s), fica o selo", () => {
+    // Uma 1:1 concluída antiga tira os dois de "Nunca começou". "link whats" é o texto que a produção guarda no lugar do link.
+    const dados = datasetDeTeste();
+    Object.assign(dados.mentorados[1], { link_whatsapp: "link whats" });
+    Object.assign(dados.mentorados[2], { link_whatsapp: "https://chat.whatsapp.com/abc" });
+    dados.sessoes.push(sessao({ id: "s6", mentorado_id: "m2", data: "2026-05-04" }), sessao({ id: "s7", mentorado_id: "m3", data: "2026-05-04" }));
+    const html = tela(<Dashboard modo="completo" />, "admin", { dados }).html;
+    const risco = html.slice(html.indexOf('id="risco"'), html.indexOf('id="sem-implementacao"'));
+    expect(risco).toMatch(/<a href="https:\/\/chat\.whatsapp\.com\/abc" target="_blank" rel="noopener noreferrer"[^>]*>.*?Contatar<span class="sr-only"> no WhatsApp<\/span><\/a>/);
+    expect(risco).toContain(renderToStaticMarkup(<Badge variant="warning">Contatar</Badge>));
+    expect(risco).not.toContain("link whats");
   });
 
   it("DATA-07: relação complementar que falhou vira aviso no topo, e o resto do Dashboard renderiza", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleCheck, TriangleAlert } from "lucide-react";
+import { CircleCheck, MessageCircle, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 
 import { DataHora, LinkFicha, StatusSessao } from "@/components/modules/comum/celulas";
@@ -24,6 +24,7 @@ import StatCard from "@/components/ui/stat-card";
 import { INICIO_COBRANCA_NPS, LINK_PESQUISA_EXP, META_ADESAO_EXP, NIVEIS } from "@/lib/constantes";
 import type { Dataset, Relacao } from "@/lib/data/esquemas";
 import { fmtD, hojeSP } from "@/lib/datas";
+import { linkSeguro } from "@/lib/links";
 import { type ChaveAviso, type Contagem, focoDoAviso, type Matriz, matrizMentores } from "@/lib/matriz";
 import { fmtBRL } from "@/lib/moeda";
 import { type ItemAtencao, type Painel, painel, type Proxima } from "@/lib/painel";
@@ -332,7 +333,18 @@ function Listas({ listas }: { listas: Painel["listas"] }) {
           {
             key: "acao",
             header: "",
-            render: (r) => (r.ultima ? <Badge variant="warning">Contatar</Badge> : <Badge variant="danger">Nunca começou</Badge>),
+            // Contatar abre o Canal WhatsApp da ficha; sem link http(s) ali, fica o selo (SEC-05).
+            render: (r) => {
+              if (!r.ultima) return <Badge variant="danger">Nunca começou</Badge>;
+              const whatsapp = linkSeguro(r.mentorado.link_whatsapp);
+              if (!whatsapp) return <Badge variant="warning">Contatar</Badge>;
+              return (
+                <Button variant="outline" size="sm" href={whatsapp} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle size={14} />
+                  Contatar<span className="sr-only"> no WhatsApp</span>
+                </Button>
+              );
+            },
           },
         ]}
       />
