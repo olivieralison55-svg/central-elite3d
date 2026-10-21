@@ -295,15 +295,15 @@ describe("Dashboard e Acompanhamento (OPS-01, OPS-04, OPS-10, NAV-10, GER-08, UI
     expect(tela(<Dashboard modo="completo" />, "admin", { manter: true }).html).not.toContain("dialog-falso");
   });
 
-  it("Contatar abre o Canal WhatsApp da ficha em aba nova; sem link http(s), fica o selo", () => {
-    // Uma 1:1 concluída antiga tira os dois de "Nunca começou". "link whats" é o texto que a produção guarda no lugar do link.
+  it("Contatar abre a conversa no wa.me com o número do Canal WhatsApp, em aba nova; sem número, fica o selo", () => {
+    // Uma 1:1 concluída antiga tira os dois de "Nunca começou". "link whats" é o texto que a produção guarda no lugar do número.
     const dados = datasetDeTeste();
     Object.assign(dados.mentorados[1], { link_whatsapp: "link whats" });
-    Object.assign(dados.mentorados[2], { link_whatsapp: "https://chat.whatsapp.com/abc" });
+    Object.assign(dados.mentorados[2], { link_whatsapp: "(11) 99999-8888" });
     dados.sessoes.push(sessao({ id: "s6", mentorado_id: "m2", data: "2026-05-04" }), sessao({ id: "s7", mentorado_id: "m3", data: "2026-05-04" }));
     const html = tela(<Dashboard modo="completo" />, "admin", { dados }).html;
     const risco = html.slice(html.indexOf('id="risco"'), html.indexOf('id="sem-implementacao"'));
-    expect(risco).toMatch(/<a href="https:\/\/chat\.whatsapp\.com\/abc" target="_blank" rel="noopener noreferrer"[^>]*>.*?Contatar<span class="sr-only"> no WhatsApp<\/span><\/a>/);
+    expect(risco).toMatch(/<a href="https:\/\/wa\.me\/5511999998888" target="_blank" rel="noopener noreferrer"[^>]*>.*?Contatar<span class="sr-only"> no WhatsApp<\/span><\/a>/);
     expect(risco).toContain(renderToStaticMarkup(<Badge variant="warning">Contatar</Badge>));
     expect(risco).not.toContain("link whats");
   });
