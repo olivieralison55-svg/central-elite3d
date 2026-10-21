@@ -1,31 +1,33 @@
-# AD-012 — "Contatar" abre o Canal WhatsApp da ficha, não um telefone
+# AD-012 — "Contatar" abre a conversa no wa.me com o número do Canal WhatsApp
 
 - **Status**: active
 - **Date**: 2026-10-21
-- **Scope**: lista "Mentorados sem sessão há +30 dias" do Dashboard e do Acompanhamento (`src/components/modules/dashboard/dashboard.tsx`), coluna `mentorados.link_whatsapp`.
+- **Scope**: lista "Mentorados sem sessão há +30 dias" do Dashboard e do Acompanhamento (`src/components/modules/dashboard/dashboard.tsx`), `linkWhatsapp` em `src/lib/links.ts`, coluna `mentorados.link_whatsapp`.
 
 ## Decisão
 
-Na lista "Mentorados sem sessão há +30 dias", o selo "Contatar" vira botão que abre,
-em aba nova, o `link_whatsapp` do mentorado — o "Canal WhatsApp" da aba Cadastro da
-ficha. Só vira botão o link que passa no `linkSeguro` (http/https, SEC-05). Sem link
-válido o selo "Contatar" continua, sem ação. "Nunca começou" não muda.
+O "Canal WhatsApp" da aba Cadastro (`link_whatsapp`) guarda o **número** do mentorado.
+Na lista "Mentorados sem sessão há +30 dias", o selo "Contatar" vira botão que abre
+`https://wa.me/<número>` em aba nova. Sem "+", o número é do Brasil (DDD e número, com
+ou sem máscara, 55 ou 0 na frente) e ganha o 55; com "+", já traz o DDI. Um link http(s)
+gravado ali continua abrindo como está (SEC-05). Qualquer outro texto mantém o selo,
+sem ação. "Nunca começou" não muda.
 
 ## Por quê
 
-- `link_whatsapp` é o único dado de WhatsApp do mentorado. Nenhuma das relações que o
-  app lê (R01–R22, snapshot de paridade de 2026-10-14, `select *`) tem telefone; o
-  `contact.phone` do `payload` da Lia aparece em 7 das 177 cobranças.
-- O mentor também vê o botão: `link_whatsapp` está na view `mentorados_basic`
-  (`20260916_email_do_mentorado.sql`).
+- A primeira versão, no mesmo dia, abria só o link do grupo gravado no campo, e nenhum
+  botão apareceu: das 23 linhas da lista (lógica do painel sobre o snapshot de paridade
+  de 2026-10-14, só contagens), 18 tinham o texto `link whats` e 5 estavam vazias. O
+  Lucas decidiu que o campo passa a receber o número.
+- Nenhuma das relações que o app lê (R01–R22) tem telefone; o `contact.phone` do
+  `payload` da Lia aparece em 7 das 177 cobranças. Reusar a coluna evita migration no
+  banco de produção, e o mentor também vê o botão (`link_whatsapp` está na view
+  `mentorados_basic`, `20260916_email_do_mentorado.sql`).
 
 ## Trade-off
 
-- **Hoje quase ninguém tem o botão.** No snapshot de 2026-10-14, dos 88 mentorados,
-  1 tem link `https://chat.whatsapp.com/…`, 49 têm o texto `link whats` (marcador,
-  não link) e 38 estão vazios. Linha com selo e sem botão é ficha sem Canal WhatsApp,
-  não defeito: o conserto é preencher a ficha.
-- O botão abre o grupo, não a conversa privada. Um `https://wa.me/55…` gravado no
-  Canal WhatsApp também funciona, porque vale qualquer link http(s). Telefone de
-  verdade (coluna, campo no Cadastro, `wa.me` montado) pede migration no banco de
-  produção e fica para quando o grupo não bastar.
+- O botão só aparece depois que alguém troca o `link whats` pelo número na ficha.
+- Número de fora sem "+" não é reconhecido e fica com o selo. A troca para
+  libphonenumber fica para quando isso acontecer.
+- O nome "Canal WhatsApp" e a leitura da ficha, que mostra valor que não é link como
+  texto com `*`, não mudaram.
