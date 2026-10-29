@@ -218,6 +218,9 @@ Deno.serve(async (req) => {
       .select("mentorado_id,etapa,status,google_event_id").lt("ordem", 90);
     const ocupadas = new Map<string, Set<string>>();
     for (const r of ocupadasRows || []) {
+      /* "Nao compareceu" (falta do mentorado) nao cumpre a etapa: o proximo
+         evento dele volta a deduzir a mesma casa, e nao a seguinte. */
+      if (r.status === "Não compareceu") continue;
       if (r.status === "Concluída" || r.google_event_id) ocupar(r.mentorado_id, r.etapa, ocupadas);
     }
 
