@@ -41,6 +41,9 @@ const STLSELLER = {
 const NPS = { comentario: null, clareza: null, direcionamento: null, apoio: null };
 
 // Um Dataset novo a cada chamada: um teste não contamina o outro.
+// Os mentores do cadastro (`mentores_ativos()`): Israel e Evaldo já saíram e só aparecem nas sessões.
+export const MENTORES_CADASTRO: readonly string[] = ["Luan", "Sergio", "Diovani", "Petare", "Michelle", "André", "Gabriella"];
+
 export function datasetDeTeste(): Dataset {
   return {
     mentorados: [
@@ -278,5 +281,6 @@ export function datasetDeTeste(): Dataset {
     validacoes: [],
     validacaoLojas: [],
     validacaoEventos: [],
+    mentores: [...MENTORES_CADASTRO],
   };
 }

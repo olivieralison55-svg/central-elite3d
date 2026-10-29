@@ -141,6 +141,7 @@ export async function lerTudo(db, usuario) {
   r.nps_analises = lista(await db.from("nps_analises").select("*").order("gerado_em", { ascending: false }).limit(1), "nps_analises");
   r.experiencia_adesao = lista(await db.rpc("experiencia_adesao", ADESAO), "experiencia_adesao");
   r.analise_ia_mentor = lista(await db.rpc("analise_ia_mentor"), "analise_ia_mentor");
+  r.mentores_ativos = lista(await db.rpc("mentores_ativos"), "mentores_ativos");
   return r;
 }
 

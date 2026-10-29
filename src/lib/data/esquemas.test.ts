@@ -203,6 +203,7 @@ const LINHAS = {
     alertas: [ALERTA],
     mentorados: [LEITURA_MENTORADO],
   },
+  mentores_ativos: { nome: "Luan" },
   transcricoes: { drive_id: "d1", mentor: "Luan", status: "aceita", realizada_em: "2026-10-01T13:00:00Z", mentorado_id: "m1" },
   mentorado_notas: { conteudo: "<h1>Plano</h1>", atualizado_em: "2026-10-13T12:00:00Z" },
   faixas_remuneracao: { id: 1, piso: "10000.00", teto: "20000.00", valor_hora: "75.00" },
@@ -278,6 +279,7 @@ const NAO_NULO: Record<NomeRelacao, string[]> = {
   nps_analises: ["gerado_em", "modelo", "respostas", "resumo", "alertas", "mentores", "mentorados"],
   experiencia_adesao: ["respostas", "mentorados_com_sessao"],
   analise_ia_mentor: ["gerado_em", "modelo", "respostas", "alertas", "mentorados"],
+  mentores_ativos: ["nome"],
   transcricoes: ["drive_id", "status", "realizada_em"],
   mentorado_notas: ["conteudo", "atualizado_em"],
   // 20261029_validacao_faturamento.sql.
@@ -320,6 +322,7 @@ describe("schemas das leituras R01–R23 (DATA-02, DATA-03, EDGE-05, GER-06)", (
       "nps_analises",
       "experiencia_adesao",
       "analise_ia_mentor",
+      "mentores_ativos",
       "transcricoes",
       "mentorado_notas",
       "faixas_remuneracao",

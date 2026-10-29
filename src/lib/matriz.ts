@@ -1,5 +1,5 @@
 import { chaveNome } from "./busca";
-import { MENTORES, ordemDaEtapa, TODOS_MENTORES } from "./constantes";
+import { ordemDaEtapa } from "./constantes";
 import type { Sessao } from "./data/esquemas";
 import { mesDe } from "./datas";
 import { agruparGrupo, eh1a1, type Encontro, ehGrupo } from "./sessoes";
@@ -75,10 +75,9 @@ export function marcadorDeLinhas(sessoes: readonly Sessao[]): (s: Sessao) => Mar
 }
 
 // `sessoes.mentor` é texto livre. Para agrupar, a chave sem acento, sem caixa e com os espaços
-// colapsados; para exibir, a grafia de TODOS_MENTORES, ou o nome como veio, com o espaço
-// normalizado (OPS-03).
-const CANONICO = new Map(TODOS_MENTORES.map((mentor) => [chaveNome(mentor), mentor]));
-const nomeMentor = (mentor: string | null): string => CANONICO.get(chaveNome(mentor)) ?? (mentor ?? "").replace(/\s+/g, " ").trim();
+// colapsados; para exibir, a grafia do cadastro, ou o nome como veio, com o espaço normalizado
+// (OPS-03).
+const nomeMentor = (canonico: ReadonlyMap<string, string>, mentor: string | null): string => canonico.get(chaveNome(mentor)) ?? (mentor ?? "").replace(/\s+/g, " ").trim();
 const temMentor = (x: { mentor: string | null }) => chaveNome(x.mentor) !== "";
 
 export type ChaveAviso = "dobradas" | "semData" | "semMentor" | "etapaDeduzida";
@@ -111,7 +110,9 @@ const unicos = <T,>(lista: T[]): T[] => [...new Set(lista)];
 
 // `mesEscolhido` null é o padrão de OPS-04: o mês corrente se tiver reunião, senão o mais
 // recente com reunião, senão "Todos". Mês que o seletor não oferece também cai em "Todos".
-export function matrizMentores(sessoes: readonly Sessao[], mesEscolhido: string | null, hoje: string): Matriz {
+export function matrizMentores(sessoes: readonly Sessao[], mesEscolhido: string | null, hoje: string, cadastrados: readonly string[]): Matriz {
+  const canonico = new Map(cadastrados.map((mentor) => [chaveNome(mentor), mentor]));
+  const nomeDe = (mentor: string | null) => nomeMentor(canonico, mentor);
   const { reunioes, dobradas } = reunioesConcluidas1a1(sessoes);
   const grupoConcluido = sessoes.filter((s) => ehGrupo(s) && s.status === "Concluída");
   const mesAtual = hoje.slice(0, 7);
@@ -134,13 +135,13 @@ export function matrizMentores(sessoes: readonly Sessao[], mesEscolhido: string 
   });
 
   // Quem aparece sai dos próprios dados: ninguém some da contagem ao sair do projeto.
-  const linhas = unicos([...reunioesMes, ...grupoMes].filter(temMentor).map((x) => nomeMentor(x.mentor)))
+  const linhas = unicos([...reunioesMes, ...grupoMes].filter(temMentor).map((x) => nomeDe(x.mentor)))
     .map((mentor) => ({
       mentor,
-      foraDoProjeto: !MENTORES.includes(mentor),
+      foraDoProjeto: !cadastrados.includes(mentor),
       ...contar(
-        reunioesMes.filter((s) => nomeMentor(s.mentor) === mentor),
-        grupoMes.filter((e) => nomeMentor(e.mentor) === mentor),
+        reunioesMes.filter((s) => nomeDe(s.mentor) === mentor),
+        grupoMes.filter((e) => nomeDe(e.mentor) === mentor),
       ),
     }))
     .sort((a, b) => b.total1a1 - a.total1a1 || b.grupo - a.grupo);

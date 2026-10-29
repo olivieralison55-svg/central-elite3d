@@ -11,7 +11,6 @@ import PageHeader from "@/components/ui/page-header";
 import SegmentedControl from "@/components/ui/segmented-control";
 import Select from "@/components/ui/select";
 import StatCard from "@/components/ui/stat-card";
-import { MENTORES } from "@/lib/constantes";
 import { dpLabel, fmtD, hojeSP } from "@/lib/datas";
 import {
   calendario,
@@ -74,7 +73,7 @@ function Painel({ competencia }: { competencia: string }) {
   const agora = new Date();
   const linhaDe = (mentor: string) => dados.validacoes.find((v) => v.mentor === mentor && v.competencia.startsWith(competencia)) ?? null;
   // Os mentores atuais, mais quem tiver linha no mês (um mentor que saiu ainda fecha o último mês).
-  const nomes = [...new Set([...MENTORES, ...dados.validacoes.filter((v) => v.competencia.startsWith(competencia)).map((v) => v.mentor)])];
+  const nomes = [...new Set([...dados.mentores, ...dados.validacoes.filter((v) => v.competencia.startsWith(competencia)).map((v) => v.mentor)])];
   const [sel, setSel] = useState<string>(nomes[0] ?? "");
   // O admin alterna entre conferir e lançar no lugar do mentor; o modo fica ao trocar de mentor.
   const { pode } = useSessao();

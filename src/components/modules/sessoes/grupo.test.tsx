@@ -148,7 +148,7 @@ describe("encontros em grupo (OPS-06, WRITE-03, WRITE-04)", () => {
     }
     const concluido = agruparGrupo(datasetDeTeste().sessoes.filter((s) => s.id === "g1" || s.id === "g2"));
     expect(render(<DetalheEncontro encontro={concluido[0]} aoConfirmar={() => undefined} />).html).not.toContain("Confirmar o encontro");
-    // Mentor fora de MENTORES entra nas opções, para o encontro dele continuar escolhível.
+    // Mentor fora do cadastro entra nas opções, para o encontro dele continuar escolhível.
     const opcoes = prop(render(<DetalheEncontro encontro={{ ...PLANTAO, mentor: "Israel" }} aoConfirmar={() => undefined} />).vistos, "select", () => true, "options");
     expect(opcoes).toEqual(expect.arrayContaining([{ value: "", label: "Selecione o mentor…" }, { value: "Sergio", label: "Sergio" }, { value: "Israel", label: "Israel" }]));
   });

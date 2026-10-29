@@ -31,6 +31,17 @@ async function primeira<T>(rel: Relacao, pedido: Resposta, esquema: z.ZodType<T>
   return lido.ok ? { ok: true, dados: lido.dados[0] ?? null } : lido;
 }
 
+// Os mentores do cadastro (AD-013), pela rpc: o mentor só lê o próprio perfil.
+async function lerMentores(db: SupabaseClient): Promise<Resultado<string[]>> {
+  const { data, error } = await db.rpc("mentores_ativos");
+  if (error) {
+    console.error("[central-elite3d] mentores_ativos", error);
+    return { ok: false, erro: error.message };
+  }
+  const lido = validarLinhas("mentores_ativos", ESQUEMAS.mentores_ativos, data);
+  return lido.ok ? { ok: true, dados: lido.dados.map((m) => m.nome) } : lido;
+}
+
 export async function carregarTudo(papel: Papel, usuarioId: string, db: SupabaseClient = cliente()): Promise<Carga> {
   // SEC-06: sem sessão, a leitura iria como anon e voltaria vazia sem erro; com a de outra
   // pessoa (login em outra aba), traria o recorte dela.
@@ -73,6 +84,7 @@ export async function carregarTudo(papel: Papel, usuarioId: string, db: Supabase
     validacoes,
     validacaoLojas,
     validacaoEventos,
+    mentores,
   ] = await Promise.all([
     completo
       ? lista("mentorados", ESQUEMAS.mentorados, [["data_fechamento", true], ["id", true]])
@@ -108,6 +120,7 @@ export async function carregarTudo(papel: Papel, usuarioId: string, db: Supabase
     lista("validacao_faturamento", ESQUEMAS.validacao_faturamento, [["competencia", false], ["id", true]]),
     lista("validacao_lojas", ESQUEMAS.validacao_lojas, [["validacao_id", true], ["id", true]]),
     lista("validacao_eventos", ESQUEMAS.validacao_eventos, [["criado_em", true], ["id", true]]),
+    lerMentores(db),
   ]);
 
   if (!mentorados.ok) return mentorados;
@@ -145,6 +158,7 @@ export async function carregarTudo(papel: Papel, usuarioId: string, db: Supabase
     validacoes: ou("validacao_faturamento", validacoes, []),
     validacaoLojas: ou("validacao_lojas", validacaoLojas, []),
     validacaoEventos: ou("validacao_eventos", validacaoEventos, []),
+    mentores: ou("mentores_ativos", mentores, []),
   };
   return { ok: true, dados, erros };
 }

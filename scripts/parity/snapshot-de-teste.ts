@@ -39,6 +39,7 @@ export function relacoesDe(d: Dataset): Relacoes {
     validacao_faturamento: d.validacoes,
     validacao_lojas: d.validacaoLojas,
     validacao_eventos: d.validacaoEventos,
+    mentores_ativos: d.mentores.map((nome) => ({ nome })),
   };
 }
 

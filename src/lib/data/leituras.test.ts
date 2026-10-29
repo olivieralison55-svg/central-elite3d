@@ -105,6 +105,7 @@ function cenario() {
     experiencia_adesao: [ADESAO],
     analise_ia_mentor: [analiseMentor],
     transcricoes: [TRANSCRICAO],
+    mentores_ativos: d.mentores.map((nome) => ({ nome })),
   };
   const completo: Dataset = { ...d, orfas: [ORFA], adesao: ADESAO, transcricoes: [TRANSCRICAO] };
   // A view do mentor não tem as colunas financeiras, e ele não recebe nada do que só admin e diretoria leem.
@@ -151,6 +152,7 @@ const DO_COMPLETO = [
   "validacao_faturamento",
   "validacao_lojas",
   "validacao_eventos",
+  "mentores_ativos",
 ];
 const DO_MENTOR = [
   "mentorados_basic",
@@ -169,6 +171,7 @@ const DO_MENTOR = [
   "validacao_faturamento",
   "validacao_lojas",
   "validacao_eventos",
+  "mentores_ativos",
 ];
 const ADESAO_ARGS = { p_desde: "2026-10-13", p_prazo_dias: 2 };
 
@@ -195,6 +198,7 @@ const COMPLEMENTARES: Array<[Relacao, keyof Dataset, [] | null]> = [
   ["validacao_faturamento", "validacoes", []],
   ["validacao_lojas", "validacaoLojas", []],
   ["validacao_eventos", "validacaoEventos", []],
+  ["mentores_ativos", "mentores", []],
 ];
 
 describe("carga inteira e nota (DATA-02, DATA-04, DATA-06, DATA-07, DATA-08, GATE-08, SEC-06)", () => {
@@ -262,14 +266,17 @@ describe("carga inteira e nota (DATA-02, DATA-04, DATA-06, DATA-07, DATA-08, GAT
     }
   });
 
-  it("DATA-08 e GATE-08: R20 para os 3 papéis, nenhuma outra rpc e nenhuma escrita", async () => {
+  it("DATA-08 e GATE-08: R20 e os mentores do cadastro para os 3 papéis, nenhuma outra rpc e nenhuma escrita", async () => {
     const { tabelas } = cenario();
     const rpcsDe = (f: ReturnType<typeof clienteFalso>) => f.pedidos.flatMap((p) => p.chamadas.filter((c) => c[0] === "rpc"));
     const metodosDe = (f: ReturnType<typeof clienteFalso>) => [...new Set(f.pedidos.flatMap((p) => p.chamadas.map((c) => c[0])))].sort();
     for (const papel of ["admin", "diretoria"] as const) {
       const f = clienteFalso({ tabelas });
       await carregarTudo(papel, "u1", f.db);
-      expect(rpcsDe(f), papel).toEqual([["rpc", "experiencia_adesao", ADESAO_ARGS]]);
+      expect(rpcsDe(f), papel).toEqual([
+        ["rpc", "experiencia_adesao", ADESAO_ARGS],
+        ["rpc", "mentores_ativos", undefined],
+      ]);
       expect(metodosDe(f), papel).toEqual(["from", "limit", "order", "range", "rpc", "select"]);
     }
     const mentor = clienteFalso({ tabelas });
@@ -277,6 +284,7 @@ describe("carga inteira e nota (DATA-02, DATA-04, DATA-06, DATA-07, DATA-08, GAT
     expect(rpcsDe(mentor)).toEqual([
       ["rpc", "analise_ia_mentor", undefined],
       ["rpc", "experiencia_adesao", ADESAO_ARGS],
+      ["rpc", "mentores_ativos", undefined],
     ]);
     expect(metodosDe(mentor)).toEqual(["from", "order", "range", "rpc", "select"]);
   });

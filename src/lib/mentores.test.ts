@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { datasetDeTeste } from "@/test/fixtures";
+import { datasetDeTeste, MENTORES_CADASTRO } from "@/test/fixtures";
 
 import type { Mentorado, NpsResposta, Sessao, Transcricao } from "./data/esquemas";
 import { atividadePorMes, haDias, mentoresDaTela, resumoDoMentor, resumosDosMentores, ultimaNotaDe, ultimasRespostas, ultimosMeses, visaoMentores } from "./mentores";
@@ -35,7 +35,7 @@ const resp = (id: string, mentor: string, nota: number, em: string | null, extra
   ...extra,
 });
 const call = (drive: string, mentor: string | null, status: string): Transcricao => ({ drive_id: drive, mentor, status, realizada_em: "2026-10-01T12:00:00Z", mentorado_id: null });
-const dados = (parcial: Partial<Parameters<typeof resumoDoMentor>[0]> = {}) => ({ sessoes: [], mentorados: [], nps: [], transcricoes: [], analise: null, ...parcial });
+const dados = (parcial: Partial<Parameters<typeof resumoDoMentor>[0]> = {}) => ({ sessoes: [], mentorados: [], nps: [], transcricoes: [], analise: null, mentores: [...MENTORES_CADASTRO], ...parcial });
 const nomes = (r: { carteira: { m: Mentorado }[] }) => r.carteira.map((c) => c.m.id);
 
 describe("carteira: ativos cuja última 1:1 concluída foi com o mentor (GER-07)", () => {
@@ -183,7 +183,7 @@ describe("NPS de 30 dias, calls e leitura da IA (GER-07)", () => {
 describe("a visão geral e a lista de mentores (GER-07)", () => {
   it("os da lista atual vêm primeiro e depois quem só aparece nas sessões, em ordem do português", () => {
     const sessoes = [sessao("a", "Israel", "Concluída", "2026-01-01"), sessao("b", "Evaldo", "Concluída", "2026-01-01"), sessao("c", "Álvaro", "Agendada", null), sessao("d", null, "Concluída", "2026-01-01"), sessao("e", "Luan", "Concluída", "2026-01-01")];
-    const lista = mentoresDaTela(sessoes);
+    const lista = mentoresDaTela(sessoes, MENTORES_CADASTRO);
     expect(lista.slice(0, 7)).toEqual(["Luan", "Sergio", "Diovani", "Petare", "Michelle", "André", "Gabriella"]);
     expect(lista.slice(7)).toEqual(["Álvaro", "Evaldo", "Israel"]);
   });
@@ -197,7 +197,7 @@ describe("a visão geral e a lista de mentores (GER-07)", () => {
       sessao("e", "Sergio", "Concluída", "2026-10-03", { etapa: "Plantão de Dúvida Semanal" }),
     ];
     const d = dados({ sessoes });
-    const v = visaoMentores(resumosDosMentores(d, HOJE), d.nps, HOJE);
+    const v = visaoMentores(resumosDosMentores(d, HOJE), d.nps, HOJE, MENTORES_CADASTRO);
     expect(v.ativos.map((r) => r.nome)).toEqual(["Luan", "Sergio", "Diovani", "Petare", "Michelle", "André", "Gabriella", "Álvaro", "Israel"]);
     expect(v.historico.map((r) => r.nome)).toEqual(["Evaldo"]);
     // 1:1: Israel (01/10), Evaldo (março) e Luan (02/10): três no total e duas em 30 dias. Grupo: um. Agenda: um.
@@ -206,9 +206,9 @@ describe("a visão geral e a lista de mentores (GER-07)", () => {
 
   it("o NPS de 30 dias do card é de todas as respostas, de qualquer mentor", () => {
     const nps = [resp("a", "Luan", 10, "2026-10-01T12:00:00Z"), resp("b", "Quem não está na lista", 4, "2026-10-02T12:00:00Z"), resp("c", "Luan", 9, "2026-08-01T12:00:00Z")];
-    const v = visaoMentores([], nps, HOJE);
+    const v = visaoMentores([], nps, HOJE, []);
     expect(v.nps30).toEqual({ media: 7, nps: 0 });
-    expect(visaoMentores([], [], HOJE).nps30).toEqual({ media: null, nps: null });
+    expect(visaoMentores([], [], HOJE, []).nps30).toEqual({ media: null, nps: null });
   });
 });
 

@@ -417,7 +417,8 @@ function Detalhe({
 }) {
   const { ui, mudar } = useUi();
   const { ir } = useNavegar();
-  const matriz = matrizMentores(sessoes, ui.mesMatriz, hoje);
+  const { dados } = useDados();
+  const matriz = matrizMentores(sessoes, ui.mesMatriz, hoje, dados.mentores);
   // NAV-10: o aviso leva às linhas dele. Tipo e mentor zeram: um filtro ativo esconderia justamente
   // o que o aviso aponta, e a tela abriria vazia sem explicar por quê.
   const focar = (chave: ChaveAviso) => {

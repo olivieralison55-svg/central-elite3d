@@ -78,7 +78,7 @@ describe("snapshot de paridade (GATE-05, DATA-04, GATE-03)", () => {
 
     expect(Object.keys(relacoes).sort()).toEqual([
       "analise_ia_mentor", "canais", "experiencia_adesao", "experiencia_respostas", "faturamento_mensal",
-      "lia_cobrancas", "marcos_definicao", "mentorado_canais", "mentorado_marcos", "mentorados", "mentorados_basic",
+      "lia_cobrancas", "marcos_definicao", "mentorado_canais", "mentorado_marcos", "mentorados", "mentorados_basic", "mentores_ativos",
       "nps_analises", "nps_respostas", "parcelas", "profiles", "rotas", "sessoes", "sessoes_orfas",
       "stlseller_mentorados", "stlseller_pedidos_marketplace", "stlseller_produtos_vendidos", "transcricoes",
       "faixas_remuneracao", "mentor_lojas", "validacao_eventos", "validacao_faturamento", "validacao_lojas",
@@ -115,6 +115,7 @@ describe("snapshot de paridade (GATE-05, DATA-04, GATE-03)", () => {
     expect(rpcs).toEqual([
       ["experiencia_adesao", { p_desde: "2026-10-13", p_prazo_dias: 2 }],
       ["analise_ia_mentor", undefined],
+      ["mentores_ativos", undefined],
     ]);
   });
 
@@ -187,7 +188,7 @@ describe("snapshot de paridade (GATE-05, DATA-04, GATE-03)", () => {
     expect(opcoes.auth.persistSession).toBe(false);
     expect(falso.auth.login).toEqual({ email: "zzq-migracao@example.invalid", password: "s3nha-de-teste" });
     expect(falso.auth.signOut).toEqual([{ scope: "local" }]);
-    expect(saida).toHaveLength(27);
+    expect(saida).toHaveLength(28);
     expect(saida.filter((linha) => !/^[a-z_]+: \d+$/.test(linha))).toEqual([]);
     const gravado = readFileSync(join(pasta, "snapshot-2026-10-14.json"), "utf8");
     expect(JSON.parse(gravado).data).toBe("2026-10-14");

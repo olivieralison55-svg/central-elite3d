@@ -17,7 +17,8 @@ import SearchInput from "@/components/ui/search-input";
 import SectionLabel from "@/components/ui/section-label";
 import Select from "@/components/ui/select";
 import { casaBusca } from "@/lib/busca";
-import { ETAPAS_GRUPO, MENTORES, S_STATUS } from "@/lib/constantes";
+import { ETAPAS_GRUPO, S_STATUS } from "@/lib/constantes";
+import { mentoresCom } from "@/lib/mentores";
 import type { Sessao } from "@/lib/data/esquemas";
 import { confirmarGrupo, criarSessaoGrupo, type EncontroGrupo as CamposEncontro } from "@/lib/data/escritas";
 import { fmtD, hojeSP } from "@/lib/datas";
@@ -36,7 +37,8 @@ const opcoes = (valores: readonly string[]) => valores.map((valor) => ({ value: 
 // concluída sem dono e some da contagem por mentor. Só as presenças pendentes são marcadas.
 function ConfirmarEncontro({ encontro, aoConfirmar }: { encontro: Encontro; aoConfirmar(): void }) {
   const ids = encontro.itens.filter((s) => s.status !== "Concluída").map((s) => s.id);
-  const mentores = [...MENTORES, ...(encontro.mentor && !MENTORES.includes(encontro.mentor) ? [encontro.mentor] : [])];
+  const { dados } = useDados();
+  const mentores = mentoresCom(dados.mentores, encontro.mentor);
   const [mentor, setMentor] = useState(encontro.mentor ?? "");
   const { executar, ocupado } = useEscrita("escreverSessao", (quem: string) => confirmarGrupo(ids, quem), `${ids.length} presença(s) confirmada(s)`);
   const confirmar = async () => {
@@ -160,7 +162,7 @@ export function RegistrarEncontroForm({ aoRegistrar }: { aoRegistrar(): void }) 
           <Select id="grupo-status" name="status" options={opcoes(S_STATUS)} value={campos.status} onChange={mudar("status")} />
         </FormField>
         <FormField label="Mentor" htmlFor="grupo-mentor">
-          <Select id="grupo-mentor" name="mentor" options={[{ value: "", label: "—" }, ...opcoes(MENTORES)]} value={campos.mentor} onChange={mudar("mentor")} />
+          <Select id="grupo-mentor" name="mentor" options={[{ value: "", label: "—" }, ...opcoes(dados.mentores)]} value={campos.mentor} onChange={mudar("mentor")} />
         </FormField>
         {CAMPOS_TEXTO.map(([campo, rotulo, tipo, dica]) => (
           <FormField key={campo} label={rotulo} htmlFor={`grupo-${campo}`}>

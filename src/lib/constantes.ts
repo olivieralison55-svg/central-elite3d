@@ -1,13 +1,7 @@
 // Constantes de domínio do index.html (:561–671, :807–809), que o mapeamento §2.2 chama de
-// contrato. A trilha 1:1 é a mesma `TRILHA` do sync-google-calendar, e cada mentor de `MENTORES`
-// é um valor do `EMAIL_MENTOR` dele: as duas pontas precisam concordar, senão o sync inventa uma
-// etapa que a tela não sabe desenhar ou credita a sessão a ninguém.
-
-// Mentores que recebem novos agendamentos. Quem sai do projeto vai para MENTORES_HIST: some dos
-// formulários, mas continua contando no histórico (a matriz marca "fora do projeto").
-export const MENTORES: readonly string[] = ["Luan", "Sergio", "Diovani", "Petare", "Michelle", "André", "Gabriella"];
-export const MENTORES_HIST: readonly string[] = ["Israel", "Evaldo"];
-export const TODOS_MENTORES: readonly string[] = [...MENTORES, ...MENTORES_HIST];
+// contrato. A trilha 1:1 é a mesma `TRILHA` do sync-google-calendar: as duas pontas precisam
+// concordar, senão o sync inventa uma etapa que a tela não sabe desenhar. Os mentores não moram
+// aqui: vêm do cadastro (`Dataset.mentores`, AD-013).
 
 export const ETAPAS: readonly string[] = [
   "Diagnóstico de Negócio",

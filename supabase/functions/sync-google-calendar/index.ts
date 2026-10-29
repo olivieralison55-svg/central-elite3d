@@ -7,39 +7,29 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 const GOOGLE_REFRESH_TOKEN = Deno.env.get("GOOGLE_REFRESH_TOKEN")!;
 const TZ = "America/Sao_Paulo";
 
-// Fonte de verdade para identificar o mentor: e-mail do convidado no evento.
-// Comparação exata — os e-mails nao seguem padrao previsivel (contatoevxldo = Evaldo),
-// entao qualquer heuristica de nome produziria atribuicao errada e silenciosa.
-// ATENCAO: so entram aqui quem ATENDE a sessao. CS e observadores ficam de fora,
-// senao a sessao seria creditada a quem apenas acompanhou.
-const EMAIL_MENTOR: Record<string, string> = {
-  "am.3d.printt@gmail.com": "Michelle",
-  "contato.alvesmaker@gmail.com": "Luan",
-  "contatoevxldo@gmail.com": "Evaldo",
-  "mkt.martinsoliveira@gmail.com": "Diovani",
-  "diovane_martins@hotmail.com": "Diovani", // legado: mantido para reconhecer eventos antigos
-  "petarerp@gmail.com": "Petare",
-  "sergiodink@gmail.com": "Sergio",
-  "andreandradestlflix@gmail.com": "André",
-  "gabriellaandradestlflix@gmail.com": "Gabriella",
-};
+// Os mentores vem do cadastro (profiles com role 'mentor', AD-013), lidos a cada
+// execucao. Fonte de verdade: e-mail do convidado no evento, comparacao exata --
+// os e-mails nao seguem padrao previsivel, entao heuristica de nome produziria
+// atribuicao errada e silenciosa. So mentor e convidado-mentor: CS e observadores
+// nao tem perfil de mentor, e a sessao nao e creditada a quem so acompanhou.
+// Fallback: o nome do mentor (mentor_nome) escrito no titulo/descricao.
+type Mentores = { porEmail: Map<string, string>; porNome: { nome: string; chave: string }[] };
 
-// Fallback por nome escrito no titulo/descricao. Israel e Evaldo sairam do
-// projeto e nao recebem novos agendamentos, mas seguem reconheciveis caso
-// aparecam em evento antigo -- tirar daqui jogaria as sessoes deles para
-// "sem mentor identificado" calado.
-const MENTORES: { nome: string; alias: string[] }[] = [
-  { nome: "Evaldo",   alias: ["evaldo"] },
-  { nome: "Luan",     alias: ["luan"] },
-  { nome: "Sergio",   alias: ["sergio"] },
-  { nome: "Diovani",  alias: ["diovani", "diovane"] },
-  { nome: "Petare",   alias: ["petare"] },
-  { nome: "Michelle", alias: ["michelle", "michele", "michelli"] },
-  { nome: "Israel",   alias: ["israel"] },
-  // André sem apelido de proposito: ha mentorado chamado André (Bertozzi), e o
-  // titulo "Mentoria André Bertozzi" creditaria a sessao ao mentor. So por e-mail.
-  { nome: "Gabriella", alias: ["gabriella", "gabriela"] },
-];
+/* Nome de mentor que tambem e primeiro nome de mentorado nao vale como apelido:
+   "Mentoria André Bertozzi" creditaria a sessao ao mentor André. Esse fica so
+   pelo e-mail. */
+function montarMentores(perfis: { mentor_nome: string; email: string | null }[], mentorados: { nome: string }[]): Mentores {
+  const primeiros = new Set(mentorados.map((m) => normaliza(m.nome).trim().split(/\s+/)[0]));
+  const porEmail = new Map<string, string>();
+  const porNome: { nome: string; chave: string }[] = [];
+  for (const p of perfis) {
+    const e = (p.email || "").trim().toLowerCase();
+    if (e) porEmail.set(e, p.mentor_nome);
+    const chave = normaliza(p.mentor_nome).trim();
+    if (chave && !primeiros.has(chave)) porNome.push({ nome: p.mentor_nome, chave });
+  }
+  return { porEmail, porNome };
+}
 
 const tzFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
@@ -112,13 +102,13 @@ function ocupar(mentoradoId: string, etapa: string, ocupadas: Map<string, Set<st
   if (!s) { s = new Set(); ocupadas.set(mentoradoId, s); }
   s.add(etapa);
 }
-function acharMentor(texto: string, attendees: { email?: string }[] = []): string | null {
+function acharMentor(mentores: Mentores, texto: string, attendees: { email?: string }[] = []): string | null {
   for (const a of attendees) {
-    const mt = EMAIL_MENTOR[(a.email || "").trim().toLowerCase()];
+    const mt = mentores.porEmail.get((a.email || "").trim().toLowerCase());
     if (mt) return mt;
   }
   const s = normaliza(texto);
-  for (const mt of MENTORES) if (mt.alias.some((x) => s.includes(x))) return mt.nome;
+  for (const mt of mentores.porNome) if (s.includes(mt.chave)) return mt.nome;
   return null;
 }
 type Mentorado = { id: string; nome: string; email?: string | null };
@@ -200,6 +190,10 @@ Deno.serve(async (req) => {
     const { data: mentorados, error: merr } = await supabase.from("mentorados").select("id,nome,email").eq("cancelado", false);
     if (merr) throw merr;
     const lista: Mentorado[] = mentorados || [];
+    const { data: perfis, error: perr } = await supabase.from("profiles")
+      .select("mentor_nome,email").eq("role", "mentor").not("mentor_nome", "is", null);
+    if (perr) throw perr;
+    const mentores = montarMentores(perfis || [], lista);
     const porEmail = new Map<string, Mentorado>();
     for (const m of lista) {
       const e = (m.email || "").trim().toLowerCase();
@@ -233,7 +227,7 @@ Deno.serve(async (req) => {
         if (ev.status === "cancelled") continue;
         const summary = ev.summary || "";
         if (!parseEtapa(summary) || !casarMentorado(summary, ev.attendees || [])) continue;
-        if (acharMentor(summary + " " + (ev.description || ""), ev.attendees || [])) continue;
+        if (acharMentor(mentores, summary + " " + (ev.description || ""), ev.attendees || [])) continue;
         amostra.push({ titulo: summary, attendees: (ev.attendees || []).map((a: { email?: string }) => a.email) });
         if (amostra.length >= 10) break;
       }
@@ -268,7 +262,7 @@ Deno.serve(async (req) => {
 
       const fimDT = ev.end?.dateTime || ev.end?.date || startDT;
       const jaPassou = new Date(fimDT) < agora;
-      const mentor = acharMentor(summary + " " + (ev.description || ""), ev.attendees || []);
+      const mentor = acharMentor(mentores, summary + " " + (ev.description || ""), ev.attendees || []);
       const link_meet = ev.hangoutLink || ev.location || null;
 
       /* A sessao deste evento e procurada ANTES de resolver a etapa, e nao
@@ -368,8 +362,8 @@ Deno.serve(async (req) => {
             upd.ordem = etapaInfo.ordem;
             upd.etapa_deduzida = deduzida;
           }
-          /* mentor pode voltar nulo quando o e-mail do atendente nao esta no
-             EMAIL_MENTOR. Gravar esse nulo apagaria o mentor que ja estava na
+          /* mentor pode voltar nulo quando o e-mail do atendente nao e de um
+             mentor cadastrado. Gravar esse nulo apagaria o mentor que ja estava na
              linha e mandaria a sessao para "sem mentor identificado" calada --
              o ramo `existente` acima ja se protegia disso, este nao. */
           if (mentor) upd.mentor = mentor;
