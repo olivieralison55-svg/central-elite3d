@@ -5,6 +5,7 @@ import {
   bloqueiosDaValidacao,
   calendario,
   competenciaAtual,
+  competenciasDoSeletor,
   elegivelDasLojas,
   ehDiaUtil,
   faixaDe,
@@ -90,6 +91,15 @@ describe("calendário", () => {
   it("a competência em processo é a do mês anterior, também na virada do ano", () => {
     expect(competenciaAtual("2026-11-04")).toBe("2026-10");
     expect(competenciaAtual("2027-01-05")).toBe("2026-12");
+  });
+
+  it("o mês corrente entra no seletor só nos últimos 7 dias", () => {
+    expect(competenciasDoSeletor("2026-10-24")[0]).toBe("2026-09");
+    expect(competenciasDoSeletor("2026-10-25")).toEqual(["2026-10", "2026-09", "2026-08", "2026-07", "2026-06", "2026-05"]);
+    expect(competenciasDoSeletor("2026-02-22")[0]).toBe("2026-02");
+    expect(competenciasDoSeletor("2026-02-21")[0]).toBe("2026-01");
+    expect(competenciasDoSeletor("2026-12-31")[0]).toBe("2026-12");
+    expect(competenciasDoSeletor("2027-01-01")[0]).toBe("2026-12");
   });
 
   it("o passo do dia no calendário", () => {

@@ -143,6 +143,19 @@ export function calendario(competencia: string): Calendario {
 // A competência em processo num dia: a do mês anterior.
 export const competenciaAtual = (hoje: string): string => mesAnterior(mesDe(hoje));
 
+// Nos últimos 7 dias do mês, o próprio mês já abre para lançamento.
+export const DIAS_ANTES_DE_ABRIR = 7;
+
+// As competências do seletor, da mais nova: o mês corrente (se já abriu), a em processo e as
+// anteriores, `quantas` ao todo.
+export function competenciasDoSeletor(hoje: string, quantas = 6): string[] {
+  const [a, m, d] = hoje.split("-").map(Number);
+  const ultimoDia = new Date(Date.UTC(a, m, 0)).getUTCDate();
+  const meses = ultimoDia - d < DIAS_ANTES_DE_ABRIR ? [mesDe(hoje)] : [competenciaAtual(hoje)];
+  while (meses.length < quantas) meses.push(mesAnterior(meses[meses.length - 1]));
+  return meses;
+}
+
 // Em que passo do calendário o dia cai: 0 antes do D1, 1–5 nos dias, 6 depois do D5.
 export function passoDoDia(cal: Calendario, hoje: string): number {
   const dias = [cal.envio, ...cal.conferencia, cal.fechamento, cal.pagamento];

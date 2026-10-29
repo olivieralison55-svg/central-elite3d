@@ -15,12 +15,11 @@ import { MENTORES } from "@/lib/constantes";
 import { dpLabel, fmtD, hojeSP } from "@/lib/datas";
 import {
   calendario,
-  competenciaAtual,
+  competenciasDoSeletor,
   ESTADO_LABEL,
   ESTADO_TOM,
   estadoDe,
   foraDoPrazo,
-  mesAnterior,
   passoDoDia,
   semMentorNoMes,
   sessoesDoMes,
@@ -36,13 +35,6 @@ import EnvioMentor from "./envio-mentor";
 const RELACOES = ["validacao_faturamento", "faixas_remuneracao"] as const;
 const COMPLEMENTARES = ["validacao_lojas", "validacao_eventos", "mentor_lojas"] as const;
 const MODOS = ["Conferência", "Lançar dados"] as const;
-
-// O mês em processo e os cinco anteriores.
-const competencias = (hoje: string) => {
-  const meses = [competenciaAtual(hoje)];
-  while (meses.length < 6) meses.push(mesAnterior(meses[meses.length - 1]));
-  return meses;
-};
 
 function Calendario({ competencia }: { competencia: string }) {
   const cal = calendario(competencia);
@@ -141,7 +133,7 @@ function Painel({ competencia }: { competencia: string }) {
 export default function Faturamento() {
   const { papel, perfil } = useSessao();
   const hoje = hojeSP();
-  const meses = competencias(hoje);
+  const meses = competenciasDoSeletor(hoje);
   const [competencia, setCompetencia] = useState(meses[0]);
   const ehMentor = papel === "mentor";
   return (
