@@ -34,8 +34,6 @@ const ETAPAS = [
   { chave: "plantao", etapa: "Plantão de Dúvida Semanal", ordem: 90 },
   { chave: "duvida", etapa: "Plantão de Dúvida Semanal", ordem: 90 },
 ];
-// Nome do mentor no título ("Plantão de Dúvidas #27 - Luan"), grafia canônica do index.html.
-const MENTORES = ["Luan", "Sergio", "Diovani", "Petare", "Michelle", "André", "Gabriella"];
 
 const json = (status: number, corpo: unknown) =>
   new Response(JSON.stringify(corpo), { status, headers: { "content-type": "application/json" } });
@@ -80,9 +78,11 @@ export function etapaDoEvento(nome: string) {
   return ETAPAS.find((e) => n.includes(e.chave)) ?? null;
 }
 
-export function mentorDoEvento(nome: string) {
+// Nome do mentor no título ("Plantão de Dúvidas #27 - Luan"), na grafia do cadastro
+// (profiles.nome_mentor, AD-013).
+export function mentorDoEvento(nome: string, mentores: readonly string[]) {
   const depois = norm(nome.split(" - ").slice(1).join(" - "));
-  return MENTORES.find((m) => depois.includes(norm(m))) ?? null;
+  return mentores.find((m) => depois.includes(norm(m))) ?? null;
 }
 
 Deno.serve(async (req) => {
@@ -131,12 +131,17 @@ Deno.serve(async (req) => {
   if (errM) return falha(`mentorados: ${errM.message}`);
   if (!ment || ment.length !== 1) return falha(ment?.length ? `e-mail ${email} em ${ment.length} fichas` : `nenhuma ficha com o e-mail ${email}`);
 
+  const { data: perfis, error: errP } = await db.from("profiles")
+    .select("nome_mentor").eq("role", "mentor").not("nome_mentor", "is", null);
+  if (errP) return falha(`profiles: ${errP.message}`);
+  const mentores = (perfis ?? []).map((p: { nome_mentor: string }) => p.nome_mentor);
+
   const inicio = new Date(evento.starts_at);
   const data = inicio.toLocaleDateString("sv-SE", { timeZone: TZ });
   const hora = inicio.toLocaleTimeString("en-GB", { timeZone: TZ, hour12: false });
   const { data: sessao, error: errS } = await db.from("sessoes").upsert({
     mentorado_id: ment[0].id, etapa: etapa.etapa, ordem: etapa.ordem, status: "Concluída",
-    mentor: mentorDoEvento(evento.name), data, hora, circle_event_id: eventId,
+    mentor: mentorDoEvento(evento.name, mentores), data, hora, circle_event_id: eventId,
   }, { onConflict: "mentorado_id,circle_event_id" }).select("id").single();
   if (errS) return falha(`sessoes: ${errS.message}`);
 

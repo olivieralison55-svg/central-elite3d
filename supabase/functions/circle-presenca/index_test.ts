@@ -16,7 +16,9 @@ Deno.test("etapa e mentor saem do nome do evento", () => {
   assertEquals(etapaDoEvento("Sessão de Implementação #7")?.etapa, "Sessão de Implementação Mensal");
   assertEquals(etapaDoEvento("Plantão de Dúvidas #23 - André")?.etapa, "Plantão de Dúvida Semanal");
   assertEquals(etapaDoEvento("Live aberta"), null);
-  assertEquals(mentorDoEvento("Plantão de Dúvidas #25 - Sérgio"), "Sergio");
-  assertEquals(mentorDoEvento("Plantão de Dúvidas Elite 3D #19 - Precificação com Petare"), "Petare");
-  assertEquals(mentorDoEvento("Sessão de Implementação #7"), null);
+  const mentores = ["Luan", "Sergio", "Petare", "Leonardo"];
+  assertEquals(mentorDoEvento("Plantão de Dúvidas #25 - Sérgio", mentores), "Sergio");
+  assertEquals(mentorDoEvento("Plantão de Dúvidas Elite 3D #19 - Precificação com Petare", mentores), "Petare");
+  assertEquals(mentorDoEvento("Plantão de Dúvidas #30 - Leonardo", mentores), "Leonardo");
+  assertEquals(mentorDoEvento("Sessão de Implementação #7", mentores), null);
 });
