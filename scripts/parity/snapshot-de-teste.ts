@@ -34,6 +34,7 @@ export function relacoesDe(d: Dataset): Relacoes {
     experiencia_adesao: d.adesao ? [d.adesao] : [],
     analise_ia_mentor: recorte,
     transcricoes: d.transcricoes,
+    mentores_ativos: d.mentores.map((nome) => ({ nome })),
   };
 }
 

@@ -18,7 +18,8 @@ import SearchInput from "@/components/ui/search-input";
 import SectionLabel from "@/components/ui/section-label";
 import SegmentedControl from "@/components/ui/segmented-control";
 import Select from "@/components/ui/select";
-import { ordemDaEtapa, TODOS_MENTORES } from "@/lib/constantes";
+import { ordemDaEtapa } from "@/lib/constantes";
+import { mentoresDaTela } from "@/lib/mentores";
 import type { Sessao } from "@/lib/data/esquemas";
 import { fmtD } from "@/lib/datas";
 import { marcadorDeLinhas } from "@/lib/matriz";
@@ -38,7 +39,6 @@ const TIPOS: readonly [string, string][] = [
   ["individual", "Somente 1:1 com mentores"],
   ["grupo", "Somente em grupo"],
 ];
-const MENTORES = [{ value: "", label: "Todos os mentores" }, ...TODOS_MENTORES.map((m) => ({ value: m, label: m })), { value: "__sem__", label: "— sem mentor —" }];
 
 export default function Sessoes() {
   const { dados } = useDados();
@@ -131,7 +131,7 @@ export default function Sessoes() {
           <label htmlFor="sessoes-mentor" className="sr-only">
             Mentor
           </label>
-          <Select id="sessoes-mentor" options={MENTORES} value={filtro.mentor} onChange={(mentor) => filtrar({ mentor })} />
+          <Select id="sessoes-mentor" options={[{ value: "", label: "Todos os mentores" }, ...mentoresDaTela(dados.sessoes, dados.mentores).map((m) => ({ value: m, label: m })), { value: "__sem__", label: "— sem mentor —" }]} value={filtro.mentor} onChange={(mentor) => filtrar({ mentor })} />
         </span>
         <SeloBusca termo={filtro.qSessoes} n={recorte.selo.n} total={recorte.selo.total} unidade="sessão(ões) e encontro(s)" limpar={() => filtrar({ qSessoes: "" })} />
       </div>

@@ -259,6 +259,8 @@ export const ESQUEMAS = {
   experiencia_adesao: z.object({ respostas: numerico, mentorados_com_sessao: numerico }),
   // AD-005: o recorte do mentor vem sem `resumo` e sem `mentores`.
   analise_ia_mentor: analise.omit({ resumo: true, mentores: true }),
+  // `returns table (nome)` de 20261029_mentores_do_cadastro.sql (AD-013).
+  mentores_ativos: z.object({ nome: z.string() }),
   // R22: 20261013_transcricoes_e_dossies.sql. `drive_id` entra no select para o desempate.
   transcricoes: z.object({
     drive_id: z.string(),
@@ -321,6 +323,7 @@ export type Relacao =
   | "nps_analises"
   | "experiencia_adesao"
   | "analise_ia_mentor"
+  | "mentores_ativos"
   | "transcricoes";
 
 export type ErrosDeCarga = Partial<Record<Relacao, string>>;
@@ -346,4 +349,5 @@ export interface Dataset {
   analise: Analise | null; // R19 ou R21
   adesao: Adesao | null; // R20
   transcricoes: Transcricao[];
+  mentores: string[]; // os mentores do cadastro, que recebem sessões novas (AD-013)
 }

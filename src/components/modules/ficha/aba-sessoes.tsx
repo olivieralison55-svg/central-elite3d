@@ -15,7 +15,8 @@ import Input from "@/components/ui/input";
 import SectionLabel from "@/components/ui/section-label";
 import SegmentedProgress from "@/components/ui/segmented-progress";
 import Select from "@/components/ui/select";
-import { ETAPAS, ETAPAS_GRUPO, MENTORES, S_STATUS } from "@/lib/constantes";
+import { ETAPAS, ETAPAS_GRUPO, S_STATUS } from "@/lib/constantes";
+import { mentoresCom } from "@/lib/mentores";
 import type { Mentorado, Sessao } from "@/lib/data/esquemas";
 import { type CamposSessao, confirmarSessao, delSessao, salvarSessao } from "@/lib/data/escritas";
 import { fmtD } from "@/lib/datas";
@@ -31,8 +32,6 @@ import { semMarcador } from "@/lib/marcador";
 // Dialog, que não renderiza sem `document` (design, componente 6).
 
 const opcoes = (valores: readonly string[]) => valores.map((valor) => ({ value: valor, label: valor }));
-// O mentor gravado continua escolhível mesmo fora de MENTORES (quem saiu do projeto).
-const mentoresCom = (atual: string | null) => [...MENTORES, ...(atual && !MENTORES.includes(atual) ? [atual] : [])];
 
 type Campos = Record<Exclude<keyof CamposSessao, "mentorado_id">, string>;
 
@@ -90,7 +89,7 @@ export function SessaoForm({ sessao, mentoradoId, aoTerminar }: { sessao: Sessao
           <Select id="sessao-status" options={opcoes(S_STATUS)} value={campos.status} onChange={escolher("status")} />
         </FormField>
         <FormField label="Mentor" htmlFor="sessao-mentor">
-          <Select id="sessao-mentor" options={[{ value: "", label: "—" }, ...opcoes(mentoresCom(sessao?.mentor ?? null))]} value={campos.mentor} onChange={escolher("mentor")} />
+          <Select id="sessao-mentor" options={[{ value: "", label: "—" }, ...opcoes(mentoresCom(dados.mentores, sessao?.mentor ?? null))]} value={campos.mentor} onChange={escolher("mentor")} />
         </FormField>
         <FormField label="Data" htmlFor="sessao-data">
           <Input id="sessao-data" type="date" value={campos.data} onChange={digitar("data")} />
@@ -166,7 +165,7 @@ export function ConfirmarSessaoForm({ sessao, aoTerminar }: { sessao: Sessao; ao
     <div className="space-y-4">
       <p className="text-sm text-muted">{`${sessao.etapa ?? ""} · ${semMarcador(nomeDe(dados.mentorados, sessao.mentorado_id))} · ${fmtD(sessao.data)}`}</p>
       <FormField label="Quem atendeu esta sessão?" htmlFor="confirmar-mentor">
-        <Select id="confirmar-mentor" options={[{ value: "", label: "Selecione o mentor…" }, ...opcoes(mentoresCom(sessao.mentor))]} value={mentor} onChange={setMentor} />
+        <Select id="confirmar-mentor" options={[{ value: "", label: "Selecione o mentor…" }, ...opcoes(mentoresCom(dados.mentores, sessao.mentor))]} value={mentor} onChange={setMentor} />
       </FormField>
       <div className="flex flex-wrap gap-2">
         <Button loading={ocupado} data-escrita="W04" onClick={() => void confirmar().catch((erro: unknown) => console.error("[central-elite3d] confirmar sessão", erro))}>

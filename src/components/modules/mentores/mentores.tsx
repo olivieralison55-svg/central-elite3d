@@ -17,7 +17,6 @@ import { contrasDe, pautaDe, prosDe } from "@/lib/ia";
 import {
   type AtividadeMes,
   atividadePorMes,
-  ehMentorAtual,
   mentoresDaTela,
   resumoDoMentor,
   type ResumoMentor,
@@ -50,7 +49,7 @@ const Contagem = ({ no30, total }: { no30: number; total: number }) => (
 
 function Visao({ resumos, hoje, escolher }: { resumos: ResumoMentor[]; hoje: string; escolher(nome: string): void }) {
   const { dados } = useDados();
-  const v = visaoMentores(resumos, dados.nps, hoje);
+  const v = visaoMentores(resumos, dados.nps, hoje, dados.mentores);
   const colunas: Column<ResumoMentor>[] = [
     {
       key: "mentor",
@@ -58,7 +57,7 @@ function Visao({ resumos, hoje, escolher }: { resumos: ResumoMentor[]; hoje: str
       render: (r) => (
         <span className="inline-flex items-center gap-1.5">
           <BotaoDoMentor nome={r.nome} onClick={() => escolher(r.nome)} />
-          {!ehMentorAtual(r.nome) && <Badge>histórico</Badge>}
+          {!dados.mentores.includes(r.nome) && <Badge>histórico</Badge>}
         </span>
       ),
     },
@@ -228,7 +227,7 @@ export default function Mentores() {
   const { dados } = useDados();
   const { ui, mudar } = useUi();
   const hoje = hojeSP();
-  const nomes = mentoresDaTela(dados.sessoes);
+  const nomes = mentoresDaTela(dados.sessoes, dados.mentores);
   const sel = nomes.includes(ui.filtro.mentorSel) ? ui.filtro.mentorSel : "";
   const escolher = (mentorSel: string) => mudar({ filtro: { ...ui.filtro, mentorSel } });
   return (

@@ -1,4 +1,3 @@
-import { MENTORES } from "./constantes";
 import type { Dataset, Mentorado, NpsResposta, Sessao } from "./data/esquemas";
 import { diaSP } from "./datas";
 import type { LeituraMentor } from "./ia";
@@ -11,19 +10,20 @@ import { agruparGrupo, eh1a1, type Encontro, ehGrupo } from "./sessoes";
 // num lugar. As sessões 1:1 contam por reunião (a mesma regra da matriz do Dashboard, OPS-02), os
 // encontros em grupo por encontro. "Hoje" vem de quem chama: a regra não o calcula.
 
-export type DadosMentores = Pick<Dataset, "sessoes" | "mentorados" | "nps" | "transcricoes" | "analise">;
+export type DadosMentores = Pick<Dataset, "sessoes" | "mentorados" | "nps" | "transcricoes" | "analise" | "mentores">;
 
 // A data `hoje` menos `dias`, em dia de calendário: a conta é em UTC ao meio-dia, sem horário de verão.
 export const haDias = (hoje: string, dias: number): string => new Date(new Date(`${hoje}T12:00:00Z`).getTime() - dias * 864e5).toISOString().slice(0, 10);
 
 // Os mentores da tela: os atuais primeiro, depois quem ainda aparece nas sessões (histórico), em
 // ordem alfabética do português.
-export const mentoresDaTela = (sessoes: readonly Sessao[]): string[] => [
-  ...MENTORES,
-  ...[...new Set(sessoes.flatMap((s) => (s.mentor ? [s.mentor] : [])))].filter((n) => !MENTORES.includes(n)).sort((a, b) => a.localeCompare(b, "pt-BR")),
+export const mentoresDaTela = (sessoes: readonly Sessao[], ativos: readonly string[]): string[] => [
+  ...ativos,
+  ...[...new Set(sessoes.flatMap((s) => (s.mentor ? [s.mentor] : [])))].filter((n) => !ativos.includes(n)).sort((a, b) => a.localeCompare(b, "pt-BR")),
 ];
 
-export const ehMentorAtual = (nome: string): boolean => MENTORES.includes(nome);
+// As opções de mentor de um formulário: os do cadastro, e o já gravado mesmo que tenha saído.
+export const mentoresCom = (ativos: readonly string[], atual: string | null): string[] => [...ativos, ...(atual && !ativos.includes(atual) ? [atual] : [])];
 
 export interface ResumoMentor {
   nome: string;
@@ -87,7 +87,7 @@ function resumir(nome: string, dados: DadosMentores, hoje: string, reunioes: rea
 export function resumosDosMentores(dados: DadosMentores, hoje: string): ResumoMentor[] {
   const { reunioes } = reunioesConcluidas1a1(dados.sessoes);
   const ultimas = ultimaConcluidaPorMentorado(dados.sessoes);
-  return mentoresDaTela(dados.sessoes).map((nome) => resumir(nome, dados, hoje, reunioes, ultimas));
+  return mentoresDaTela(dados.sessoes, dados.mentores).map((nome) => resumir(nome, dados, hoje, reunioes, ultimas));
 }
 
 export function resumoDoMentor(dados: DadosMentores, hoje: string, nome: string): ResumoMentor {
@@ -104,8 +104,8 @@ export interface VisaoMentores {
 // A visão geral: quem tem atividade e os cards. É ativo o mentor da lista atual, ou quem teve 1:1
 // nos últimos 30 dias ou tem agenda; os outros vão para o histórico. Os totais somam todos. O NPS
 // de 30 dias é o de todas as respostas, de qualquer mentor.
-export function visaoMentores(resumos: readonly ResumoMentor[], nps: readonly NpsResposta[], hoje: string): VisaoMentores {
-  const ativo = (r: ResumoMentor) => ehMentorAtual(r.nome) || r.r1_30.length > 0 || r.agenda.length > 0;
+export function visaoMentores(resumos: readonly ResumoMentor[], nps: readonly NpsResposta[], hoje: string, cadastrados: readonly string[]): VisaoMentores {
+  const ativo = (r: ResumoMentor) => cadastrados.includes(r.nome) || r.r1_30.length > 0 || r.agenda.length > 0;
   const soma = (f: (r: ResumoMentor) => number) => resumos.reduce((a, r) => a + f(r), 0);
   const corte = haDias(hoje, 30);
   const recentes = nps.filter((r) => r.respondido_em !== null && diaSP(r.respondido_em) >= corte);

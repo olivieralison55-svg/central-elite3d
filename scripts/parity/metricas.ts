@@ -51,10 +51,10 @@ export const par05: Metrica = (dados, papel, hoje) =>
   Object.fromEntries(painel(dados, papel, hoje, "").progressao.map(({ mentorado, nivel }) => [mentorado.id, { nivel: nivel.atual.nome, total: centavos(nivel.total) }]));
 
 export const par06: Metrica = (dados, _papel, hoje) => {
-  const { meses } = matrizMentores(dados.sessoes, null, hoje);
+  const { meses } = matrizMentores(dados.sessoes, null, hoje, dados.mentores);
   const valores: Valores = {};
   for (const mes of ["", ...meses]) {
-    const m = matrizMentores(dados.sessoes, mes, hoje);
+    const m = matrizMentores(dados.sessoes, mes, hoje, dados.mentores);
     const porEtapa = (contagem: number[]) => Object.fromEntries(m.etapas.map((etapa, i) => [etapa, contagem[i]]));
     const rotulo = mes || "todos";
     valores[`${rotulo}|__meses__`] = meses.length;
@@ -65,7 +65,7 @@ export const par06: Metrica = (dados, _papel, hoje) => {
 };
 
 export const par07: Metrica = (dados, _papel, hoje) => {
-  const { focos } = matrizMentores(dados.sessoes, null, hoje);
+  const { focos } = matrizMentores(dados.sessoes, null, hoje, dados.mentores);
   return { dobradas: ordenados(focos.dobradas), semData: ordenados(focos.semData), semMentor: ordenados(focos.semMentor), etapaDeduzida: ordenados(focos.etapaDeduzida) };
 };
 

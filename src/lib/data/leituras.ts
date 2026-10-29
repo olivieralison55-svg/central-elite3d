@@ -31,6 +31,17 @@ async function primeira<T>(rel: Relacao, pedido: Resposta, esquema: z.ZodType<T>
   return lido.ok ? { ok: true, dados: lido.dados[0] ?? null } : lido;
 }
 
+// Os mentores do cadastro (AD-013), pela rpc: o mentor só lê o próprio perfil.
+async function lerMentores(db: SupabaseClient): Promise<Resultado<string[]>> {
+  const { data, error } = await db.rpc("mentores_ativos");
+  if (error) {
+    console.error("[central-elite3d] mentores_ativos", error);
+    return { ok: false, erro: error.message };
+  }
+  const lido = validarLinhas("mentores_ativos", ESQUEMAS.mentores_ativos, data);
+  return lido.ok ? { ok: true, dados: lido.dados.map((m) => m.nome) } : lido;
+}
+
 export async function carregarTudo(papel: Papel, usuarioId: string, db: SupabaseClient = cliente()): Promise<Carga> {
   // SEC-06: sem sessão, a leitura iria como anon e voltaria vazia sem erro; com a de outra
   // pessoa (login em outra aba), traria o recorte dela.
@@ -68,6 +79,7 @@ export async function carregarTudo(papel: Papel, usuarioId: string, db: Supabase
     analiseLida,
     adesao,
     transcricoes,
+    mentores,
   ] = await Promise.all([
     completo
       ? lista("mentorados", ESQUEMAS.mentorados, [["data_fechamento", true], ["id", true]])
@@ -97,6 +109,7 @@ export async function carregarTudo(papel: Papel, usuarioId: string, db: Supabase
     analise,
     primeira("experiencia_adesao", db.rpc("experiencia_adesao", { p_desde: INICIO_COBRANCA_NPS, p_prazo_dias: PRAZO_RESPOSTA_DIAS }), ESQUEMAS.experiencia_adesao),
     doCompleto(() => lista("transcricoes", ESQUEMAS.transcricoes, [["drive_id", true]], "mentor,status,realizada_em,mentorado_id,drive_id")),
+    lerMentores(db),
   ]);
 
   if (!mentorados.ok) return mentorados;
@@ -129,6 +142,7 @@ export async function carregarTudo(papel: Papel, usuarioId: string, db: Supabase
     analise: ou(completo ? "nps_analises" : "analise_ia_mentor", analiseLida, null),
     adesao: ou("experiencia_adesao", adesao, null),
     transcricoes: ou("transcricoes", transcricoes, []),
+    mentores: ou("mentores_ativos", mentores, []),
   };
   return { ok: true, dados, erros };
 }
