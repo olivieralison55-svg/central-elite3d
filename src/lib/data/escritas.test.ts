@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  pastaDoMentor,
   addParcela,
   adotarOrfas,
   confirmarGrupo,
@@ -735,5 +736,19 @@ describe("anexo das notas (AD-010)", () => {
       erro: "new row violates row-level security policy",
     });
     expect(erroNoConsole.mock.calls.at(-1)).toEqual(["[central-elite3d] notas-anexos", { message: "new row violates row-level security policy" }]);
+  });
+});
+
+describe("pasta do mentor no bucket de relatórios", () => {
+  // Os mesmos pares que `pasta_do_mentor()` no banco devolve (conferido em 29/10/2026).
+  it("tira acento e espaço, e não muda nome que já era limpo", () => {
+    const pares: [string, string][] = [
+      ["André", "Andre"],
+      ["Luan", "Luan"],
+      ["Gabriella", "Gabriella"],
+      ["Leonardo Donadel", "Leonardo-Donadel"],
+      ["João Ção", "Joao-Cao"],
+    ];
+    for (const [nome, pasta] of pares) expect(pastaDoMentor(nome)).toBe(pasta);
   });
 });

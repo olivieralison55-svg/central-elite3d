@@ -500,10 +500,18 @@ export async function salvarEnvio(mentor: string, competencia: string, envio: En
   return r.ok ? { ...r, id } : r;
 }
 
-// W25: o relatório de uma loja, em `<mentor>/<AAAA-MM>/<uuid>-<nome>`. Sem sobrescrever: o
-// relatório enviado é a prova do mês.
+// A pasta do mentor no bucket: o Storage recusa chave com acento ("André" dá "Invalid key"), então
+// tira acento e troca o resto por hífen. Espelha `pasta_do_mentor()` no banco, que a política usa.
+export const pastaDoMentor = (mentor: string): string =>
+  mentor
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^A-Za-z0-9_-]+/g, "-");
+
+// W25: o relatório de uma loja, em `<pasta do mentor>/<AAAA-MM>/<uuid>-<nome>`. Sem sobrescrever:
+// o relatório enviado é a prova do mês.
 export async function enviarRelatorio(mentor: string, competencia: string, arquivo: File, db: SupabaseClient = cliente(), novoId: () => string = () => crypto.randomUUID()): Promise<ResultadoEscrita> {
-  const caminho = `${mentor}/${competencia}/${novoId()}-${nomeSaneado(arquivo.name)}`;
+  const caminho = `${pastaDoMentor(mentor)}/${competencia}/${novoId()}-${nomeSaneado(arquivo.name)}`;
   const { data, error } = await db.storage.from("faturamento-relatorios").upload(caminho, arquivo, { upsert: false, contentType: arquivo.type });
   if (error) {
     console.error("[central-elite3d] faturamento-relatorios", error);
