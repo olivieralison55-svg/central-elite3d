@@ -2,7 +2,7 @@
 
 - **Status**: active
 - **Date**: 2026-10-29
-- **Scope**: migration `20261029_mentores_do_cadastro.sql` (`profiles.nome_mentor`, trigger `preencher_nome_mentor`, rpc `mentores_ativos()`), `Dataset.mentores`, `src/lib/mentores.ts`, `src/lib/matriz.ts`, formulários de sessão, edge functions `sync-google-calendar` e `circle-presenca`.
+- **Scope**: migration `20261029_mentores_do_cadastro.sql` (`profiles.mentor_nome`, trigger `preencher_mentor_nome`, rpc `mentores_ativos()`), `Dataset.mentores`, `src/lib/mentores.ts`, `src/lib/matriz.ts`, formulários de sessão, edge functions `sync-google-calendar` e `circle-presenca`.
 
 ## Contexto
 
@@ -14,16 +14,16 @@ publicar; sem isso o sync gravava as sessões dele como "sem mentor identificado
 ## Decisão
 
 `profiles` com `role = 'mentor'` é a única fonte. `sessoes.mentor` continua texto, então o
-perfil ganhou `nome_mentor`: a grafia gravada nas sessões (`profiles.nome` é o nome completo,
+perfil ganhou `mentor_nome`: a grafia gravada nas sessões (`profiles.nome` é o nome completo,
 "Luan Alves Maker", e não casa com "Luan").
 
-- O trigger preenche `nome_mentor` com o primeiro nome quando o perfil vira mentor, ou o nome
+- O trigger preenche `mentor_nome` com o primeiro nome quando o perfil vira mentor, ou o nome
   inteiro se o primeiro já é de outro mentor. Nunca reescreve: trocar o nome do perfil não
   parte o histórico em dois. Corrigir a grafia é um `update` direto na coluna.
 - O app lê a lista por `mentores_ativos()` (`security definer`): o mentor só lê o próprio perfil.
 - Quem saiu do projeto (Israel, Evaldo) não tem perfil: aparece pelos nomes gravados nas
   sessões, como histórico. `MENTORES_HIST` deixou de existir.
-- O sync casa pelo e-mail do perfil e, como fallback, pelo `nome_mentor` no título — exceto
+- O sync casa pelo e-mail do perfil e, como fallback, pelo `mentor_nome` no título — exceto
   quando ele é também primeiro nome de um mentorado ativo (o caso André × André Bertozzi,
   que antes era uma exceção escrita à mão).
 

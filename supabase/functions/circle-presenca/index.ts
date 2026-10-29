@@ -79,7 +79,7 @@ export function etapaDoEvento(nome: string) {
 }
 
 // Nome do mentor no título ("Plantão de Dúvidas #27 - Luan"), na grafia do cadastro
-// (profiles.nome_mentor, AD-013).
+// (profiles.mentor_nome, AD-013).
 export function mentorDoEvento(nome: string, mentores: readonly string[]) {
   const depois = norm(nome.split(" - ").slice(1).join(" - "));
   return mentores.find((m) => depois.includes(norm(m))) ?? null;
@@ -132,9 +132,9 @@ Deno.serve(async (req) => {
   if (!ment || ment.length !== 1) return falha(ment?.length ? `e-mail ${email} em ${ment.length} fichas` : `nenhuma ficha com o e-mail ${email}`);
 
   const { data: perfis, error: errP } = await db.from("profiles")
-    .select("nome_mentor").eq("role", "mentor").not("nome_mentor", "is", null);
+    .select("mentor_nome").eq("role", "mentor").not("mentor_nome", "is", null);
   if (errP) return falha(`profiles: ${errP.message}`);
-  const mentores = (perfis ?? []).map((p: { nome_mentor: string }) => p.nome_mentor);
+  const mentores = (perfis ?? []).map((p: { mentor_nome: string }) => p.mentor_nome);
 
   const inicio = new Date(evento.starts_at);
   const data = inicio.toLocaleDateString("sv-SE", { timeZone: TZ });

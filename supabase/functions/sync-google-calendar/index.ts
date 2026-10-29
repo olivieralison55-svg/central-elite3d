@@ -12,21 +12,21 @@ const TZ = "America/Sao_Paulo";
 // os e-mails nao seguem padrao previsivel, entao heuristica de nome produziria
 // atribuicao errada e silenciosa. So mentor e convidado-mentor: CS e observadores
 // nao tem perfil de mentor, e a sessao nao e creditada a quem so acompanhou.
-// Fallback: o nome do mentor (nome_mentor) escrito no titulo/descricao.
+// Fallback: o nome do mentor (mentor_nome) escrito no titulo/descricao.
 type Mentores = { porEmail: Map<string, string>; porNome: { nome: string; chave: string }[] };
 
 /* Nome de mentor que tambem e primeiro nome de mentorado nao vale como apelido:
    "Mentoria André Bertozzi" creditaria a sessao ao mentor André. Esse fica so
    pelo e-mail. */
-function montarMentores(perfis: { nome_mentor: string; email: string | null }[], mentorados: { nome: string }[]): Mentores {
+function montarMentores(perfis: { mentor_nome: string; email: string | null }[], mentorados: { nome: string }[]): Mentores {
   const primeiros = new Set(mentorados.map((m) => normaliza(m.nome).trim().split(/\s+/)[0]));
   const porEmail = new Map<string, string>();
   const porNome: { nome: string; chave: string }[] = [];
   for (const p of perfis) {
     const e = (p.email || "").trim().toLowerCase();
-    if (e) porEmail.set(e, p.nome_mentor);
-    const chave = normaliza(p.nome_mentor).trim();
-    if (chave && !primeiros.has(chave)) porNome.push({ nome: p.nome_mentor, chave });
+    if (e) porEmail.set(e, p.mentor_nome);
+    const chave = normaliza(p.mentor_nome).trim();
+    if (chave && !primeiros.has(chave)) porNome.push({ nome: p.mentor_nome, chave });
   }
   return { porEmail, porNome };
 }
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
     if (merr) throw merr;
     const lista: Mentorado[] = mentorados || [];
     const { data: perfis, error: perr } = await supabase.from("profiles")
-      .select("nome_mentor,email").eq("role", "mentor").not("nome_mentor", "is", null);
+      .select("mentor_nome,email").eq("role", "mentor").not("mentor_nome", "is", null);
     if (perr) throw perr;
     const mentores = montarMentores(perfis || [], lista);
     const porEmail = new Map<string, Mentorado>();
