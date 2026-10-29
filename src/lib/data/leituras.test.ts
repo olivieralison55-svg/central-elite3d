@@ -146,6 +146,11 @@ const DO_COMPLETO = [
   "nps_analises",
   "experiencia_adesao",
   "transcricoes",
+  "faixas_remuneracao",
+  "mentor_lojas",
+  "validacao_faturamento",
+  "validacao_lojas",
+  "validacao_eventos",
 ];
 const DO_MENTOR = [
   "mentorados_basic",
@@ -159,6 +164,11 @@ const DO_MENTOR = [
   "sessoes_orfas",
   "experiencia_adesao",
   "analise_ia_mentor",
+  "faixas_remuneracao",
+  "mentor_lojas",
+  "validacao_faturamento",
+  "validacao_lojas",
+  "validacao_eventos",
 ];
 const ADESAO_ARGS = { p_desde: "2026-10-13", p_prazo_dias: 2 };
 
@@ -180,6 +190,11 @@ const COMPLEMENTARES: Array<[Relacao, keyof Dataset, [] | null]> = [
   ["nps_analises", "analise", null],
   ["experiencia_adesao", "adesao", null],
   ["transcricoes", "transcricoes", []],
+  ["faixas_remuneracao", "faixas", []],
+  ["mentor_lojas", "mentorLojas", []],
+  ["validacao_faturamento", "validacoes", []],
+  ["validacao_lojas", "validacaoLojas", []],
+  ["validacao_eventos", "validacaoEventos", []],
 ];
 
 describe("carga inteira e nota (DATA-02, DATA-04, DATA-06, DATA-07, DATA-08, GATE-08, SEC-06)", () => {
@@ -210,7 +225,7 @@ describe("carga inteira e nota (DATA-02, DATA-04, DATA-06, DATA-07, DATA-08, GAT
     await carregarTudo("admin", "u1", admin.db);
     const mentor = clienteFalso({ tabelas });
     await carregarTudo("mentor", "u1", mentor.db);
-    expect(PAGINADAS).toHaveLength(18);
+    expect(PAGINADAS).toHaveLength(23);
     for (const { nome, select = "*", ordem, chave } of PAGINADAS) {
       const pedidos = (nome === "mentorados_basic" ? mentor : admin).pedidos.filter((p) => p.alvo === nome);
       expect(

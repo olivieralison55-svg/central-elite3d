@@ -17,7 +17,7 @@ import SegmentedProgress from "@/components/ui/segmented-progress";
 import Select from "@/components/ui/select";
 import { ETAPAS, ETAPAS_GRUPO, MENTORES, S_STATUS } from "@/lib/constantes";
 import type { Mentorado, Sessao } from "@/lib/data/esquemas";
-import { type CamposSessao, confirmarSessao, delSessao, salvarSessao } from "@/lib/data/escritas";
+import { type CamposSessao, confirmarSessao, delSessao, marcarFalta, salvarSessao } from "@/lib/data/escritas";
 import { fmtD } from "@/lib/datas";
 import { nomeDe } from "@/lib/mentorados";
 import { aplicarOrdem } from "@/lib/ordem";
@@ -150,17 +150,19 @@ export function SessaoDialogo({
 }
 
 // W04: confirmar exige o mentor; sem ele, a sessão entra concluída sem dono e some da contagem por
-// mentor. Confirmar não mexe na etapa deduzida (OPS-08).
+// mentor. Confirmar não mexe na etapa deduzida (OPS-08). W23: "Mentorado faltou" também pede o
+// mentor (é dele a agenda que ficou vazia), e a sessão sai do pagamento e da trilha.
 export function ConfirmarSessaoForm({ sessao, aoTerminar }: { sessao: Sessao; aoTerminar(): void }) {
   const { dados } = useDados();
   const [mentor, setMentor] = useState(sessao.mentor ?? "");
   const { executar, ocupado } = useEscrita("escreverSessao", (quem: string) => confirmarSessao(sessao.id, quem), "Sessão confirmada como concluída");
-  const confirmar = async () => {
+  const falta = useEscrita("escreverSessao", (quem: string) => marcarFalta(sessao.id, quem), "Falta do mentorado registrada");
+  const confirmar = async (comoFalta = false) => {
     if (!mentor) {
       toast.error("Selecione quem atendeu a sessão");
       return;
     }
-    if (await executar(mentor)) aoTerminar();
+    if (await (comoFalta ? falta.executar(mentor) : executar(mentor))) aoTerminar();
   };
   return (
     <div className="space-y-4">
@@ -171,6 +173,14 @@ export function ConfirmarSessaoForm({ sessao, aoTerminar }: { sessao: Sessao; ao
       <div className="flex flex-wrap gap-2">
         <Button loading={ocupado} data-escrita="W04" onClick={() => void confirmar().catch((erro: unknown) => console.error("[central-elite3d] confirmar sessão", erro))}>
           Confirmar como concluída
+        </Button>
+        <Button
+          variant="outline"
+          loading={falta.ocupado}
+          data-escrita="W23"
+          onClick={() => void confirmar(true).catch((erro: unknown) => console.error("[central-elite3d] falta do mentorado", erro))}
+        >
+          Mentorado faltou
         </Button>
         <Button variant="outline" onClick={aoTerminar}>
           Cancelar

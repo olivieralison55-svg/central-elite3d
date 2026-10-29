@@ -38,7 +38,7 @@ export const ETAPA_ORD: Readonly<Partial<Record<string, number>>> = Object.fromE
 export const ordemDaEtapa = (etapa: string): number => ETAPA_ORD[etapa] ?? 99;
 
 // O mesmo domínio do CHECK de `sessoes.status` e da `promover_sessoes_vencidas()`.
-export const S_STATUS: readonly string[] = ["Não iniciada", "Agendada", "Aguardando confirmação", "Concluída", "Bloqueada"];
+export const S_STATUS: readonly string[] = ["Não iniciada", "Agendada", "Aguardando confirmação", "Concluída", "Bloqueada", "Não compareceu"];
 
 // Gamificação: a faixa vem do faturamento acumulado real, da maior para a menor.
 export const NIVEIS: readonly { nome: string; min: number }[] = [

@@ -273,5 +273,10 @@ export function datasetDeTeste(): Dataset {
     },
     adesao: null,
     transcricoes: [],
+    faixas: [],
+    mentorLojas: [],
+    validacoes: [],
+    validacaoLojas: [],
+    validacaoEventos: [],
   };
 }

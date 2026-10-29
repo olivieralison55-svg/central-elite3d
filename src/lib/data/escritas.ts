@@ -437,3 +437,120 @@ export function salvarParcela(id: string, parcela: CamposParcela, db: SupabaseCl
 export function delParcela(id: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
   return conferir("parcelas", db.from("parcelas").delete().eq("id", id).select("id"));
 }
+
+// W23: o mentorado faltou. A sessão fica no histórico, mas não é paga nem cumpre a etapa
+// (20261029_validacao_faturamento.sql).
+export function marcarFalta(id: string, mentor: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("sessoes", db.from("sessoes").update({ status: "Não compareceu", mentor }).eq("id", id).select("id"));
+}
+
+/* ---------- Validação de faturamento (W24–W31) ---------- */
+
+// Uma loja do mês, como o mentor digitou. Valores em reais; o elegível o banco calcula.
+export interface LojaDoMes {
+  loja_id: string | null;
+  marketplace: string;
+  loja_nome: string;
+  periodo_inicio: string;
+  periodo_fim: string;
+  vendas: number;
+  pedidos: number;
+  cancelamentos: number;
+  devolucoes: number;
+  reembolsos: number;
+  arquivo_path: string | null;
+}
+
+export interface EnvioDoMes {
+  alteracao_lojas: boolean;
+  alteracao_lojas_obs: string | null;
+  obs_mentor: string | null;
+  lojas: LojaDoMes[];
+}
+
+const ID_GRAVADO = z.object({ id: z.string() });
+
+// W24: o mentor salva o rascunho ou envia. Ordem: a linha do mês em rascunho, as lojas trocadas
+// inteiras, e só então o envio — enviado, o banco não deixa mais o mentor tocar nas lojas.
+export async function salvarEnvio(mentor: string, competencia: string, envio: EnvioDoMes, enviar: boolean, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  const linha = { mentor, competencia: `${competencia}-01`, estado: "rascunho", alteracao_lojas: envio.alteracao_lojas, alteracao_lojas_obs: ouNulo(envio.alteracao_lojas_obs), obs_mentor: ouNulo(envio.obs_mentor) };
+  const { data, error } = await db.from("validacao_faturamento").upsert(linha, { onConflict: "mentor,competencia" }).select("id").single();
+  if (error) {
+    console.error("[central-elite3d] validacao_faturamento", error);
+    return { ok: false, erro: error.message };
+  }
+  const gravado = ID_GRAVADO.safeParse(data);
+  if (!gravado.success) return { ok: false, zeroLinhas: true };
+  const id = gravado.data.id;
+
+  const apagou = await db.from("validacao_lojas").delete().eq("validacao_id", id);
+  if (apagou.error) {
+    console.error("[central-elite3d] validacao_lojas", apagou.error);
+    return { ok: false, erro: apagou.error.message };
+  }
+  if (envio.lojas.length > 0) {
+    const lojas = envio.lojas.map((l) => ({ ...l, validacao_id: id }));
+    const r = await conferir("validacao_lojas", db.from("validacao_lojas").insert(lojas).select("id"), lojas.length);
+    if (!r.ok) return r;
+  }
+  if (!enviar) return { ok: true, linhas: 1, id };
+  const r = await conferir("validacao_faturamento", db.from("validacao_faturamento").update({ estado: "enviado" }).eq("id", id).select("id"));
+  return r.ok ? { ...r, id } : r;
+}
+
+// W25: o relatório de uma loja, em `<mentor>/<AAAA-MM>/<uuid>-<nome>`. Sem sobrescrever: o
+// relatório enviado é a prova do mês.
+export async function enviarRelatorio(mentor: string, competencia: string, arquivo: File, db: SupabaseClient = cliente(), novoId: () => string = () => crypto.randomUUID()): Promise<ResultadoEscrita> {
+  const caminho = `${mentor}/${competencia}/${novoId()}-${nomeSaneado(arquivo.name)}`;
+  const { data, error } = await db.storage.from("faturamento-relatorios").upload(caminho, arquivo, { upsert: false, contentType: arquivo.type });
+  if (error) {
+    console.error("[central-elite3d] faturamento-relatorios", error);
+    return { ok: false, erro: error.message };
+  }
+  const objeto = OBJETO_ENVIADO.safeParse(data);
+  if (!objeto.success) return { ok: false, zeroLinhas: true };
+  return { ok: true, linhas: 1, caminho: objeto.data.path };
+}
+
+// W26: o admin abre o mês de quem não enviou, para conduzir a conferência por ele.
+export function abrirValidacao(mentor: string, competencia: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("validacao_faturamento", db.from("validacao_faturamento").insert({ mentor, competencia: `${competencia}-01`, estado: "em_conferencia" }).select("id"));
+}
+
+// Os campos da conferência que o admin grava sem fechar o mês.
+export interface Conferencia {
+  estado?: "em_conferencia" | "ajuste_pedido" | "meet_agendado";
+  checklist?: Record<string, boolean>;
+  motivo_ajuste?: string | null;
+  meet_motivo?: string | null;
+  meet_em?: string | null;
+  obs_admin?: string | null;
+  faixa_vigente?: number | null;
+  comunicado_em?: string | null;
+}
+
+// W27.
+export function salvarConferencia(id: string, campos: Conferencia, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("validacao_faturamento", db.from("validacao_faturamento").update(campos).eq("id", id).select("id"));
+}
+
+// W28: fecha o mês. O banco carimba quem e quando, e a linha não muda mais.
+export function validarMes(id: string, fechamento: Record<string, unknown>, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("validacao_faturamento", db.from("validacao_faturamento").update({ ...fechamento, estado: "validado" }).eq("id", id).select("id"));
+}
+
+// W29.
+export function marcarPago(id: string, pagoEm: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("validacao_faturamento", db.from("validacao_faturamento").update({ estado: "pago", pago_em: pagoEm }).eq("id", id).select("id"));
+}
+
+// W30: um registro no histórico do mês (comunicação, ajuste posterior, nota).
+export function registrarEvento(validacaoId: string, tipo: string, detalhe: string, autor: string, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  return conferir("validacao_eventos", db.from("validacao_eventos").insert({ validacao_id: validacaoId, tipo, detalhe, autor }).select("id"));
+}
+
+// W31: as lojas cadastradas de um mentor. Loja não se apaga: desativa, e os meses antigos seguem apontando para ela.
+export function salvarLoja(id: string | null, loja: { mentor: string; marketplace: string; nome: string; ativa: boolean }, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
+  const pedido = id ? db.from("mentor_lojas").update(loja).eq("id", id).select("id") : db.from("mentor_lojas").insert(loja).select("id");
+  return conferir("mentor_lojas", pedido);
+}

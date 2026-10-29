@@ -25,6 +25,7 @@ const ROTAS = [
   "/acompanhamento",
   "/analise",
   "/dash",
+  "/faturamento",
   "/financeiro",
   "/ia",
   "/mentorado/[id]/[[...aba]]",
@@ -71,7 +72,7 @@ function gruposDoMapeamento(): string[] {
 }
 
 describe("estrutura (NAV-01, TEST-01)", () => {
-  it("NAV-01: as 13 rotas existem em src/app, e nenhuma a mais", () => {
+  it("NAV-01: as 14 rotas existem em src/app, e nenhuma a mais", () => {
     expect(rotas()).toEqual(ROTAS);
   });
 

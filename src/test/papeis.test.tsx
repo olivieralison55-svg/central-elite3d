@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import Dashboard from "@/components/modules/dashboard/dashboard";
 import Ficha from "@/components/modules/ficha/ficha";
+import Faturamento from "@/components/modules/faturamento/faturamento";
 import Financeiro from "@/components/modules/financeiro/financeiro";
 import Ia from "@/components/modules/ia/ia";
 import Mentorados from "@/components/modules/mentorados/mentorados";
@@ -129,6 +130,7 @@ function telasDe(papel: Papel): Tela[] {
     { el: <Sessoes /> },
     { el: <Rotas /> },
     { el: <Rotas />, ui: { marcoAberto: "mk1" } },
+    { el: <Faturamento /> },
   ];
   if (pode(papel, "verIa")) telas.push({ el: <Ia /> });
   if (pode(papel, "verFinanceiro")) telas.push({ el: <Mentores /> }, { el: <Stlseller /> }, { el: <Nps /> }, { el: <Financeiro /> });
@@ -149,7 +151,7 @@ describe("controles de escrita por papel (WRITE-09, GATE-08)", () => {
   });
 
   it("diretoria: nenhum controle de escrita nas 10 telas, na ficha nas 5 abas e nos modais", () => {
-    expect(telasDe("diretoria")).toHaveLength(11 + 3 * 5);
+    expect(telasDe("diretoria")).toHaveLength(12 + 3 * 5);
     expect(varrerPapel("diretoria")).toEqual([]);
   });
 
@@ -160,7 +162,7 @@ describe("controles de escrita por papel (WRITE-09, GATE-08)", () => {
     for (const w of ["W02", "W05", "W08", "W11", "W12", "W13", "W14", "W15", "W16", "W17", "W18", "W19", "W20", "W21"]) expect(achados, w).toContain(w);
   });
 
-  it("mentor: só W01, W03, W04, W06, W07, W09, W10 e W22", () => {
-    expect(varrerPapel("mentor")).toEqual(["W01", "W03", "W04", "W06", "W07", "W09", "W10", "W22"]);
+  it("mentor: só W01, W03, W04, W06, W07, W09, W10, W22 e W23", () => {
+    expect(varrerPapel("mentor")).toEqual(["W01", "W03", "W04", "W06", "W07", "W09", "W10", "W22", "W23"]);
   });
 });

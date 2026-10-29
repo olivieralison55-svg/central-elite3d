@@ -46,7 +46,7 @@ export async function carregarTudo(papel: Papel, usuarioId: string, db: Supabase
     ? primeira("nps_analises", db.from("nps_analises").select("*").order("gerado_em", { ascending: false }).limit(1), ESQUEMAS.nps_analises)
     : primeira("analise_ia_mentor", db.rpc("analise_ia_mentor"), ESQUEMAS.analise_ia_mentor);
 
-  // As 20 leituras em paralelo. A ordem de hoje e o desempate pela chave única (design,
+  // As 25 leituras em paralelo. A ordem de hoje e o desempate pela chave única (design,
   // "Leituras"): a mesma do scripts/parity/snapshot.mjs, conferida no banco no G0.2.
   const [
     mentorados,
@@ -68,6 +68,11 @@ export async function carregarTudo(papel: Papel, usuarioId: string, db: Supabase
     analiseLida,
     adesao,
     transcricoes,
+    faixas,
+    mentorLojas,
+    validacoes,
+    validacaoLojas,
+    validacaoEventos,
   ] = await Promise.all([
     completo
       ? lista("mentorados", ESQUEMAS.mentorados, [["data_fechamento", true], ["id", true]])
@@ -97,6 +102,12 @@ export async function carregarTudo(papel: Papel, usuarioId: string, db: Supabase
     analise,
     primeira("experiencia_adesao", db.rpc("experiencia_adesao", { p_desde: INICIO_COBRANCA_NPS, p_prazo_dias: PRAZO_RESPOSTA_DIAS }), ESQUEMAS.experiencia_adesao),
     doCompleto(() => lista("transcricoes", ESQUEMAS.transcricoes, [["drive_id", true]], "mentor,status,realizada_em,mentorado_id,drive_id")),
+    // R24–R28: a validação de faturamento. O RLS recorta o mentor às linhas dele.
+    lista("faixas_remuneracao", ESQUEMAS.faixas_remuneracao, [["id", true]]),
+    lista("mentor_lojas", ESQUEMAS.mentor_lojas, [["mentor", true], ["id", true]]),
+    lista("validacao_faturamento", ESQUEMAS.validacao_faturamento, [["competencia", false], ["id", true]]),
+    lista("validacao_lojas", ESQUEMAS.validacao_lojas, [["validacao_id", true], ["id", true]]),
+    lista("validacao_eventos", ESQUEMAS.validacao_eventos, [["criado_em", true], ["id", true]]),
   ]);
 
   if (!mentorados.ok) return mentorados;
@@ -129,6 +140,11 @@ export async function carregarTudo(papel: Papel, usuarioId: string, db: Supabase
     analise: ou(completo ? "nps_analises" : "analise_ia_mentor", analiseLida, null),
     adesao: ou("experiencia_adesao", adesao, null),
     transcricoes: ou("transcricoes", transcricoes, []),
+    faixas: ou("faixas_remuneracao", faixas, []),
+    mentorLojas: ou("mentor_lojas", mentorLojas, []),
+    validacoes: ou("validacao_faturamento", validacoes, []),
+    validacaoLojas: ou("validacao_lojas", validacaoLojas, []),
+    validacaoEventos: ou("validacao_eventos", validacaoEventos, []),
   };
   return { ok: true, dados, erros };
 }
@@ -167,6 +183,21 @@ export async function linksAssinados(caminhos: readonly string[], db: SupabaseCl
     console.error("[central-elite3d] notas-anexos: schema mismatch", lidos.error.issues);
     return { ok: false, erro: "notas-anexos: schema mismatch" };
   }
+  const links = new Map<string, string>();
+  for (const { path, signedUrl, error: recusa } of lidos.data) if (path && signedUrl && !recusa) links.set(path, signedUrl);
+  return { ok: true, dados: links };
+}
+
+// Os links dos relatórios de faturamento, assinados por 1 h, como os anexos das notas.
+export async function linksRelatorios(caminhos: readonly string[], db: SupabaseClient = cliente()): Promise<Resultado<Map<string, string>>> {
+  if (caminhos.length === 0) return { ok: true, dados: new Map() };
+  const { data, error } = await db.storage.from("faturamento-relatorios").createSignedUrls([...caminhos], 3600);
+  if (error) {
+    console.error("[central-elite3d] faturamento-relatorios", error);
+    return { ok: false, erro: error.message };
+  }
+  const lidos = LINKS_ASSINADOS.safeParse(data);
+  if (!lidos.success) return { ok: false, erro: "faturamento-relatorios: schema mismatch" };
   const links = new Map<string, string>();
   for (const { path, signedUrl, error: recusa } of lidos.data) if (path && signedUrl && !recusa) links.set(path, signedUrl);
   return { ok: true, dados: links };
