@@ -472,8 +472,10 @@ const ID_GRAVADO = z.object({ id: z.string() });
 
 // W24: o mentor salva o rascunho ou envia. Ordem: a linha do mês em rascunho, as lojas trocadas
 // inteiras, e só então o envio — enviado, o banco não deixa mais o mentor tocar nas lojas.
-export async function salvarEnvio(mentor: string, competencia: string, envio: EnvioDoMes, enviar: boolean, db: SupabaseClient = cliente()): Promise<ResultadoEscrita> {
-  const linha = { mentor, competencia: `${competencia}-01`, estado: "rascunho", alteracao_lojas: envio.alteracao_lojas, alteracao_lojas_obs: ouNulo(envio.alteracao_lojas_obs), obs_mentor: ouNulo(envio.obs_mentor) };
+// O admin, lançando pelo mentor, passa `estado` para corrigir um mês já com a operação sem
+// devolvê-lo a rascunho.
+export async function salvarEnvio(mentor: string, competencia: string, envio: EnvioDoMes, enviar: boolean, db: SupabaseClient = cliente(), estado = "rascunho"): Promise<ResultadoEscrita> {
+  const linha = { mentor, competencia: `${competencia}-01`, estado, alteracao_lojas: envio.alteracao_lojas, alteracao_lojas_obs: ouNulo(envio.alteracao_lojas_obs), obs_mentor: ouNulo(envio.obs_mentor) };
   const { data, error } = await db.from("validacao_faturamento").upsert(linha, { onConflict: "mentor,competencia" }).select("id").single();
   if (error) {
     console.error("[central-elite3d] validacao_faturamento", error);

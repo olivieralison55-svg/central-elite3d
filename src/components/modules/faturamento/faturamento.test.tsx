@@ -121,6 +121,32 @@ describe("validação de faturamento", () => {
     expect(html).toContain("Enviar para conferência");
   });
 
+  it("admin lançando pelo mentor: edita o mês já com a operação, sem reenviar", () => {
+    const html = renderTela(<EnvioMentor mentor="Luan" competencia="2026-10" pelaOperacao />, { papel: "admin", dados: dados() });
+    expect(html).toContain("Lançando pelo mentor Luan");
+    expect(html).toContain("Salvar alterações");
+    expect(html).not.toContain("Enviar para conferência");
+    expect(html).not.toMatch(/<fieldset[^>]*disabled/);
+  });
+
+  it("admin lançando pelo mentor que não enviou: pode salvar e enviar", () => {
+    const d = { ...dados(), validacoes: [], validacaoLojas: [] };
+    const html = renderTela(<EnvioMentor mentor="Luan" competencia="2026-10" pelaOperacao />, { papel: "admin", dados: d });
+    expect(html).toContain("Salvar rascunho");
+    expect(html).toContain("Enviar para conferência");
+  });
+
+  it("admin lançando pelo mentor: mês validado fica travado", () => {
+    const html = renderTela(<EnvioMentor mentor="Luan" competencia="2026-10" pelaOperacao />, { papel: "admin", dados: dados({ estado: "validado" }) });
+    expect(html).toContain("Mês fechado");
+    expect(html).not.toContain('data-escrita="W24"');
+  });
+
+  it("admin vê a troca entre conferir e lançar dados", () => {
+    const html = renderTela(<Faturamento />, { papel: "admin", dados: dados() });
+    expect(html).toContain("Lançar dados");
+  });
+
   it("mentor sem login ligado a um nome de mentor vê o aviso", () => {
     const html = renderTela(<Faturamento />, { papel: "mentor", dados: dados() });
     expect(html).toContain("Seu login ainda não está ligado a um mentor");

@@ -8,6 +8,7 @@ import Badge from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import EmptyState from "@/components/ui/empty-state";
 import PageHeader from "@/components/ui/page-header";
+import SegmentedControl from "@/components/ui/segmented-control";
 import Select from "@/components/ui/select";
 import StatCard from "@/components/ui/stat-card";
 import { MENTORES } from "@/lib/constantes";
@@ -34,6 +35,7 @@ import EnvioMentor from "./envio-mentor";
 
 const RELACOES = ["validacao_faturamento", "faixas_remuneracao"] as const;
 const COMPLEMENTARES = ["validacao_lojas", "validacao_eventos", "mentor_lojas"] as const;
+const MODOS = ["Conferência", "Lançar dados"] as const;
 
 // O mês em processo e os cinco anteriores.
 const competencias = (hoje: string) => {
@@ -74,6 +76,9 @@ function Painel({ competencia }: { competencia: string }) {
   // Os mentores atuais, mais quem tiver linha no mês (um mentor que saiu ainda fecha o último mês).
   const nomes = [...new Set([...MENTORES, ...dados.validacoes.filter((v) => v.competencia.startsWith(competencia)).map((v) => v.mentor)])];
   const [sel, setSel] = useState<string>(nomes[0] ?? "");
+  // O admin alterna entre conferir e lançar no lugar do mentor; o modo fica ao trocar de mentor.
+  const { pode } = useSessao();
+  const [modo, setModo] = useState<(typeof MODOS)[number]>("Conferência");
   const linhas = nomes.map((mentor) => {
     const v = linhaDe(mentor);
     const s = sessoesDoMes(dados.sessoes, mentor, competencia);
@@ -116,7 +121,18 @@ function Painel({ competencia }: { competencia: string }) {
             ))}
           </ul>
         </Card>
-        {sel ? <Conferencia key={`${sel}|${competencia}`} mentor={sel} competencia={competencia} /> : <EmptyState title="Escolha um mentor" />}
+        {sel ? (
+          <div className="space-y-4">
+            {pode("conferirFaturamento") && <SegmentedControl items={MODOS} value={modo} onChange={setModo} />}
+            {modo === "Lançar dados" && pode("conferirFaturamento") ? (
+              <EnvioMentor key={`${sel}|${competencia}|lancar`} mentor={sel} competencia={competencia} pelaOperacao />
+            ) : (
+              <Conferencia key={`${sel}|${competencia}`} mentor={sel} competencia={competencia} />
+            )}
+          </div>
+        ) : (
+          <EmptyState title="Escolha um mentor" />
+        )}
       </div>
     </div>
   );

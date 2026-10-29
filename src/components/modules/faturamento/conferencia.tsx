@@ -364,7 +364,7 @@ function Acoes({ v, mentor, competencia }: { v: Validacao; mentor: string; compe
 
 const TIPO_EVENTO = (tipo: string): string => {
   if (tipo.startsWith("estado:")) return ESTADO_LABEL[estadoDe({ estado: tipo.slice(7) })];
-  return { comunicacao: "Comunicação", ajuste_posterior: "Ajuste posterior", nota: "Nota" }[tipo] ?? tipo;
+  return { comunicacao: "Comunicação", ajuste_posterior: "Ajuste posterior", nota: "Nota", lancamento: "Lançado pela operação" }[tipo] ?? tipo;
 };
 
 export default function Conferencia({ mentor, competencia }: { mentor: string; competencia: string }) {
@@ -400,7 +400,7 @@ export default function Conferencia({ mentor, competencia }: { mentor: string; c
           v.estado !== "rascunho" ? (
             <Acoes key={v.id} v={v} mentor={mentor} competencia={competencia} />
           ) : (
-            <p className="text-sm text-muted">O mentor está preenchendo (rascunho).</p>
+            <p className="text-sm text-muted">Mês em rascunho: aguarde o mentor ou envie você mesmo em “Lançar dados”.</p>
           )
         ) : (
           <Button variant="outline" loading={abrir.ocupado} data-escrita="W26" onClick={() => void abrir.executar().catch(log("abrir conferência"))}>

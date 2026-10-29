@@ -4,7 +4,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 
 import CampoMoeda from "@/components/modules/comum/campo-moeda";
-import { useDados } from "@/components/shell/contexto";
+import { useDados, useSessao } from "@/components/shell/contexto";
 import { useEscrita } from "@/components/shell/use-escrita";
 import Alert from "@/components/ui/alert";
 import Badge from "@/components/ui/badge";
@@ -16,16 +16,17 @@ import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import Textarea from "@/components/ui/textarea";
 import type { ValidacaoLoja } from "@/lib/data/esquemas";
-import { enviarRelatorio, type LojaDoMes, salvarEnvio } from "@/lib/data/escritas";
+import { enviarRelatorio, type LojaDoMes, registrarEvento, salvarEnvio } from "@/lib/data/escritas";
 import { fmtInstante } from "@/lib/datas";
-import { calendario, ESTADO_LABEL, ESTADO_TOM, estadoDe, foraDoPrazo, mentorEdita } from "@/lib/faturamento";
+import { calendario, ESTADO_LABEL, ESTADO_TOM, estadoDe, fechado, foraDoPrazo, mentorEdita } from "@/lib/faturamento";
 import { fmtBRL, lerBRL, mascaraBRL } from "@/lib/moeda";
 
 import { ResumoDoMes } from "./conferencia";
 
 // O envio do mentor: uma linha por loja, com o relatório oficial anexado, e o elegível somado na
 // hora. Salvar guarda o rascunho; enviar entrega à operação, e daí o mentor só mexe se ela pedir
-// ajuste (o banco confere).
+// ajuste (o banco confere). Com `pelaOperacao`, o admin lança no lugar do mentor: edita até o mês
+// ser validado, e cada gravação fica no histórico como lançada pela operação.
 
 const MARKETPLACES = ["Shopee", "Mercado Livre", "Outro"];
 const TIPOS_RELATORIO = ".pdf,.png,.jpg,.jpeg,.webp,.xls,.xlsx,.csv";
@@ -85,8 +86,9 @@ const daLinha = (l: ValidacaoLoja): LojaForm => ({
 const valor = (texto: string) => lerBRL(texto) ?? 0;
 const elegivelDe = (l: LojaForm) => valor(l.vendas) - valor(l.cancelamentos) - valor(l.devolucoes) - valor(l.reembolsos);
 
-export default function EnvioMentor({ mentor, competencia }: { mentor: string; competencia: string }) {
+export default function EnvioMentor({ mentor, competencia, pelaOperacao = false }: { mentor: string; competencia: string; pelaOperacao?: boolean }) {
   const { dados } = useDados();
+  const { usuario } = useSessao();
   const v = dados.validacoes.find((x) => x.mentor === mentor && x.competencia.startsWith(competencia)) ?? null;
   const cadastradas = dados.mentorLojas.filter((l) => l.mentor === mentor && l.ativa);
   const [lojas, setLojas] = useState<LojaForm[]>(() => {
@@ -100,15 +102,23 @@ export default function EnvioMentor({ mentor, competencia }: { mentor: string; c
   const [obs, setObs] = useState(v?.obs_mentor ?? "");
   const [subindo, setSubindo] = useState<number | null>(null);
 
-  const edita = mentorEdita(v);
+  // Aberto: o mês ainda não foi entregue à operação; só daí se envia.
+  const aberto = mentorEdita(v);
+  const edita = pelaOperacao ? !fechado(v) : aberto;
   const estado = estadoDe(v);
   const cal = calendario(competencia);
   const fora = foraDoPrazo(v, cal, new Date());
   const total = lojas.reduce((t, l) => t + elegivelDe(l), 0);
 
-  const gravar = useEscrita("enviarFaturamento", (enviar: boolean, lista: LojaDoMes[]) =>
-    salvarEnvio(mentor, competencia, { alteracao_lojas: alteracao, alteracao_lojas_obs: alteracaoObs, obs_mentor: obs, lojas: lista }, enviar),
-  );
+  const gravar = useEscrita(pelaOperacao ? "conferirFaturamento" : "enviarFaturamento", async (enviar: boolean, lista: LojaDoMes[]) => {
+    const envio = { alteracao_lojas: alteracao, alteracao_lojas_obs: alteracaoObs, obs_mentor: obs, lojas: lista };
+    if (!pelaOperacao) return salvarEnvio(mentor, competencia, envio, enviar);
+    const r = await salvarEnvio(mentor, competencia, envio, enviar, undefined, v && !aberto ? v.estado : "rascunho");
+    if (!r.ok || !r.id) return r;
+    const soma = lista.reduce((t, l) => t + l.vendas - l.cancelamentos - l.devolucoes - l.reembolsos, 0);
+    const ev = await registrarEvento(r.id, "lancamento", `${lista.length} loja(s), elegível ${fmtBRL(soma)}${enviar ? ", enviado para conferência" : ""}`, usuario.id);
+    return ev.ok ? r : ev;
+  });
   const mudar = (i: number, campo: keyof LojaForm, valorNovo: string | null) => setLojas((ls) => ls.map((l, k) => (k === i ? { ...l, [campo]: valorNovo } : l)));
 
   const anexar = async (i: number, arquivo: File | undefined) => {
@@ -148,7 +158,7 @@ export default function EnvioMentor({ mentor, competencia }: { mentor: string; c
       reembolsos: valor(l.reembolsos),
       arquivo_path: l.arquivo_path,
     }));
-    if (await gravar.executar(enviar, lista)) toast.success(enviar ? "Enviado para conferência" : "Rascunho salvo");
+    if (await gravar.executar(enviar, lista)) toast.success(enviar ? "Enviado para conferência" : aberto ? "Rascunho salvo" : "Alterações salvas");
   };
 
   return (
@@ -162,7 +172,13 @@ export default function EnvioMentor({ mentor, competencia }: { mentor: string; c
         )}
       </div>
       {v?.estado === "ajuste_pedido" && <Alert variant="warning" title="A operação pediu ajuste">{v.motivo_ajuste ?? ""}</Alert>}
-      {!edita && <Alert variant="info" title="Este mês está com a operação">Se precisar corrigir algo, peça ao responsável que devolva com um pedido de ajuste.</Alert>}
+      {pelaOperacao && edita && (
+        <Alert variant="info" title={`Lançando pelo mentor ${mentor}`}>
+          O que você gravar aqui conta como o envio do mentor, e o histórico registra que foi lançado pela operação.
+        </Alert>
+      )}
+      {pelaOperacao && !edita && <Alert variant="info" title="Mês fechado">Mês validado não muda; registre um ajuste posterior na conferência.</Alert>}
+      {!pelaOperacao && !edita && <Alert variant="info" title="Este mês está com a operação">Se precisar corrigir algo, peça ao responsável que devolva com um pedido de ajuste.</Alert>}
 
       {lojas.map((l, i) => (
         <Card key={i}>
@@ -238,11 +254,13 @@ export default function EnvioMentor({ mentor, competencia }: { mentor: string; c
         {edita && (
           <div className="flex flex-wrap gap-2 border-t border-line p-4">
             <Button variant="outline" loading={gravar.ocupado} data-escrita="W24" onClick={() => void enviarOuSalvar(false).catch((erro: unknown) => console.error("[central-elite3d] rascunho", erro))}>
-              Salvar rascunho
+              {aberto ? "Salvar rascunho" : "Salvar alterações"}
             </Button>
-            <Button loading={gravar.ocupado} data-escrita="W24" onClick={() => void enviarOuSalvar(true).catch((erro: unknown) => console.error("[central-elite3d] envio", erro))}>
-              Enviar para conferência
-            </Button>
+            {aberto && (
+              <Button loading={gravar.ocupado} data-escrita="W24" onClick={() => void enviarOuSalvar(true).catch((erro: unknown) => console.error("[central-elite3d] envio", erro))}>
+                Enviar para conferência
+              </Button>
+            )}
           </div>
         )}
       </Card>
