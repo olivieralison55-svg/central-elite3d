@@ -38,6 +38,7 @@ const TOM_STATUS: ReadonlyMap<string, BadgeVariant> = new Map([
   ["Agendada", "info"],
   ["Aguardando confirmação", "warning"],
   ["Bloqueada", "danger"],
+  ["Não compareceu", "neutral"],
 ]);
 
 // O status da sessão. Fora de S_STATUS, o texto cru, que o React escapa (EDGE-05).

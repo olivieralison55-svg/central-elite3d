@@ -56,17 +56,18 @@ const DE_ADMIN = [
   ["/nps", "NPS"],
   ["/ia", "Análise IA"],
   ["/financeiro", "Financeiro"],
+  ["/faturamento", "Faturamento"],
   ["/usuarios", "Usuários"],
 ];
 const DE_DIRETORIA = DE_ADMIN.filter(([caminho]) => caminho !== "/usuarios");
 const DE_MENTOR = DE_DIRETORIA.filter(([caminho]) => !["/mentores", "/analise", "/nps", "/financeiro"].includes(caminho));
 
 describe("menu, usuário e tema (NAV-06, UI-04, UI-08, AUTH-08)", () => {
-  it("NAV-06 e AUTH-08: admin vê 11 itens, a diretoria 10; o mentor que entra depois, só os 6 dele", () => {
+  it("NAV-06 e AUTH-08: admin vê 12 itens, a diretoria 11; o mentor que entra depois, só os 7 dele", () => {
     expect(itens(renderTela(<Menu />, { papel: "admin" }))).toEqual(DE_ADMIN);
     expect(itens(renderTela(<Menu />, { papel: "diretoria" }))).toEqual(DE_DIRETORIA);
     expect(itens(renderTela(<Menu />, { papel: "mentor" }))).toEqual(DE_MENTOR);
-    expect(DE_MENTOR.map(([, rotulo]) => rotulo)).toEqual(["Dashboard", "Acompanhamento", "Mentorados", "Sessões", "Rotas", "Análise IA"]);
+    expect(DE_MENTOR.map(([, rotulo]) => rotulo)).toEqual(["Dashboard", "Acompanhamento", "Mentorados", "Sessões", "Rotas", "Análise IA", "Faturamento"]);
   });
 
   it("NAV-06 e UI-08: o menu mobile lista os mesmos itens do papel e leva o bloco do usuário com o Sair", () => {

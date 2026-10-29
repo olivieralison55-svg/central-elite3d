@@ -81,7 +81,8 @@ describe("snapshot de paridade (GATE-05, DATA-04, GATE-03)", () => {
       "lia_cobrancas", "marcos_definicao", "mentorado_canais", "mentorado_marcos", "mentorados", "mentorados_basic",
       "nps_analises", "nps_respostas", "parcelas", "profiles", "rotas", "sessoes", "sessoes_orfas",
       "stlseller_mentorados", "stlseller_pedidos_marketplace", "stlseller_produtos_vendidos", "transcricoes",
-    ]);
+      "faixas_remuneracao", "mentor_lojas", "validacao_eventos", "validacao_faturamento", "validacao_lojas",
+    ].sort());
     expect(consultas[0]).toMatchObject({ tabela: "profiles", eq: ["id", "u1"], single: true });
     expect(Object.fromEntries(consultas.slice(1).map((c) => [c.tabela, c.ordens]))).toEqual({
       mentorados: [["data_fechamento", true], ["id", true]],
@@ -102,6 +103,11 @@ describe("snapshot de paridade (GATE-05, DATA-04, GATE-03)", () => {
       nps_respostas: [["respondido_em", false], ["id", true]],
       experiencia_respostas: [["respondido_em", false], ["origem_id", true]],
       transcricoes: [["drive_id", true]],
+      faixas_remuneracao: [["id", true]],
+      mentor_lojas: [["mentor", true], ["id", true]],
+      validacao_faturamento: [["competencia", false], ["id", true]],
+      validacao_lojas: [["validacao_id", true], ["id", true]],
+      validacao_eventos: [["criado_em", true], ["id", true]],
       nps_analises: [["gerado_em", false]],
     });
     expect(consultas.find((c) => c.tabela === "transcricoes").select).toBe("mentor,status,realizada_em,mentorado_id,drive_id");
@@ -181,7 +187,7 @@ describe("snapshot de paridade (GATE-05, DATA-04, GATE-03)", () => {
     expect(opcoes.auth.persistSession).toBe(false);
     expect(falso.auth.login).toEqual({ email: "zzq-migracao@example.invalid", password: "s3nha-de-teste" });
     expect(falso.auth.signOut).toEqual([{ scope: "local" }]);
-    expect(saida).toHaveLength(22);
+    expect(saida).toHaveLength(27);
     expect(saida.filter((linha) => !/^[a-z_]+: \d+$/.test(linha))).toEqual([]);
     const gravado = readFileSync(join(pasta, "snapshot-2026-10-14.json"), "utf8");
     expect(JSON.parse(gravado).data).toBe("2026-10-14");

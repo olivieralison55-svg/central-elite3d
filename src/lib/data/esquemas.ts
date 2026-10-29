@@ -79,6 +79,9 @@ export const ESQUEMAS = {
     role: z.string().nullable(),
     nome: z.string().nullable(),
     email: z.string().nullable(),
+    // 20261029_validacao_faturamento.sql: o nome do mentor em `sessoes.mentor`. Opcional: o perfil
+    // lido antes da migration não tinha a coluna.
+    mentor_nome: z.string().nullable().optional(),
   }),
   mentorados: mentoradoBasico.extend({
     cadastro_incompleto: z.boolean().nullable(),
@@ -269,6 +272,59 @@ export const ESQUEMAS = {
   }),
   // R23: 20261013_mentorado_notas.sql.
   mentorado_notas: z.object({ conteudo: z.string(), atualizado_em: z.string() }),
+  // R24–R28: a validação de faturamento dos mentores (20261029_validacao_faturamento.sql).
+  faixas_remuneracao: z.object({ id: z.number(), piso: numerico, teto: numerico.nullable(), valor_hora: numerico }),
+  mentor_lojas: z.object({ id: z.string(), mentor: z.string(), marketplace: z.string(), nome: z.string(), ativa: z.boolean() }),
+  validacao_faturamento: z.object({
+    id: z.string(),
+    mentor: z.string(),
+    competencia: z.string(),
+    estado: z.string(),
+    enviado_em: z.string().nullable(),
+    alteracao_lojas: z.boolean().nullable(),
+    alteracao_lojas_obs: z.string().nullable(),
+    obs_mentor: z.string().nullable(),
+    checklist: z.record(z.boolean()),
+    motivo_ajuste: z.string().nullable(),
+    meet_motivo: z.string().nullable(),
+    meet_em: z.string().nullable(),
+    obs_admin: z.string().nullable(),
+    faturamento_elegivel: numerico.nullable(),
+    faixa_do_mes: z.number().nullable(),
+    faixa_vigente: z.number().nullable(),
+    faixa_seguinte: z.number().nullable(),
+    mudanca: z.string().nullable(),
+    comunicado_em: z.string().nullable(),
+    sessoes_ids: z.array(z.string()).nullable(),
+    sessoes_qtd: z.number().nullable(),
+    valor_hora: numerico.nullable(),
+    valor_pagar: numerico.nullable(),
+    validado_em: z.string().nullable(),
+    pago_em: z.string().nullable(),
+  }),
+  validacao_lojas: z.object({
+    id: z.string(),
+    validacao_id: z.string(),
+    loja_id: z.string().nullable(),
+    marketplace: z.string(),
+    loja_nome: z.string(),
+    periodo_inicio: z.string(),
+    periodo_fim: z.string(),
+    vendas: numerico,
+    pedidos: z.number(),
+    cancelamentos: numerico,
+    devolucoes: numerico,
+    reembolsos: numerico,
+    elegivel: numerico,
+    arquivo_path: z.string().nullable(),
+  }),
+  validacao_eventos: z.object({
+    id: z.string(),
+    validacao_id: z.string(),
+    tipo: z.string(),
+    detalhe: z.string().nullable(),
+    criado_em: z.string(),
+  }),
 };
 
 type Linha<R extends keyof typeof ESQUEMAS> = z.infer<(typeof ESQUEMAS)[R]>;
@@ -298,6 +354,11 @@ export type Analise = Linha<"analise_ia_mentor"> & Partial<Pick<Linha<"nps_anali
 export type Adesao = Linha<"experiencia_adesao">;
 export type Transcricao = Linha<"transcricoes">;
 export type Nota = Linha<"mentorado_notas">;
+export type FaixaRemuneracao = Linha<"faixas_remuneracao">;
+export type MentorLoja = Linha<"mentor_lojas">;
+export type Validacao = Linha<"validacao_faturamento">;
+export type ValidacaoLoja = Linha<"validacao_lojas">;
+export type ValidacaoEvento = Linha<"validacao_eventos">;
 
 // R02–R22: as relações da carga, que nomeiam o erro de cada uma.
 export type Relacao =
@@ -321,7 +382,12 @@ export type Relacao =
   | "nps_analises"
   | "experiencia_adesao"
   | "analise_ia_mentor"
-  | "transcricoes";
+  | "transcricoes"
+  | "faixas_remuneracao"
+  | "mentor_lojas"
+  | "validacao_faturamento"
+  | "validacao_lojas"
+  | "validacao_eventos";
 
 export type ErrosDeCarga = Partial<Record<Relacao, string>>;
 
@@ -346,4 +412,9 @@ export interface Dataset {
   analise: Analise | null; // R19 ou R21
   adesao: Adesao | null; // R20
   transcricoes: Transcricao[];
+  faixas: FaixaRemuneracao[]; // R24–R28: validação de faturamento
+  mentorLojas: MentorLoja[];
+  validacoes: Validacao[];
+  validacaoLojas: ValidacaoLoja[];
+  validacaoEventos: ValidacaoEvento[];
 }

@@ -52,6 +52,13 @@ export const PAGINADAS = [
   { nome: "nps_respostas", ordem: [["respondido_em", false]], chave: ["id"] },
   { nome: "experiencia_respostas", ordem: [["respondido_em", false]], chave: ["origem_id"] },
   { nome: "transcricoes", select: "mentor,status,realizada_em,mentorado_id,drive_id", ordem: [], chave: ["drive_id"] },
+  // R24–R28: a validação de faturamento (20261029_validacao_faturamento.sql). Não há métrica do app
+  // antigo sobre elas; entram para o app novo carregar do snapshot.
+  { nome: "faixas_remuneracao", ordem: [], chave: ["id"] },
+  { nome: "mentor_lojas", ordem: [["mentor", true]], chave: ["id"] },
+  { nome: "validacao_faturamento", ordem: [["competencia", false]], chave: ["id"] },
+  { nome: "validacao_lojas", ordem: [["validacao_id", true]], chave: ["id"] },
+  { nome: "validacao_eventos", ordem: [["criado_em", true]], chave: ["id"] },
 ];
 
 /**

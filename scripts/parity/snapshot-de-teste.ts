@@ -34,6 +34,11 @@ export function relacoesDe(d: Dataset): Relacoes {
     experiencia_adesao: d.adesao ? [d.adesao] : [],
     analise_ia_mentor: recorte,
     transcricoes: d.transcricoes,
+    faixas_remuneracao: d.faixas,
+    mentor_lojas: d.mentorLojas,
+    validacao_faturamento: d.validacoes,
+    validacao_lojas: d.validacaoLojas,
+    validacao_eventos: d.validacaoEventos,
   };
 }
 

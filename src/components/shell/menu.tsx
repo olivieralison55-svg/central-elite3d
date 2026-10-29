@@ -10,6 +10,7 @@ import {
   Menu as IconeMenu,
   PanelLeftClose,
   PanelLeftOpen,
+  Receipt,
   Route,
   Sparkles,
   Star,
@@ -47,6 +48,7 @@ const ICONES: Record<string, LucideIcon> = {
   "/ia": Sparkles,
   "/financeiro": Wallet,
   "/usuarios": KeyRound,
+  "/faturamento": Receipt,
 };
 
 // Na ficha, o item aceso é a lista de onde ela foi aberta (index.html:1384–1386).

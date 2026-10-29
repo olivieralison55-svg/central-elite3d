@@ -205,6 +205,52 @@ const LINHAS = {
   },
   transcricoes: { drive_id: "d1", mentor: "Luan", status: "aceita", realizada_em: "2026-10-01T13:00:00Z", mentorado_id: "m1" },
   mentorado_notas: { conteudo: "<h1>Plano</h1>", atualizado_em: "2026-10-13T12:00:00Z" },
+  faixas_remuneracao: { id: 1, piso: "10000.00", teto: "20000.00", valor_hora: "75.00" },
+  mentor_lojas: { id: "l1", mentor: "Luan", marketplace: "Shopee", nome: "Loja 1", ativa: true },
+  validacao_faturamento: {
+    id: "v1",
+    mentor: "Luan",
+    competencia: "2026-10-01",
+    estado: "enviado",
+    enviado_em: "2026-11-03T12:00:00Z",
+    alteracao_lojas: false,
+    alteracao_lojas_obs: "obs",
+    obs_mentor: "obs",
+    checklist: { deducoes: true },
+    motivo_ajuste: "motivo",
+    meet_motivo: "promocao",
+    meet_em: "2026-11-05T13:00:00Z",
+    obs_admin: "obs",
+    faturamento_elegivel: "26310.00",
+    faixa_do_mes: 2,
+    faixa_vigente: 2,
+    faixa_seguinte: 2,
+    mudanca: "promocao",
+    comunicado_em: "2026-11-05T13:00:00Z",
+    sessoes_ids: ["s1"],
+    sessoes_qtd: 1,
+    valor_hora: "100.00",
+    valor_pagar: "100.00",
+    validado_em: "2026-11-06T13:00:00Z",
+    pago_em: "2026-11-09",
+  },
+  validacao_lojas: {
+    id: "vl1",
+    validacao_id: "v1",
+    loja_id: "l1",
+    marketplace: "Shopee",
+    loja_nome: "Loja 1",
+    periodo_inicio: "2026-10-01",
+    periodo_fim: "2026-10-31",
+    vendas: "18400.00",
+    pedidos: 120,
+    cancelamentos: "0.00",
+    devolucoes: "0.00",
+    reembolsos: "0.00",
+    elegivel: "18400.00",
+    arquivo_path: "Luan/2026-10/x-relatorio.pdf",
+  },
+  validacao_eventos: { id: "e1", validacao_id: "v1", tipo: "estado:enviado", detalhe: "detalhe", criado_em: "2026-11-03T12:00:00Z" },
 } satisfies Record<NomeRelacao, Record<string, unknown>>;
 
 // NOT NULL provado: nas migrations de supabase/migrations/ (e nas funções que elas criam), ou a
@@ -234,6 +280,12 @@ const NAO_NULO: Record<NomeRelacao, string[]> = {
   analise_ia_mentor: ["gerado_em", "modelo", "respostas", "alertas", "mentorados"],
   transcricoes: ["drive_id", "status", "realizada_em"],
   mentorado_notas: ["conteudo", "atualizado_em"],
+  // 20261029_validacao_faturamento.sql.
+  faixas_remuneracao: ["id", "piso", "valor_hora"],
+  mentor_lojas: ["id", "mentor", "marketplace", "nome", "ativa"],
+  validacao_faturamento: ["id", "mentor", "competencia", "estado", "checklist"],
+  validacao_lojas: ["id", "validacao_id", "marketplace", "loja_nome", "periodo_inicio", "periodo_fim", "vendas", "pedidos", "cancelamentos", "devolucoes", "reembolsos", "elegivel"],
+  validacao_eventos: ["id", "validacao_id", "tipo", "criado_em"],
 };
 
 const RELACOES = Object.keys(LINHAS) as NomeRelacao[];
@@ -270,6 +322,11 @@ describe("schemas das leituras R01–R23 (DATA-02, DATA-03, EDGE-05, GER-06)", (
       "analise_ia_mentor",
       "transcricoes",
       "mentorado_notas",
+      "faixas_remuneracao",
+      "mentor_lojas",
+      "validacao_faturamento",
+      "validacao_lojas",
+      "validacao_eventos",
     ]);
   });
 

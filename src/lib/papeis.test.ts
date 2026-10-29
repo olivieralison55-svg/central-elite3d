@@ -53,6 +53,7 @@ describe("papéis e capacidades (AUTH-07, NAV-04, NAV-06, WRITE-08)", () => {
       ["/nps", "NPS"],
       ["/ia", "Análise IA"],
       ["/financeiro", "Financeiro"],
+      ["/faturamento", "Faturamento"],
     ];
     const doMenu = (papel: "admin" | "diretoria" | "mentor") => itensDoMenu(papel).map((i) => [i.caminho, i.rotulo]);
     expect(doMenu("admin")).toEqual([...completo, ["/usuarios", "Usuários"]]);
@@ -64,6 +65,7 @@ describe("papéis e capacidades (AUTH-07, NAV-04, NAV-06, WRITE-08)", () => {
       ["/sessoes", "Sessões"],
       ["/rotas", "Rotas"],
       ["/ia", "Análise IA"],
+      ["/faturamento", "Faturamento"],
     ]);
   });
 });

@@ -15,7 +15,9 @@ export type Capacidade =
   | "escreverSessao"
   | "escreverRotas"
   | "escreverNotas"
-  | "gerirUsuarios";
+  | "gerirUsuarios"
+  | "enviarFaturamento" // o mentor envia o próprio mês
+  | "conferirFaturamento"; // o admin confere e fecha
 
 export const CAPACIDADES: Record<Papel, readonly Capacidade[]> = {
   admin: [
@@ -30,10 +32,11 @@ export const CAPACIDADES: Record<Papel, readonly Capacidade[]> = {
     "excluir",
     "verIa",
     "gerirUsuarios",
+    "conferirFaturamento",
   ],
   diretoria: ["verFinanceiro", "verIa"],
   // verIa sem verFinanceiro = recorte do mentor na Análise IA (analise_ia_mentor).
-  mentor: ["escreverSessao", "escreverRotas", "escreverNotas", "verIa"],
+  mentor: ["escreverSessao", "escreverRotas", "escreverNotas", "verIa", "enviarFaturamento"],
 };
 
 export const PAPEL_LABEL: Record<Papel, string> = { admin: "Administrador", diretoria: "Diretoria", mentor: "Mentor" };
@@ -66,6 +69,8 @@ const MENU: ReadonlyArray<ItemMenu & { requer?: Capacidade }> = [
   { caminho: "/nps", rotulo: "NPS", requer: "verFinanceiro" },
   { caminho: "/ia", rotulo: "Análise IA", requer: "verIa" },
   { caminho: "/financeiro", rotulo: "Financeiro", requer: "verFinanceiro" },
+  // Todos os papéis: o mentor vê o próprio mês (o RLS recorta), a diretoria só lê.
+  { caminho: "/faturamento", rotulo: "Faturamento" },
   { caminho: "/usuarios", rotulo: "Usuários", requer: "gerirUsuarios" },
 ];
 
