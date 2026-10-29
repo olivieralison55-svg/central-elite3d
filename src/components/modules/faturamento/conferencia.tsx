@@ -109,7 +109,7 @@ export function ResumoDoMes({ mentor, competencia }: { mentor: string; competenc
         <dd className="flex flex-wrap gap-1">
           {r.ciclo.map((c) => (
             <Badge key={c.competencia} variant={c.acima === null ? "neutral" : c.acima ? "success" : "warning"}>
-              {`${dpLabel(c.competencia, "month")} ${c.acima === null ? "?" : c.acima ? "✓" : "—"}`}
+              {`${dpLabel(c.competencia, "month")} ${c.acima === null ? "?" : c.acima ? "ok" : "—"}`}
             </Badge>
           ))}
         </dd>
